@@ -1,0 +1,2 @@
+betterosi @ git+https://gitlab+deploy-token-147:gldt-nUtxxKzFkxtgbKngy5U-@gitlab.ika.rwth-aachen.de/fb-fi/projects/synergies/betterosi@ac4b76d548409185ef4db9ff76996a36931ee449
+-e .[test]

@@ -1,0 +1,9 @@
+
+build/
+dist/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.idea/
+omegadoc
+*.html

@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "ruff"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["omega_format"]
+
+
+[project]
+name = "omega_format"
+authors = [
+    {name = "ika - RWTH Aachen", email = "michael.schuldes@ika.rwth-aachen.de"},
+]
+description = "omega_format"
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["one", "two"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    'shapely',
+    'pandas',
+    'scipy',
+    'xarray',
+    'numpy',
+    'typer',
+    'pandera',
+    'lxml',
+    'matplotlib',
+    'betterosi'
+    
+]
+version = "0.1"
+
+[project.optional-dependencies]
+test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress', 'nbval']
+
+
+[tool.ruff]
+lint.ignore = ["E741", "E701"]
+
+[tool.licensecheck]
+# run `pip install licensecheck` and `licensecheck`
+using = "PEP631"
+ignore_licenses = ["mpl"]
+ignore_packages = [
+    "tzdata"
+]   
+zero = true
