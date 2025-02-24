@@ -30,6 +30,8 @@ dependencies = [
     'pandera',
     'lxml',
     'matplotlib',
+    'StrEnum',
+    'networkx',
     'betterosi'
     
 ]
