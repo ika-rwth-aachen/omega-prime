@@ -63,7 +63,6 @@ def get_center_line_points(road, step_size):
                 delta_s, 2) + supelev.d * np.power(delta_s, 3)
 
     # make copy of center_line_points for objects and signals where lane offset is not considered
-    #plt.figure();plt.plot(center_line_points[:, 0], center_line_points[:, 1]);plt.savefig('test.png')
     clp_no_offset = copy.copy(center_line_points)
 
     # move center line by lane offset(s)
@@ -81,7 +80,7 @@ def get_center_line_points(road, step_size):
         # add superelevation to z coordinate
         center_line_points[idxs, 4] = center_line_points[idxs, 4] + np.sin(center_line_points[idxs, 5]) * lane_offset_value
 
-    # s=0, x=1, y=2, z=3, superelevation=4, angle=5, 
+    # s=0, x=1, y=2, heading=3, z=4, z_heading=5, 
     return center_line_points, clp_no_offset, n_coordinates_per_segment
 
 
@@ -104,7 +103,6 @@ def sample_points(geometry_entry, step_size):
         ])
 
     elif geometry_entry.arc.curvature is not None:
-        #delta_s /= geometry_entry.length
         # https://github.com/pageldev/libOpenDRIVE/blob/master/src/Geometries/Arc.cpp#L15
         r = 1 / geometry_entry.arc.curvature
         angle_at_s = delta_s * geometry_entry.arc.curvature - np.pi / 2
@@ -178,4 +176,5 @@ def sample_points(geometry_entry, step_size):
     else:
         logger.warning("Centerline geometry type unknown!")
 
+    # x, y, heading
     return center_line_points, delta_s

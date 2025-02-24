@@ -143,9 +143,9 @@ def add_width(center_line_points, current_lane_width, index_from, index_to, inde
     :param orientation: left or right
     :return: coordinates of the border
     """
-    j = np.arange(index_from, index_to + 1)
+    j = np.arange(index_from, index_to+1)
     delta_s = center_line_points[j, 0] - current_lane_width.s_offset - center_line_points[index_section_start, 0]
-    current_lane_width_value = current_lane_width.a + current_lane_width.b * delta_s + current_lane_width.c * pow(delta_s, 2) + current_lane_width.d * pow(delta_s, 3)
+    current_lane_width_value = current_lane_width.a + current_lane_width.b * delta_s + current_lane_width.c * np.pow(delta_s, 2) + current_lane_width.d * np.pow(delta_s, 3)
 
     if orientation == 'left':
         angle_offset = np.pi/2
@@ -153,15 +153,17 @@ def add_width(center_line_points, current_lane_width, index_from, index_to, inde
         # right
         angle_offset = -np.pi/2
     pos[j-index_section_start, 0] = \
-        pos_previous[j-index_section_start, 0] + current_lane_width_value \
-        * np.cos(center_line_points[j-index_section_start, 3] + angle_offset)
+        pos_previous[j-index_section_start, 0] + \
+        + current_lane_width_value * np.cos(
+            center_line_points[j-index_section_start, 3] + angle_offset)
     pos[j-index_section_start, 1] = \
         pos_previous[j-index_section_start, 1] \
         + current_lane_width_value * np.sin(
             center_line_points[j-index_section_start, 3] + angle_offset)
     pos[j-index_section_start, 2] = \
         pos_previous[j-index_section_start, 2] \
-        + np.sin(center_line_points[j-index_section_start, 5]) * current_lane_width_value
+        +  current_lane_width_value * np.sin(
+            center_line_points[j-index_section_start, 5])
     return pos
 
 
