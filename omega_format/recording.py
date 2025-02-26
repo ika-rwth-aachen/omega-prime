@@ -9,6 +9,8 @@ from matplotlib.patches import Polygon as PltPolygon
 from .asam_odr import MapOdr
 import pandera as pa
 from pathlib import Path
+from .map import MapOsi
+from warnings import warn
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
 
@@ -27,13 +29,18 @@ recording_moving_object_schema = pa.DataFrameSchema(
         'width': pa.Column(float, pa.Check.ge(0)),
         'height': pa.Column(float),
         'type': pa.Column(int, pa.Check.between(0,4, error=f"Type must be one of {({o.name: o.value for o in betterosi.MovingObjectType})}")),
+        'role': pa.Column(int, pa.Check.between(-1,10, error=f"Type must be one of {({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationRole})}")),
         'subtype': pa.Column(int,  pa.Check.between(0, 17, error=f"Subtype must be one of {({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationType})}")),
         'roll': pa.Column(float, pi_valued),
         'pitch': pa.Column(float, pi_valued),
         'yaw': pa.Column(float, pi_valued),
         'idx': pa.Column(int, pa.Check.ge(0)),
         'total_nanos': pa.Column(int, pa.Check.ge(0))},
-    unique=['idx','total_nanos'])
+    unique=['idx','total_nanos'],
+    checks=[
+        pa.Check(lambda df: ~np.logical_and(df['type']==betterosi.MovingObjectType.TYPE_VEHICLE, df['role']==-1), error="role is `-1` despite type beeing `TYPE_VEHICLE`"),
+        pa.Check(lambda df: ~np.logical_and(df['type']!=betterosi.MovingObjectType.TYPE_VEHICLE, df['role']!=-1), error="role is set despite type not beeing `TYPE_VEHICLE`"),
+    ])
 
 
 #recording_internal_mv_schema = recording_moving_object_schema.add_columns({
@@ -98,116 +105,6 @@ class MovingObject():
         polys = self._df[self._df['frame']==frame]['polygon'].values
         for p in polys:
             ax.add_patch(PltPolygon(p.exterior.coords, fc='red', alpha=0.2))
-            
-            
-class LaneBoundary():
-    def __init__(self, osi_lane_boundary, map: "Map"):
-        super().__init__()
-        self._osi = osi_lane_boundary
-        self._map = map
-        
-        self.idx = self._osi.id.value
-        self.polyline = shapely.LineString([(p.position.x, p.position.y) for p in self._osi.boundary_line])
-        self.type = betterosi.LaneBoundaryClassificationType(self._osi.classification.type)
-    
-    def plot(self, ax: plt.Axes):
-        ax.plot(*np.array(self.polyline.coords).T, color='gray', alpha=.1)
-        
-        
-                    
-class Lane():
-    def __init__(self, osi_lane, map: "Map"):
-        super().__init__()
-        self._osi = osi_lane
-        self._map = map
-        
-        self.idx  = int(self._osi.id.value)
-        self._centerline_is_driving_direction = self._osi.classification.centerline_is_driving_direction
-        self.centerline = self._get_centerline()
-        self.type = betterosi.LaneClassificationType(self._osi.classification.type)
-        self.subtype = betterosi.LaneClassificationSubtype(self._osi.classification.subtype)
-        self.successor_ids = [p.successor_lane_id.value for p in self._osi.classification.lane_pairing if p.successor_lane_id is not None]
-        self.antecessor_ids = [p.antecessor_lane_id.value for p in self._osi.classification.lane_pairing if p.antecessor_lane_id is not None]
-        self.right_boundary_ids = [idx.value for idx in self._osi.classification.right_lane_boundary_id if idx is not None]
-        self.right_boundary = self._map.lane_boundaries[self.right_boundary_ids[0]]
-        self.left_boundary_ids = list([idx.value for idx in self._osi.classification.left_lane_boundary_id if idx is not None])
-        self.left_boundary = self._map.lane_boundaries[self.left_boundary_ids[0]]
-        self.free_boundary_ids = [idx.value for idx in self._osi.classification.free_lane_boundary_id if idx is not None]
-        self.polygon = shapely.Polygon(np.concatenate([np.array(self.left_boundary.polyline.coords), np.flip(np.array(self.right_boundary.polyline.coords), axis=0)]))
-        if not self.polygon.is_simple:
-            self.polygon = shapely.convex_hull(self.polygon)
-            # TODO: fix or warning
-            
-        # for omega
-        self.oriented_borders = self._get_oriented_borders()
-        self.start_points = np.array([b.interpolate(0, normalized=True) for b in self.oriented_borders])
-        self.end_points = np.array([b.interpolate(1, normalized=True) for b in self.oriented_borders])
-    
-        
-    def _get_centerline(self):
-        cl = np.array([(p.x, p.y) for p in self._osi.classification.centerline])
-        if not self._centerline_is_driving_direction:
-            cl = np.flip(cl, axis=0)
-        return cl
-    
-    def plot(self, ax: plt.Axes):
-        c = 'green' if not self.type==betterosi.LaneClassificationType.TYPE_INTERSECTION else 'black'
-        ax.plot(*np.array(self.centerline).T, color=c, alpha=0.5)
-        ax.add_patch(PltPolygon(self.polygon.exterior.coords, fc='blue', alpha=.2, ec='black'))
-        
-    # for ase_engine/omega_format
-
-    
-    def _get_oriented_borders(self):
-        center_start = shapely.LineString(self.centerline).interpolate(0, normalized=True)
-        left = self.left_boundary.polyline
-        invert_left = left.project(center_start, normalized=True)>.5
-        if invert_left:
-            left = shapely.reverse(left)
-        right = self.right_boundary.polyline
-        invert_right = right.project(center_start, normalized=True)>.5
-        if invert_right:
-            right = shapely.reverse(right)
-        return left, right
-
-        
-
-
-class Map():
-    pass
-
-class MapOsi(Map):
-    @classmethod
-    def from_gt(cls, gt: betterosi.GroundTruth):
-        if not hasattr(gt, 'lane') or not hasattr(gt, 'lane_boundary'):
-            return None
-        else:
-            return cls(gt)
-
-    def __init__(self, gt: betterosi.GroundTruth):
-        super().__init__()
-        self._osi = gt
-        
-        lane_boundaries = [LaneBoundary(b, self) for b in gt.lane_boundary]
-        self.lane_boundaries = {b.idx: b for b in lane_boundaries}
-        lanes = [Lane(lane, self) for lane in gt.lane if len(lane.classification.right_lane_boundary_id)>0]
-        self.lanes = {l.idx: l for l in lanes}
-
-        
-    def plot(self, ax: plt.Axes):
-        for l in self.lanes.values():
-            l.plot(ax)
-        for b in self.lane_boundaries.values():
-            b.plot(ax)
-            
-class Road():
-    def __init__(self, parent):
-        super().__init__()
-        self._parent = parent
-        
-    @property
-    def lanes(self):
-        return self._parent.lanes
     
 
 
@@ -271,9 +168,9 @@ class Recording():
     def to_osi_gts(self) -> list[betterosi.GroundTruth]:
         gts = [self.get_moving_object_ground_truth(nanos, group_df, host_vehicle=self.host_vehicle) for nanos, group_df in self._df.groupby('total_nanos')]
         
-        if map is not None and isinstance(map, MapOsi):
-                gts[0].lane_boundary = [b._osi for b in self.map.lane_boundaries.values()]
-                gts[0].lane = [l._osi for l in self.map.lanes.values()]
+        if self.map is not None and isinstance(self.map, MapOsi):
+            gts[0].lane_boundary = [b._osi for b in self.map.lane_boundaries.values()]
+            gts[0].lane = [l._osi for l in self.map.lanes.values()]
         return gts
         
     @classmethod
@@ -301,30 +198,29 @@ class Recording():
                 pitch = mv.base.orientation.pitch,
                 yaw = mv.base.orientation.yaw,
                 type = mv.type,
+                role = mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1,
                 subtype = mv.vehicle_classification.type
             ) for mv in gt.moving_object]
             
             if map is None:
-                map = MapOsi.from_gt(gt)
+                map = MapOsi.create(gt)
         df_mv = pd.DataFrame(mvs).sort_values(by=['total_nanos', 'idx']).reset_index(drop='index')
         return cls(df_mv, map)
     
     @classmethod
-    def from_file(cls, filepath):
-        gts = betterosi.read(filepath, return_ground_truth=True)
-        return cls.from_osi_gts(gts)
-    
-    @classmethod
-    def from_mcap(cls, filepath):
-        if Path(filepath).suffix != '.mcap':
-            raise ValueError()
+    def from_file(cls, filepath, xodr_path: str|None = None):
         gts = betterosi.read(filepath, return_ground_truth=True)
         r = cls.from_osi_gts(gts)
-        try:
-            map = MapOdr.from_mcap(filepath)
-            r.map = map
-        except Exception as e:
-            raise e
+        if xodr_path is not None:
+            r.map = MapOdr.from_file(xodr_path)
+        elif Path(filepath).suffix==".mcap":
+            try:
+                r.map = MapOdr.from_file(filepath)
+            except StopIteration:
+                if r.map is not None:
+                    warn("No map provided in mcap. OSI GroundTruth map is used!")
+        if r.map is None:
+            warn("No xodr map provided in mcap nor OSI map in GroundTruth!")
         return r
     
     def to_mcap(self, filepath):
@@ -338,10 +234,9 @@ class Recording():
                 w.add(self.map.to_osi(), topic='ground_truth_map', log_time=0)
 
         
-        
-    def to_hdf(self, filename):
+    def to_hdf(self, filename, key='moving_object'):
         #!pip install tables
-        self._df.drop(columns=['polygon','frame']).to_hdf(filename, key='moving_object')
+        self._df.drop(columns=['polygon','frame']).to_hdf(filename, key=key)
         
     @classmethod
     def from_hdf(cls, filename, key='moving_object'):

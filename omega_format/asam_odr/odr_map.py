@@ -19,15 +19,14 @@ class MapOdr():
     _map: Any = None
     
     @classmethod
-    def from_odr(cls, filename):
-        with open(filename, "r") as f:
-            self = cls(odr_xml=f.read(), name=Path(filename).stem)
-        return self
-    
-    @classmethod
-    def from_mcap(cls, filename, topic='ground_truth_map'):
-        map = next(iter(betterosi.read(filename, mcap_topics=[topic], osi_message_type=betterosi.MapAsamOpenDrive)))
-        return cls(odr_xml=map.open_drive_xml_content, name=map.map_reference)
+    def from_file(cls, filename, topic='ground_truth_map', is_odr_xml: bool = False, is_mcap: bool = False):
+        if Path(filename).suffix in ['.xodr', '.odr'] or is_odr_xml:
+            with open(filename, "r") as f:
+                self = cls(odr_xml=f.read(), name=Path(filename).stem)
+            return self
+        elif Path(filename).suffix in ['.mcap'] or is_mcap:
+            map = next(iter(betterosi.read(filename, mcap_topics=[topic], osi_message_type=betterosi.MapAsamOpenDrive)))
+            return cls(odr_xml=map.open_drive_xml_content, name=map.map_reference)
     
     def to_osi(self):
         return betterosi.MapAsamOpenDrive(map_reference=self.name, open_drive_xml_content=self.odr_xml)

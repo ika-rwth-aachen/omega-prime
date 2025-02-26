@@ -10,21 +10,18 @@ You might be looking for the now deprecated [OMEGAFormat legacy]() created in VV
 
 ### Create Omega File from OSI stream and OpenDRIVE
 
+Create Recording form OSI GroundTruth stream and ASAM OpenDrive map and store it to an mcap file.
 ```python
 import omega_format
-from omega_format.asam_odr import MapOdr
-
-m = MapOdr.from_odr('map.xodr')
-r = omega_format.Recording.from_file('ground_truths.osi/mcap')
-r.map = m 
-r.to_mcap('omega_file.mcap')
+r = omega_format.Recording.from_file('ground_truths.osi/mcap', xodr_path='map.xodr')
+r.to_mcap('test.mcap')
 
 ```
 ### Read and Plot Omega File
 
 ```python
 import omega_format
-r = omega_format.Recording.from_mcap('test.mcap')
+r = omega_format.Recording.from_file('test.mcap')
 r.plot()
 
 # or 

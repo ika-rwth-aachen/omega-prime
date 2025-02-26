@@ -12,7 +12,7 @@ class LaneBoundary():
     idx: int
     type: betterosi.LaneBoundaryClassificationType
     polyline: shapely.LineString
-    reference: Any = None
+    #reference: Any = field(init=False, default=None)
     
     def plot(self, ax: plt.Axes):
         ax.plot(*np.array(self.polyline.coords).T, color='gray', alpha=.1)
@@ -55,7 +55,7 @@ class Lane():
     polygon: shapely.Polygon = field(init=False)
     left_boundary: LaneBoundary = field(init=False)
     right_boundary: LaneBoundary = field(init=False)
-    source_reference: Any = None
+    #source_reference: Any = None
     
 
 @dataclass(repr=False)
