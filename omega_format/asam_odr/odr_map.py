@@ -9,8 +9,6 @@ from typing import Any
 import betterosi
 from pathlib import Path
 from matplotlib import pyplot as plt
-import numpy as np
-from matplotlib.patches import Polygon as PltPolygon
 
 @dataclass(repr=False)
 class MapOdr(Map):
@@ -64,9 +62,10 @@ class MapOdr(Map):
         for rid, r in self.roads.items():
             ax.plot(*r.centerline_points[:,1:3].T, c='black')  
             for lid, l in r.lanes.items():
-                c = 'blue' if l.type==betterosi.LaneClassificationType.TYPE_UNKNOWN else 'green'
-                lb = self.roads[l.left_boundary_id[0]].borders[l.left_boundary_id[1]]
-                rb = self.roads[l.right_boundary_id[0]].borders[l.right_boundary_id[1]]
+                pass
+                #c = 'blue' if l.type==betterosi.LaneClassificationType.TYPE_UNKNOWN else 'green'
+                #lb = self.roads[l.left_boundary_id[0]].borders[l.left_boundary_id[1]]
+                #rb = self.roads[l.right_boundary_id[0]].borders[l.right_boundary_id[1]]
                 #ax.add_patch(PltPolygon(np.concatenate([lb.polyline[:,:2], np.flip(rb.polyline[:,:2], axis=0)]), fc=c, alpha=0.5, ec='black'))
 
         ax.autoscale()
