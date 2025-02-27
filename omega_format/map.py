@@ -6,10 +6,11 @@ from matplotlib.patches import Polygon as PltPolygon
 from dataclasses import dataclass, field
 from typing import Any
 
+
 @dataclass(repr=False)
 class LaneBoundary():
     _map: "Map" = field(init=False)
-    idx: int
+    idx: Any
     type: betterosi.LaneBoundaryClassificationType
     polyline: shapely.LineString
     #reference: Any = field(init=False, default=None)
@@ -44,14 +45,14 @@ class LaneBoundaryOsi(LaneBoundary):
 @dataclass(repr=False)
 class Lane():
     _map: "Map" = field(init=False)
-    idx: int
+    idx: Any
     centerline: np.ndarray
     type: betterosi.LaneClassificationType
     subtype: betterosi.LaneClassificationSubtype
-    successor_ids: list[int]
-    predecessor_ids: list[int]
-    right_boundary_id: int
-    left_boundary_id: int
+    successor_ids: list[Any]
+    predecessor_ids: list[Any]
+    right_boundary_id: Any
+    left_boundary_id: Any
     polygon: shapely.Polygon = field(init=False)
     left_boundary: LaneBoundary = field(init=False)
     right_boundary: LaneBoundary = field(init=False)

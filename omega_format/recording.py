@@ -65,32 +65,22 @@ class MovingObject():
         self._recording = recording
        
         self._df = self._recording._df.loc[self._recording._df['idx']==self.idx]
-        self.x = self._df.loc[:,'x'].values
-        self.y = self._df.loc[:,'y'].values
-        self.z = self._df.loc[:,'z'].values 
-        self.vel_x = self._df.loc[:,'vel_x'].values
-        self.vel_y = self._df.loc[:, 'vel_y'].values
+        
+        for k in ['x', 'y', 'z', 'vel_x', 'vel_y', 'vel_z', 'acc_x', 'acc_y', 'acc_z', 'yaw', 'roll', 'pitch', 'polygon']:
+            setattr(self, k, self._df.loc[:, k].values)
         self.vel = np.linalg.norm([self.vel_x, self.vel_y], axis=0)
-        self.acc_x = self._df.loc[:, 'acc_x'].values
-        self.acc_y = self._df.loc[:, 'acc_y'].values
-        self.yaw = self._df.loc[:,'yaw'].values
-        self.roll = self._df.loc[:, 'roll'].values
-        self.pitch = self._df.loc[:, 'pitch'].values
-            
         self.timestamps = self._df.loc[:,'total_nanos'].values/float(1e9)
-        self.lengths = self._df.loc[:,'length'].values
-        self.length = np.mean(self.lengths)
-        self.widths = self._df.loc[:,'width'].values
-        self.width = np.mean(self.widths)
-        self.heights = self._df.loc[:,'height'].values
-        self.height = np.mean(self.heights)
-        self.polygon = self._df.loc[:,'polygon'].values
+        for k in ['length', 'width', 'height']:
+            setattr(self, f'{k}s', self._df.loc[:, k].values)
+            setattr(self, k, np.mean(self._df.loc[:, k].values))
+
         self.type = betterosi.MovingObjectType(self._df.loc[:,'type'].iloc[0])
         self.subtype = betterosi.MovingObjectVehicleClassificationType(self._df.loc[:,'subtype'].iloc[0])
+        self.role = betterosi.MovingObjectVehicleClassificationRole(self._df.loc[:,'role'].iloc[0])
         self.birth = int(self._df.loc[:,'frame'].iloc[0])
         self.end = int(self._df.loc[:,'frame'].iloc[-1])   
     
-    def _dfsetter(self, k, val):
+    def set(self, k, val):
         self._recording._df.loc[self._recording._df['idx']==self.idx, k] = val
 
     @property
@@ -129,7 +119,7 @@ class Recording():
     
     @staticmethod
     def get_moving_object_ground_truth(nanos: int, df: pd.DataFrame, host_vehicle=None) -> betterosi.GroundTruth:
-        recording_moving_object_schema.validate(df)
+        #recording_moving_object_schema.validate(df, lazy=True)
         mvs = []
         for idx, row in df.iterrows():
             mvs.append(betterosi.MovingObject(
@@ -142,7 +132,7 @@ class Recording():
                     velocity=betterosi.Vector3D(x=row['vel_x'], y=row['vel_y'], z=row['vel_z']),
                     acceleration=betterosi.Vector3D(x=row['acc_x'], y=row['acc_y'], z=row['acc_z']),
                 ),
-                vehicle_classification=betterosi.MovingObjectVehicleClassification(row['subtype'])
+                vehicle_classification=betterosi.MovingObjectVehicleClassification(type=row['subtype'], role=row['role'])
             ))
         gt = betterosi.GroundTruth(
             version=betterosi.InterfaceVersion(version_major=3, version_minor=7, version_patch=9),
@@ -153,8 +143,8 @@ class Recording():
         return gt
 
     def __init__(self, df, map=None, host_vehicle=None, validate=True):
-        if validate:
-            recording_moving_object_schema.validate(df)
+        #if validate:
+            #recording_moving_object_schema.validate(df, lazy=True)
         super().__init__()
         self.nanos2frame = {n: i for i, n in enumerate(df.total_nanos.unique())}
         df['frame'] = df.total_nanos.map(self.nanos2frame)

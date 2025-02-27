@@ -6,17 +6,15 @@ import betterosi
 from dataclasses import dataclass
 from typing import Any
 
-@dataclass
-class Lane():
+from .... import map
+
+@dataclass(repr=False)
+class LaneOdr(map.Lane):
     type: Any
     subtype: Any
-    left_border_id: Any
-    right_border_id: Any
-    predecessors: list
-    successors: list
     
-@dataclass
-class LaneBoundary():
+@dataclass(repr=False)
+class LaneBoundaryOdr(map.LaneBoundary):
     polyline: Any
     
 def lane_type_to_boundary_mapping(value: str):
@@ -43,12 +41,15 @@ def check_lane_type(lane_type):
     return new_type, not_a_lane, is_a_boundary   
  
 def insert_centerline_as_border(start_point_index, end_point_index, center_line_points, my_road):
-    my_border = LaneBoundary(polyline=np.stack([
-        center_line_points[start_point_index:end_point_index + 1, 1],
-        center_line_points[start_point_index:end_point_index + 1, 2],
-        center_line_points[start_point_index:end_point_index + 1, 4]
-    ]).T)
-    my_road.borders.update({len(my_road.borders): my_border})
+    new_idx = len(my_road.borders)
+    my_road.borders[new_idx] = LaneBoundaryOdr(
+        polyline=np.stack([
+                center_line_points[start_point_index:end_point_index + 1, 1],
+                center_line_points[start_point_index:end_point_index + 1, 2],
+                center_line_points[start_point_index:end_point_index + 1, 4]]).T,
+        idx = new_idx,
+        type=None
+    )
     return my_road
 
 
@@ -121,8 +122,12 @@ def calculate_borders(lane_section, center_line_points, end_point_index, start_p
                 )
                 subsection_start_index = subsection_end_index + 1
 
-            my_border = LaneBoundary(polyline=pos)
-            my_road.borders.update({len(my_road.borders): my_border})
+            new_id = len(my_road.borders)
+            my_border = LaneBoundaryOdr(
+                idx=new_id, 
+                polyline=pos,
+                type=None)
+            my_road.borders[new_id] = my_border
 
             # set previous for next lane as starting point
             pos_previous = copy.copy(pos)
@@ -259,13 +264,15 @@ def calculate_lanes(lane_section, my_road, opendrive_road_id, opendrive_lanesect
 
 def set_lanes(my_road, direction_correct, left_index, right_index, opendrive_lane_id, opendrive_road_id, opendrive_lanesection_id, lookup_table, vvm_road_id, lane_type, lane_class, lane_subtype):
 
-    my_lane = Lane(
+    my_lane = LaneOdr(
+        idx = None,
+        centerline=None,
         type=lane_type,
         subtype=lane_subtype,
-        left_border_id = (vvm_road_id, left_index),
-        right_border_id = (vvm_road_id, right_index),
-        predecessors=set(),
-        successors=set()
+        left_boundary_id = (vvm_road_id, left_index),
+        right_boundary_id = (vvm_road_id, right_index),
+        predecessor_ids=set(),
+        successor_ids=set()
     )
     # set lane class (none, intersection or roundabout)
     if lane_class["intersection"] or lane_class["roundabout"]:
@@ -275,7 +282,8 @@ def set_lanes(my_road, direction_correct, left_index, right_index, opendrive_lan
     my_road.lanes.update({len(my_road.lanes): my_lane})
 
     # update lookup table
-    lookup_table.append([opendrive_road_id, opendrive_lanesection_id, opendrive_lane_id, vvm_road_id, len(my_road.lanes)-1])
+    new_lane_id = (vvm_road_id, len(my_road.lanes)-1)
+    lookup_table.append([opendrive_road_id, opendrive_lanesection_id, opendrive_lane_id, *new_lane_id])
 
     return my_road, lookup_table
 
@@ -288,7 +296,6 @@ def get_lane_subtype(road):
     :return:
     """
     lane_subtype = None
-
     if road.objects is not None:
 
         if road.objects.bridge is not None:
@@ -300,7 +307,6 @@ def get_lane_subtype(road):
     else:
         # this is the default 0 value for subtype
         lane_subtype = betterosi.LaneClassificationSubtype.SUBTYPE_UNKNOWN
-
     return lane_subtype
 
 

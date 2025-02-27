@@ -34,7 +34,7 @@ def setup_connections(my_roads, lookup_table, my_opendrive):
         4c.2 insert VVM ids to VVM current lane as successor or predecessor
 
     # get other information per road (use lookup table) once roads and lanes have been inserted in VVM format
-    # (e.g. predecessors/successors etc.)
+    # (e.g. predecessor_ids/successor_ids etc.)
     # get each road
     :param my_roads:
     :param lookup_table:
@@ -172,7 +172,7 @@ def setup_connections(my_roads, lookup_table, my_opendrive):
 
                                     my_roads = set_xccessor(row_number_predecessor, my_roads, vvm_road_id, vvm_lane_id, side_flag, lookup_table, False)
 
-                        # successors
+                        # successor_ids
                         if lanes_of_side[i].link.successor:
                             for successor in lanes_of_side[i].link.successor:
                                 # find this combination in lookup table
@@ -210,13 +210,13 @@ def set_xccessor(row_number, my_roads, vvm_road_id, vvm_lane_id, side_flag, look
     if row_number is not None:
         successor_road_id = lookup_table[row_number][3]
         successor_lane_id = lookup_table[row_number][4]
-        vvm_lane = my_roads.roads.get(vvm_road_id).lanes.get(vvm_lane_id)
+        vvm_lane = my_roads.get(vvm_road_id).lanes.get(vvm_lane_id)
         # insert reference element
-        # if right lanes successors should really be successors, for left lanes successors are actually predecessors
+        # if right lanes successor_ids should really be successor_ids, for left lanes successor_ids are actually predecessor_ids
         if (set_successor and side_flag == 'right') or (not set_successor and side_flag != 'right'):
-            vvm_lane.successors.add((successor_road_id, successor_lane_id))
+            vvm_lane.successor_ids.add((successor_road_id, successor_lane_id))
         else:
-            vvm_lane.predecessors.add((successor_road_id, successor_lane_id))
+            vvm_lane.predecessor_ids.add((successor_road_id, successor_lane_id))
     else:
         raise RuntimeError('For some reason the correct road_id, section_id and lane_id set for the successor/predecessor lane could not be identified in the lookup_table')
     return my_roads
@@ -274,7 +274,7 @@ def lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_ori
     look for VVM road id and VVM lane id that corresponds with the given opendrive road id, lane section id_search and
     lane id.
     section search is needed if searching for the lane within the road (in different lane section)
-    search should not output the original lane we are looking for predecessors/successors for in the first place
+    search should not output the original lane we are looking for predecessor_ids/successor_ids for in the first place
     :param opendrive_road_id:
     :param opendrive_lane_section_id_original:
     :param opendrive_lane_section_id_search:

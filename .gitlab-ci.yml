@@ -35,6 +35,12 @@ test:
   script:
     - pytest
   allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - "*.mcap"
+    expire_in: 2 week
+
 
 
 create_doc:

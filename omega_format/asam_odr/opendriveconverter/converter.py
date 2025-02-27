@@ -12,7 +12,7 @@ class Map():
     georeference: Any = None
 
 
-def convert_opendrive(my_opendrive, step_size=0.1):
+def convert_opendrive(my_opendrive, step_size=0.1) -> tuple[dict, tuple[float,float,str]]:
     """
     Converts the opendrive XML input into a OMEGAFormat road network
     :param my_opendrive: opendrive XML
@@ -21,8 +21,8 @@ def convert_opendrive(my_opendrive, step_size=0.1):
     """
 
     # create roads object and set geo reference
-    my_roads = Map({})
-    my_roads.georeference = get_georeference(my_opendrive.header)
+    my_roads = {}
+    georeference = get_georeference(my_opendrive.header)
 
     # tables needed for matching their ids in open drive to VVM format since many connections can only be set later
     lookup_table = []   # [road id | lane_section | laneID | road id VVM | lane id VVM]
@@ -36,13 +36,13 @@ def convert_opendrive(my_opendrive, step_size=0.1):
             my_roads, lookup_table, reference_table = process_road(my_roads, road, my_opendrive, step_size, lookup_table, reference_table)
             progress.update(1)
 
-    detected_roads = list(my_roads.roads.keys())
-    my_roads.roads = {rid: r for rid, r in my_roads.roads.items() if len(r.lanes)>0}
-    no_lane_roads = [rid for rid in detected_roads if rid not in my_roads.roads.keys()]
+    detected_roads = list(my_roads.keys())
+    my_roads = {rid: r for rid, r in my_roads.items() if len(r.lanes)>0}
+    no_lane_roads = [rid for rid in detected_roads if rid not in my_roads.keys()]
     if len(no_lane_roads)>0:
         print(f"There are roads with no lanes {no_lane_roads}")
     # setting up road network information via connections and references
     logger.info('Setting up roads connections.')
     my_roads = setup_connections(my_roads, lookup_table, my_opendrive)
 
-    return my_roads
+    return my_roads, georeference

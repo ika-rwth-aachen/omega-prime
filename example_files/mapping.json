@@ -1,0 +1,7 @@
+[
+    ["acc-test.osi", "straight_500m.xodr"],
+    ["alks_cut-in.osi", "straight_500m.xodr"],
+    ["swarm.osi", "e6mini.xodr"],
+    ["highway_merge.osi", "soderleden.xodr"],
+    ["pedestrian.osi", "fabriksgatan.xodr"]
+]

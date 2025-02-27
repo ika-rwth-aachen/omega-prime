@@ -15,7 +15,7 @@ class Road():
     centerline_points: Any = None
 
 
-def process_road(mapodr, road, my_opendrive, step_size, lookup_table, reference_table):
+def process_road(roads, road, my_opendrive, step_size, lookup_table, reference_table):
     # get centerline points, needs to be truncated later in case of multiple lane sections
     center_line_points, clp_no_offset, n_coordinates_per_segment = get_center_line_points(road, step_size)
 
@@ -37,16 +37,16 @@ def process_road(mapodr, road, my_opendrive, step_size, lookup_table, reference_
             my_road, 
             road, 
             lookup_table, 
-            len(mapodr.roads), 
+            len(roads), 
             my_opendrive.junction_group, 
             reference_table, 
             clp_no_offset, 
             step_size)
         # insert into my_roads structure
         my_road.centerline_points = center_line_points
-        mapodr.roads.update({len(mapodr.roads): my_road})
+        roads.update({len(roads): my_road})
 
-    return mapodr, lookup_table, reference_table
+    return roads, lookup_table, reference_table
 
 
 
@@ -85,7 +85,7 @@ def extract_road_data(index, center_line_points, end_point_index, start_point_in
 
 
 
-def get_georeference(header, latitude='50.8', longitude='6.1'):
+def get_georeference(header, latitude='50.8', longitude='6.1') -> tuple[float,float,str]:
     """
     parse opendrive header for lat/long values (converter always assumes that lat/long values are present in header)
     :param my_roads:
