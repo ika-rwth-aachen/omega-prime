@@ -267,8 +267,8 @@ class Recording():
             self.map.plot(ax)
         for ru in self.moving_objects.values():
             ru.plot(ax)
-        ax.legend()
-        return ax
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        return ax   
     
     def plot_frame(self, frame: int, ax = None):
         ax = self.plot(ax=ax)

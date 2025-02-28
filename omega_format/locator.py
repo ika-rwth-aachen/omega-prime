@@ -5,7 +5,6 @@ from typing import Any
 
 import networkx as nx
 import numpy as np
-import omega_format
 import shapely
 import xarray as xr
 from matplotlib.patches import Polygon as PltPolygon
@@ -211,42 +210,6 @@ class Locator():
                     external2internal_laneid[l.full_idx],
                     external2internal_laneid[(l.full_idx[0], l.full_idx[1]-1)],
                     label=LaneRelation.neighbour_left)
-        return g
-    
-    @classmethod
-    def from_reference_recording(cls, rr: omega_format.ReferenceRecording):
-        external_ids, all_lanes = list(zip(*[((rid, lid), WrappedLane.from_omega(l, (rid, lid))) for rid, r in rr.roads.items() for lid, l in r.lanes.items()]))
-        external2internal_laneid = {eid: i for i, eid in enumerate(external_ids)}
-        polygons = [l.polygon for l in all_lanes]
-        lbs, rbs = list(zip(*[(l.border_left, l.border_right) for l in all_lanes]))
-        str_tree = shapely.STRtree(polygons)
-        centerlines = [l.centerline for l in all_lanes] 
-        extended_centerlines = [ShapelyTrajectoryTools.extend_linestring(c) for c in centerlines]
-        
-        return cls(
-            all_lanes=all_lanes,
-            external2internal_laneid=external2internal_laneid,
-            internal2external_laneid = external_ids,
-            str_tree=str_tree,
-            extended_centerlines=extended_centerlines,
-            lane_point_distances=[np.unique(shapely.line_locate_point(cl, shapely.points(cl.coords))) for cl in extended_centerlines],
-            g=cls._get_graph_form_omega_lanes(all_lanes, lbs, rbs, str_tree, external2internal_laneid)
-        )
-        
-    @classmethod
-    def _get_graph_form_omega_lanes(cls, all_lanes, lbs, rbs, str_tree, external2internal_laneid):
-        g = nx.DiGraph()
-        for lid, lane in enumerate(all_lanes):
-            for external_pid in lane.predecessor_idxs:
-                g.add_edge(lid, external2internal_laneid[external_pid], label=LaneRelation.predecessor)
-            for external_sid in lane.successor_idxs:
-                g.add_edge(lid, external2internal_laneid[external_sid], label=LaneRelation.successor)
-            right_neigbours = [i for i in str_tree.query(rbs[lid], predicate='covered_by') if i!=lid]
-            left_neigbours = [i for i in str_tree.query(lbs[lid], predicate='covered_by') if i!=lid]
-            for rn in right_neigbours:
-                g.add_edge(lid, rn)
-            for ln in left_neigbours:
-                g.add_edge(lid, ln)
         return g
         
         

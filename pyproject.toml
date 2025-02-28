@@ -13,9 +13,11 @@ authors = [
 ]
 description = "omega_format"
 readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.9"
 keywords = ["one", "two"]
 classifiers = [
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
@@ -49,6 +51,6 @@ lint.ignore = ["E741", "E701"]
 using = "PEP631"
 ignore_licenses = ["mpl"]
 ignore_packages = [
-    "tzdata"
+    "tzdata", "xarray" # APACHE SOFTWARE LICENSE
 ]   
 zero = true

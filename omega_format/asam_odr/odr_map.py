@@ -9,6 +9,8 @@ from typing import Any
 import betterosi
 from pathlib import Path
 from matplotlib import pyplot as plt
+from matplotlib.patches import Polygon as PltPolygon
+import numpy as np
 
 @dataclass(repr=False)
 class MapOdr(Map):
@@ -16,10 +18,9 @@ class MapOdr(Map):
     name: str
     roads: dict[Any,Any]
     _odr_objects: OpenDrive
-    step_size: float = .01
     
     @classmethod
-    def from_file(cls, filename, topic='ground_truth_map', is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.001):
+    def from_file(cls, filename, topic='ground_truth_map', is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.1):
         if Path(filename).suffix in ['.xodr', '.odr'] or is_odr_xml:
             with open(filename, "r") as f:
                 self = cls.create(odr_xml=f.read(), name=Path(filename).stem, step_size=step_size)
@@ -29,7 +30,7 @@ class MapOdr(Map):
             return cls.create(odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size)
     
     @classmethod
-    def create(cls, odr_xml, name, step_size=.01):
+    def create(cls, odr_xml, name, step_size=.1):
         xml = etree.fromstring(odr_xml)
         odr_objects = parse_opendrive(xml)
         
@@ -62,11 +63,10 @@ class MapOdr(Map):
         for rid, r in self.roads.items():
             ax.plot(*r.centerline_points[:,1:3].T, c='black')  
             for lid, l in r.lanes.items():
-                pass
-                #c = 'blue' if l.type==betterosi.LaneClassificationType.TYPE_UNKNOWN else 'green'
-                #lb = self.roads[l.left_boundary_id[0]].borders[l.left_boundary_id[1]]
-                #rb = self.roads[l.right_boundary_id[0]].borders[l.right_boundary_id[1]]
-                #ax.add_patch(PltPolygon(np.concatenate([lb.polyline[:,:2], np.flip(rb.polyline[:,:2], axis=0)]), fc=c, alpha=0.5, ec='black'))
+                c = 'blue' if l.type==betterosi.LaneClassificationType.TYPE_UNKNOWN else 'green'
+                lb = self.roads[l.left_boundary_id[0]].borders[l.left_boundary_id[1]]
+                rb = self.roads[l.right_boundary_id[0]].borders[l.right_boundary_id[1]]
+                ax.add_patch(PltPolygon(np.concatenate([lb.polyline[:,:2], np.flip(rb.polyline[:,:2], axis=0)]), fc=c, alpha=0.5, ec='black'))
 
         ax.autoscale()
         ax.set_aspect(1)
