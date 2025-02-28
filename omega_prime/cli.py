@@ -4,7 +4,7 @@ from typing import Annotated
 import pandas as pd
 import typer
 
-import omega_format
+import omega_prime
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -15,7 +15,7 @@ def from_osi(
     odr: Annotated[Path|None, typer.Option(exists=True, dir_okay=False, help="Path to ASAM OpenDRIVE xml to use as map")] = None,
     validate: bool = True, 
     skip_odr_parse: bool = False):
-    r = omega_format.Recording.from_file(input, xodr_path=odr, validate=validate, skip_odr_parse=skip_odr_parse)
+    r = omega_prime.Recording.from_file(input, xodr_path=odr, validate=validate, skip_odr_parse=skip_odr_parse)
     r.to_mcap(output)
     
 @app.command()
@@ -26,9 +26,9 @@ def from_csv(
     validate: bool = True, 
     skip_odr_parse: bool = False):
     df = pd.read_csv(input)
-    r = omega_format.Recording(df, validate=validate)
+    r = omega_prime.Recording(df, validate=validate)
     if odr is not None:
-        r.map=omega_format.asam_odr.MapOdr.from_file(odr, skip_parse=skip_odr_parse)
+        r.map=omega_prime.asam_odr.MapOdr.from_file(odr, skip_parse=skip_odr_parse)
     r.to_mcap(output)
 
 
@@ -36,7 +36,7 @@ def from_csv(
 def validate(
     input: Annotated[Path, typer.Argument(help="Path to omega file to validate", exists=True, dir_okay=False)]
 ):
-    omega_format.Recording.from_file(input)
+    omega_prime.Recording.from_file(input)
     print(f"File {input} is valid.")
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ lint:
 licensecheck:
   stage: test
   before_script:
-    - uv pip install --system -r requirements.txt licensecheck
+    - uv pip install --system -e .[test]
   script:
       - licensecheck
   allow_failure: true
@@ -31,7 +31,7 @@ licensecheck:
 test:
   stage: test
   before_script: 
-    - uv pip install --system -r requirements.txt
+    - uv pip install --system -e .[test]
   script:
     - pytest
   allow_failure: true
@@ -48,9 +48,9 @@ create_doc:
   stage: test
   before_script:
     - apt-get update -q -y && apt-get install -y libgl1-mesa-dev
-    - uv pip install --system -r requirements.txt
+    - uv pip install --system -e .[test]
   script:
-    - pdoc ./omega_format --html -o docs --force
+    - pdoc ./omega_prime --html -o docs --force
   artifacts:
     when: always
     paths:

@@ -116,7 +116,7 @@ class LaneOsi(Lane):
         ax.plot(*np.array(self.centerline).T, color=c, alpha=0.5)
         ax.add_patch(PltPolygon(self.polygon.exterior.coords, fc='blue', alpha=.2, ec='black'))
         
-    # for ase_engine/omega_format
+    # for ase_engine/omega_prime
 
     
     def _get_oriented_borders(self):

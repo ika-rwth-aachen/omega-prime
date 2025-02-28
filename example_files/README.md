@@ -8,7 +8,7 @@ The ASAM OpenDRIVE files are directly taken from the example files of esmini (ht
 
 `example.csv` shows the moving object information in a csv format. It was created by the following script:
 ```python
-import omega_format
+import omega_prime
 r = omega_format.Recording.from_file('example_files/pedestrian.osi', xodr_path='example_files/fabriksgatan.xodr')
 r._df.drop(columns=['frame','polygon']).to_csv('example_files/example.csv', index=False)
 ```

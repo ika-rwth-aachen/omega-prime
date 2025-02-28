@@ -1,21 +1,21 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm", "ruff"]
+requires = ["setuptools", "ruff"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["omega_format"]
+packages = ["omega_prime", "omega_prime.asam_odr", "omega_prime.asam_odr.opendriveconverter", "omega_prime.asam_odr.opendriveconverter.elements", "omega_prime.asam_odr.opendriveparser", "omega_prime.asam_odr.opendriveparser.elements"]
 
 
 [project]
-name = "omega_format"
+name = "omega-prime"
 authors = [
     {name = "ika - RWTH Aachen", email = "michael.schuldes@ika.rwth-aachen.de"},
 ]
-description = "omega_format"
+description = ""
 readme = "README.md"
-license = {file = "LICENSE"}
-requires-python = ">=3.9"
-keywords = ["one", "two"]
+license = {text = "MPL-2.0"}
+requires-python = ">=3.10"
+keywords = ["omega-format", "osi", "open-simulation-interface", "simulation", "automated-driving", "traffic"]
 classifiers = [
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Programming Language :: Python :: 3",
@@ -34,16 +34,17 @@ dependencies = [
     'matplotlib',
     'StrEnum',
     'networkx',
-    'betterosi'
+    'proj',
+    'betterosi>=0.3.1'
     
 ]
-version = "0.1"
+version = "0.1.0"
 
 [project.optional-dependencies]
 test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress', 'nbval','ipywidgets']
 
 [project.scripts]
-omega_format = "omega_format.cli:app"
+omega-prime = "omega_prime.cli:app"
 
 [tool.ruff]
 lint.ignore = ["E741", "E701", "E501"]
