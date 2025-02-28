@@ -18,6 +18,7 @@ class JunctionConnection:
         self.id = None
         self.incoming_road = None
         self.connecting_road = None
+        self.linked_road = None
         self.contact_point = None
         self.type = None
         self.lane_link = []

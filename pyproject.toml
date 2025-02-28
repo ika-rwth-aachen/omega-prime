@@ -54,3 +54,11 @@ ignore_packages = [
     "tzdata", "xarray" # APACHE SOFTWARE LICENSE
 ]   
 zero = true
+
+[tool.pytest.ini_options]
+addopts = "-ra --junitxml=report.xml --nbval"
+testpaths = [
+    "tests",
+    "tutorial.ipynb",
+]
+log_cli = true

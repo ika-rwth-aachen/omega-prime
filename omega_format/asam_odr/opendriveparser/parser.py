@@ -842,7 +842,12 @@ def parse_opendrive_junction(opendrive, junction):
         new_connection.id = int(connection.get("id"))
         new_connection.type = connection.get("type")
         new_connection.incoming_road = int(connection.get("incomingRoad"))
-        new_connection.connecting_road = int(connection.get("connectingRoad"))
+        connecting_road = connection.get("connectingRoad")
+        if connecting_road:
+            new_connection.connecting_road = int(connecting_road)
+        linked_road = connection.get('linkedRoad')
+        if linked_road:
+            new_connection.linked_road = int(linked_road)
         new_connection.contact_point = connection.get("contactPoint")
         # predecessor allowed to be zero
         if connection.find("predecessor") is not None:

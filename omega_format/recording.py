@@ -30,7 +30,7 @@ recording_moving_object_schema = pa.DataFrameSchema(
         'height': pa.Column(float),
         'type': pa.Column(int, pa.Check.between(0,4, error=f"Type must be one of {({o.name: o.value for o in betterosi.MovingObjectType})}")),
         'role': pa.Column(int, pa.Check.between(-1,10, error=f"Type must be one of {({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationRole})}")),
-        'subtype': pa.Column(int,  pa.Check.between(0, 17, error=f"Subtype must be one of {({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationType})}")),
+        'subtype': pa.Column(int,  pa.Check.between(-1, 17, error=f"Subtype must be one of {({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationType})}")),
         'roll': pa.Column(float, pi_valued),
         'pitch': pa.Column(float, pi_valued),
         'yaw': pa.Column(float, pi_valued),
@@ -38,8 +38,10 @@ recording_moving_object_schema = pa.DataFrameSchema(
         'total_nanos': pa.Column(int, pa.Check.ge(0))},
     unique=['idx','total_nanos'],
     checks=[
-        pa.Check(lambda df: ~np.logical_and(df['type']==betterosi.MovingObjectType.TYPE_VEHICLE, df['role']==-1), error="role is `-1` despite type beeing `TYPE_VEHICLE`"),
-        pa.Check(lambda df: ~np.logical_and(df['type']!=betterosi.MovingObjectType.TYPE_VEHICLE, df['role']!=-1), error="role is set despite type not beeing `TYPE_VEHICLE`"),
+        pa.Check(lambda df: ~np.logical_and(df['type']==betterosi.MovingObjectType.TYPE_VEHICLE, df['role']==-1), error="`role` is `-1` despite type beeing `TYPE_VEHICLE`"),
+        pa.Check(lambda df: ~np.logical_and(df['type']!=betterosi.MovingObjectType.TYPE_VEHICLE, df['role']!=-1), error="`role` is set despite type not beeing `TYPE_VEHICLE`"),
+        pa.Check(lambda df: ~np.logical_and(df['type']==betterosi.MovingObjectType.TYPE_VEHICLE, df['subtype']==-1), error="`subtype` is `-1` despite type beeing `TYPE_VEHICLE`"),
+        pa.Check(lambda df: ~np.logical_and(df['type']!=betterosi.MovingObjectType.TYPE_VEHICLE, df['subtype']!=-1), error="`subtype` is set despite type not beeing `TYPE_VEHICLE`"),
     ])
 
 
@@ -75,8 +77,10 @@ class MovingObject():
             setattr(self, k, np.mean(self._df.loc[:, k].values))
 
         self.type = betterosi.MovingObjectType(self._df.loc[:,'type'].iloc[0])
-        self.subtype = betterosi.MovingObjectVehicleClassificationType(self._df.loc[:,'subtype'].iloc[0])
-        self.role = betterosi.MovingObjectVehicleClassificationRole(self._df.loc[:,'role'].iloc[0])
+        subtype_int = self._df.loc[:,'subtype'].iloc[0]
+        self.subtype = betterosi.MovingObjectVehicleClassificationType(subtype_int) if subtype_int != -1 else None
+        role_int = self._df.loc[:,'role'].iloc[0]
+        self.role = betterosi.MovingObjectVehicleClassificationRole(role_int) if role_int != -1 else None
         self.birth = int(self._df.loc[:,'frame'].iloc[0])
         self.end = int(self._df.loc[:,'frame'].iloc[-1])   
     
@@ -119,7 +123,7 @@ class Recording():
     
     @staticmethod
     def get_moving_object_ground_truth(nanos: int, df: pd.DataFrame, host_vehicle=None) -> betterosi.GroundTruth:
-        #recording_moving_object_schema.validate(df, lazy=True)
+        recording_moving_object_schema.validate(df, lazy=True)
         mvs = []
         for idx, row in df.iterrows():
             mvs.append(betterosi.MovingObject(
@@ -143,8 +147,8 @@ class Recording():
         return gt
 
     def __init__(self, df, map=None, host_vehicle=None, validate=True):
-        #if validate:
-            #recording_moving_object_schema.validate(df, lazy=True)
+        if validate:
+            recording_moving_object_schema.validate(df, lazy=True)
         super().__init__()
         self.nanos2frame = {n: i for i, n in enumerate(df.total_nanos.unique())}
         df['frame'] = df.total_nanos.map(self.nanos2frame)
@@ -189,7 +193,7 @@ class Recording():
                 yaw = mv.base.orientation.yaw,
                 type = mv.type,
                 role = mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1,
-                subtype = mv.vehicle_classification.type
+                subtype = mv.vehicle_classification.type if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1
             ) for mv in gt.moving_object]
             
             if map is None:
@@ -260,14 +264,15 @@ class Recording():
         new_df = pd.concat(new_dfs)
         return self.__init__(new_df, self.map, self.host_vehicle)
 
-    def plot(self, ax = None) -> plt.Axes:
+    def plot(self, ax = None, legend=False) -> plt.Axes:
         if ax is None:
             fig, ax = plt.subplots(1,1)
         if self.map:
             self.map.plot(ax)
         for ru in self.moving_objects.values():
             ru.plot(ax)
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        if legend:
+            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         return ax   
     
     def plot_frame(self, frame: int, ax = None):

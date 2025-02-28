@@ -72,8 +72,7 @@ def setup_connections(my_roads, lookup_table, my_opendrive):
                 road_successor = road.link.successor.element_id
             elif road.link.successor.element_type == 'junction':
                 # need to find current opendrive_road_id in connections and find connecting road
-                connection_road_lane_list_successor = find_junction(opendrive_road_id, road.link.successor.element_id,
-                                                                    my_opendrive)
+                connection_road_lane_list_successor = find_junction(opendrive_road_id, road.link.successor.element_id, my_opendrive)
                 successor_junction_global = True
                 if not connection_road_lane_list_successor:
                     # oneway streets going out of a junction are not defined, so it is not necessarily bad
@@ -196,9 +195,12 @@ def setup_connections(my_roads, lookup_table, my_opendrive):
                             # search in connection_road_lane_list_predecessor list
                             for row_junction_lookup in connection_road_lane_list_successor:
                                 if row_junction_lookup[1] == lanes_of_side[i].id:
-                                    row_number_successor = lookup_table_search(row_junction_lookup[0], 0,
-                                                                               row_junction_lookup[2], lookup_table,
-                                                                               True)
+                                    row_number_successor = lookup_table_search(
+                                        row_junction_lookup[0], 
+                                        0,
+                                        row_junction_lookup[2], 
+                                        lookup_table,
+                                        True)
 
                                     my_roads = set_xccessor(row_number_successor, my_roads, vvm_road_id, vvm_lane_id, side_flag, lookup_table, True)
 
@@ -241,9 +243,10 @@ def find_junction(opendrive_road_id, opendrive_junction_id, my_opendrive):
             for connection in junction.connection:
                 if connection.incoming_road == opendrive_road_id:
                     for lane_link in connection.lane_link:
+                        connecting_road = connection.connecting_road if connection.connecting_road is not None else connection.linked_road
                         connection_road_lane_list.append(
-                            (connection.connecting_road, lane_link.from_value, lane_link.to))
-
+                            (connecting_road, lane_link.from_value, lane_link.to))
+    assert not any(o[0] is None for o in connection_road_lane_list)
     return connection_road_lane_list
 
 

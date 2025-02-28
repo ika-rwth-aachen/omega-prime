@@ -39,6 +39,7 @@ test:
     when: always
     paths:
       - "*.mcap"
+      - "*.prof"
     expire_in: 2 week
 
 

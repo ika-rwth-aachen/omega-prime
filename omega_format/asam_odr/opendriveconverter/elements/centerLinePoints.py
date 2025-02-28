@@ -138,9 +138,7 @@ def sample_points(geometry_entry, step_size):
 
     elif geometry_entry.param_poly3.a_u is not None:
         if geometry_entry.param_poly3.p_range == "arcLength":
-            p = delta_s
-            if p > geometry_entry.length:
-                p = geometry_entry.length
+            p = delta_s[delta_s<=geometry_entry.length]
         else:  # Normalized to geometry_entry.length is the usual case
             p = delta_s / geometry_entry.length
             p = np.clip(p, 0, 1)
