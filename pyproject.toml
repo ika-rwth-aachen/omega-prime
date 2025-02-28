@@ -54,13 +54,10 @@ lint.select = [
     "F841",  # Unused local variables
     "F821",  # Undefined names
     "E501",  # Line length violations
-
     "SIM101", # Simplify unnecessary if-else blocks
     "SIM102", # Simplify return or yield statements
     "SIM103", # Simplify list/set/dict comprehensions
-
     "UP",
-
     "I",
 ]
 lint.isort.combine-as-imports = true
