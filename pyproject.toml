@@ -38,7 +38,7 @@ dependencies = [
     'betterosi>=0.3.1'
     
 ]
-version = "0.1.0"
+version = "0.1.1"
 
 [project.optional-dependencies]
 test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress', 'nbval','ipywidgets']
@@ -68,7 +68,7 @@ lint.isort.combine-as-imports = true
 using = "PEP631"
 ignore_licenses = ["mpl"]
 ignore_packages = [
-    "tzdata", "xarray" # APACHE SOFTWARE LICENSE
+    "tzdata", "xarray", "types-python-dateutil" # APACHE SOFTWARE LICENSE
 ]   
 zero = true
 
