@@ -23,7 +23,7 @@ lint:
 licensecheck:
   stage: test
   before_script:
-    - uv pip install --system -e .[test]
+    - uv pip install --system -e .[test] licensecheck
   script:
       - licensecheck
   allow_failure: true

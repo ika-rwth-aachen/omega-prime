@@ -11,7 +11,7 @@ name = "omega-prime"
 authors = [
     {name = "ika - RWTH Aachen", email = "michael.schuldes@ika.rwth-aachen.de"},
 ]
-description = ""
+description = "Omega-Prime: Data Model, Data Format and Python Library for Handling Traffic Data"
 readme = "README.md"
 license = {text = "MPL-2.0"}
 requires-python = ">=3.10"

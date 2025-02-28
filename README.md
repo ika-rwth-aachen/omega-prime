@@ -1,4 +1,4 @@
-# Omega-Prime: Data Model, Data Format and Python Library
+# Omega-Prime: Data Model, Data Format and Python Library for Handling Traffic Data
 Data Model, Format and Python Library for ground truth data of dyanmic objects and maps optimized for representing urban traffic. The data model and format heavily utilizes [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) and [ASAM Open-Simulation-Interface GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html).
 
 To learn more about the example data read [example_files/README.md](example_files/README.md). Example data was taken and created from [esmini](https://github.com/esmini/esmini)
