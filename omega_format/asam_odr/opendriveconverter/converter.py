@@ -1,6 +1,5 @@
 from .elements.road import process_road, get_georeference
 from .elements.junction import setup_connections
-from tqdm.auto import tqdm
 from ..logger import logger
 
 from dataclasses import dataclass
@@ -29,12 +28,10 @@ def convert_opendrive(my_opendrive, step_size=0.1) -> tuple[dict, tuple[float,fl
     reference_table = []    # [omega signal id | omega road id | odr signal id | odr reference id | odr connected_to id]
 
     logger.info(f'Starting conversion of {len(my_opendrive.roads)} opendrive roads into OMEGAFormat.')
-    with tqdm(total=len(my_opendrive.roads), desc='roads', leave=False) as progress:
 
-        # loop over individual opendrive roads and add them to omega roads dictionary in my_roads
-        for road in my_opendrive.roads:
-            my_roads, lookup_table, reference_table = process_road(my_roads, road, my_opendrive, step_size, lookup_table, reference_table)
-            progress.update(1)
+    # loop over individual opendrive roads and add them to omega roads dictionary in my_roads
+    for road in my_opendrive.roads:
+        my_roads, lookup_table, reference_table = process_road(my_roads, road, my_opendrive, step_size, lookup_table, reference_table)
 
     detected_roads = list(my_roads.keys())
     my_roads = {rid: r for rid, r in my_roads.items() if len(r.lanes)>0}

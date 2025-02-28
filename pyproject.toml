@@ -42,6 +42,8 @@ version = "0.1"
 [project.optional-dependencies]
 test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress', 'nbval','ipywidgets']
 
+[project.scripts]
+omega_format = "omega_format.cli:app"
 
 [tool.ruff]
 lint.ignore = ["E741", "E701"]

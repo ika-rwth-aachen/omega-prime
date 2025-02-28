@@ -11,46 +11,52 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
 import numpy as np
+from typing import Optional
+
 
 @dataclass(repr=False)
 class MapOdr(Map):
     odr_xml: str
     name: str
-    roads: dict[Any,Any]
-    _odr_objects: OpenDrive
+    roads: Optional[dict[Any,Any]] = None
+    _odr_object: Optional[OpenDrive] = None
+    step_size: float = 0.1
     
     @classmethod
-    def from_file(cls, filename, topic='ground_truth_map', is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.1):
+    def from_file(cls, filename, topic='ground_truth_map', is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.1, skip_parse: bool = False):
         if Path(filename).suffix in ['.xodr', '.odr'] or is_odr_xml:
             with open(filename, "r") as f:
-                self = cls.create(odr_xml=f.read(), name=Path(filename).stem, step_size=step_size)
+                self = cls.create(odr_xml=f.read(), name=Path(filename).stem, step_size=step_size, skip_parse=skip_parse)
             return self
         elif Path(filename).suffix in ['.mcap'] or is_mcap:
             map = next(iter(betterosi.read(filename, mcap_topics=[topic], osi_message_type=betterosi.MapAsamOpenDrive)))
-            return cls.create(odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size)
+            return cls.create(odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, skip_parse=skip_parse)
     
     @classmethod
-    def create(cls, odr_xml, name, step_size=.1):
-        xml = etree.fromstring(odr_xml)
-        odr_objects = parse_opendrive(xml)
-        
-        roads, goerefrence = convert_opendrive(odr_objects, step_size=step_size)
-        
-        lane_boundaries = {}
-        lanes = {}
-        for rid, r in roads.items():
-            for bid, b in r.borders.items():
-                lane_boundaries[(rid, bid)] = b
-            for lid, l in r.lanes.items():
-                lanes[(rid, lid)] = l
-        return cls(
-            roads = roads,
+    def create(cls, odr_xml, name, step_size=.1, skip_parse: bool = False):
+        self = cls(
             odr_xml = odr_xml,
             name = name,
-            lane_boundaries = lane_boundaries,
-            lanes = lanes,
-            _odr_objects = odr_objects
+            lane_boundaries = {},
+            lanes = {},
+            step_size=step_size,
+            _odr_object = None
         )
+        if not skip_parse:
+            self.parse()
+            return self
+        
+    def parse(self):
+        xml = etree.fromstring(self.odr_xml)
+        odr_object = parse_opendrive(xml)
+        self.roads, goerefrence = convert_opendrive(odr_object, step_size=self.step_size)
+        self.lane_boundaries = {}
+        self.lanes = {}
+        for rid, r in self.roads.items():
+            for bid, b in r.borders.items():
+                self.lane_boundaries[(rid, bid)] = b
+            for lid, l in r.lanes.items():
+                self.lanes[(rid, lid)] = l
  
     def to_osi(self):
         return betterosi.MapAsamOpenDrive(map_reference=self.name, open_drive_xml_content=self.odr_xml)
@@ -73,4 +79,4 @@ class MapOdr(Map):
         
 
     def setup_lanes_and_boundaries(self):
-        pass
+        self.parse()

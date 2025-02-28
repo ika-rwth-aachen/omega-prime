@@ -1,6 +1,10 @@
 # Omega Specification
 Data Model, Format and Python Library for ground truth data of dyanmic objects and maps optimized for representing urban traffic.
 
+You might be looking for the now deprecated [OMEGAFormat legacy]() created in VVMethods project.
+
+To learn more about the example data read [example_files/README.md](example_files/README.md)
+
 ## Features
 - Creation
     - ASAM OSI GroundTruth trace (e.g., output of esmini)
@@ -9,12 +13,9 @@ Data Model, Format and Python Library for ground truth data of dyanmic objects a
 - Plotting
 - Validation
 - Interpolatiion
+- CLI and Python functions to access features
 
-You might be looking for the now deprecated [OMEGAFormat legacy]() created in VVMethods project.
-
-Details of how to use the library can be found in [tutorial.ipynb](tutorial.ipynb)
-
-To learn more about the example data read [example_files/README.md](example_files/README.md)
+For a detailed introduction look at [tutorial.ipynb](tutorial.ipynb).
 
 ## Installation
 `pip install -r requirements.txt`

@@ -203,14 +203,14 @@ class Recording():
         return cls(df_mv, map, validate=validate)
     
     @classmethod
-    def from_file(cls, filepath, xodr_path: str|None = None, validate:bool = True):
-        gts = betterosi.read(filepath, return_ground_truth=True)
+    def from_file(cls, filepath, xodr_path: str|None = None, validate:bool = True, skip_odr_parse: bool = False):
+        gts = betterosi.read(filepath, return_ground_truth=True,)
         r = cls.from_osi_gts(gts, validate=validate)
         if xodr_path is not None:
-            r.map = MapOdr.from_file(xodr_path)
+            r.map = MapOdr.from_file(xodr_path, skip_parse=skip_odr_parse)
         elif Path(filepath).suffix==".mcap":
             try:
-                r.map = MapOdr.from_file(filepath)
+                r.map = MapOdr.from_file(filepath, skip_parse=skip_odr_parse)
             except StopIteration:
                 if r.map is not None:
                     warn("No map provided in mcap. OSI GroundTruth map is used!")
