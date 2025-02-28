@@ -40,7 +40,7 @@ dependencies = [
 version = "0.1"
 
 [project.optional-dependencies]
-test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress', 'nbval']
+test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress', 'nbval','ipywidgets']
 
 
 [tool.ruff]

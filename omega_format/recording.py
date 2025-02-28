@@ -168,7 +168,7 @@ class Recording():
         return gts
         
     @classmethod
-    def from_osi_gts(cls, gts: list[betterosi.GroundTruth]):
+    def from_osi_gts(cls, gts: list[betterosi.GroundTruth], validate: bool = True):
         mvs = []
         map = None
         for gt in gts:
@@ -199,12 +199,12 @@ class Recording():
             if map is None:
                 map = MapOsi.create(gt)
         df_mv = pd.DataFrame(mvs).sort_values(by=['total_nanos', 'idx']).reset_index(drop='index')
-        return cls(df_mv, map)
+        return cls(df_mv, map, validate=validate)
     
     @classmethod
-    def from_file(cls, filepath, xodr_path: str|None = None):
+    def from_file(cls, filepath, xodr_path: str|None = None, validate:bool = True):
         gts = betterosi.read(filepath, return_ground_truth=True)
-        r = cls.from_osi_gts(gts)
+        r = cls.from_osi_gts(gts, validate=validate)
         if xodr_path is not None:
             r.map = MapOdr.from_file(xodr_path)
         elif Path(filepath).suffix==".mcap":
@@ -253,7 +253,7 @@ class Recording():
             for c in ['x', 'y', 'z', 'vel_x', 'vel_y', 'vel_z', 'acc_x',
                 'acc_y', 'acc_z', 'length', 'width', 'height']:
                 track_data[c] = np.interp(track_new_nanos, track_df['total_nanos'], track_df[c])
-            for c in ['type', 'subtype']:
+            for c in ['type', 'subtype', 'role']:
                 track_data[c] = nearest_interp(track_new_nanos, track_df['total_nanos'].values, track_df[c].values)
             for c in ['roll', 'pitch', 'yaw']:
                 track_data[c] = np.mod(np.interp(track_new_nanos, track_df['total_nanos'], np.unwrap(track_df[c], period=np.pi)), np.pi)

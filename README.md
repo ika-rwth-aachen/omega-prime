@@ -1,10 +1,14 @@
 # Omega Specification
 Data Model, Format and Python Library for ground truth data of dyanmic objects and maps optimized for representing urban traffic.
 
+## Features
 - Creation
     - ASAM OSI GroundTruth trace (e.g., output of esmini)
     - Dataframe of moving objects (e.g., csv data)
     - ASAM OpenDRIVE map
+- Plotting
+- Validation
+- Interpolatiion
 
 You might be looking for the now deprecated [OMEGAFormat legacy]() created in VVMethods project.
 

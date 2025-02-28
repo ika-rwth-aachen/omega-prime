@@ -1,6 +1,6 @@
 variables:
   UV_VERSION: 0.5
-  PYTHON_VERSION: 3.12
+  PYTHON_VERSION: 3.11
   BASE_LAYER: bookworm
 default:
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
