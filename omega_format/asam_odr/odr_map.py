@@ -1,31 +1,31 @@
 from dataclasses import dataclass
-from lxml import etree
-
-from .opendriveparser.parser import parse_opendrive
-from .opendriveconverter.converter import convert_opendrive
-from .opendriveparser.elements.openDrive import OpenDrive
-from ..map import Map
-from typing import Any
-import betterosi
 from pathlib import Path
+from typing import Any
+
+import betterosi
+import numpy as np
+from lxml import etree
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
-import numpy as np
-from typing import Optional
+
+from ..map import Map
+from .opendriveconverter.converter import convert_opendrive
+from .opendriveparser.elements.openDrive import OpenDrive
+from .opendriveparser.parser import parse_opendrive
 
 
 @dataclass(repr=False)
 class MapOdr(Map):
     odr_xml: str
     name: str
-    roads: Optional[dict[Any,Any]] = None
-    _odr_object: Optional[OpenDrive] = None
+    roads: dict[Any, Any] | None = None
+    _odr_object: OpenDrive | None = None
     step_size: float = 0.1
     
     @classmethod
     def from_file(cls, filename, topic='ground_truth_map', is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.1, skip_parse: bool = False):
         if Path(filename).suffix in ['.xodr', '.odr'] or is_odr_xml:
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 self = cls.create(odr_xml=f.read(), name=Path(filename).stem, step_size=step_size, skip_parse=skip_parse)
             return self
         elif Path(filename).suffix in ['.mcap'] or is_mcap:

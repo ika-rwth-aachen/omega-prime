@@ -1,7 +1,9 @@
 # ruff: noqa: F405
 from lxml import etree
-from .elements import *  # noqa: F403
+
 from ..logger import logger
+from .elements import *  # noqa: F403
+
 
 def parse_opendrive(root_node):
     # Only accept xml element

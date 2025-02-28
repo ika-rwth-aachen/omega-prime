@@ -46,7 +46,24 @@ test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','py
 omega_format = "omega_format.cli:app"
 
 [tool.ruff]
-lint.ignore = ["E741", "E701"]
+lint.ignore = ["E741", "E701", "E501"]
+target-version = "py311"
+line-length = 120
+lint.select = [
+    "F401",  # Unused imports
+    "F841",  # Unused local variables
+    "F821",  # Undefined names
+    "E501",  # Line length violations
+
+    "SIM101", # Simplify unnecessary if-else blocks
+    "SIM102", # Simplify return or yield statements
+    "SIM103", # Simplify list/set/dict comprehensions
+
+    "UP",
+
+    "I",
+]
+lint.isort.combine-as-imports = true
 
 [tool.licensecheck]
 # run `pip install licensecheck` and `licensecheck`

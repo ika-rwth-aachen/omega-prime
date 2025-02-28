@@ -1,8 +1,9 @@
-import omega_format
+import cProfile
 import json
 from pathlib import Path
-import cProfile
 from pstats import Stats
+
+import omega_format
 
 p = Path('example_files/')
 with open(p/'mapping.json') as f:

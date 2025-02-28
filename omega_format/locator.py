@@ -1,4 +1,3 @@
-import typing
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
@@ -11,7 +10,7 @@ from matplotlib.patches import Polygon as PltPolygon
 from strenum import StrEnum
 
 
-class ShapelyTrajectoryTools():
+class ShapelyTrajectoryTools:
     epsi = 1e-10
     l_append = 200
     simplify_tolerance=1e-5
@@ -147,7 +146,7 @@ class LaneRelation(StrEnum):
    
 
 @dataclass
-class WrappedLane():
+class WrappedLane:
     idx: Any
     road_idx: Any
     centerline: shapely.LineString
@@ -165,7 +164,7 @@ class WrappedLane():
     
 
 @dataclass
-class Locator():
+class Locator:
     all_lanes: Any # array of all lanes
     external2internal_laneid: dict[Any,int]
     internal2external_laneid: list[Any]
@@ -174,7 +173,7 @@ class Locator():
     extended_centerlines: list[shapely.LineString]
     
     g: nx.DiGraph # Lane Relation Graph
-    xodr2external_laneid: typing.Union[None,dict] = None
+    xodr2external_laneid: None | dict = None
     
     @classmethod
     def from_inter(cls, inter):
@@ -299,7 +298,7 @@ class Locator():
         assert len(no_asscociation_new)==0
         return lat_distances, lon_distances
     
-    def get_single_lane_association(self, traveler_lane_intersections: dict[Any,Any], overlaps: typing.Union[None,dict[Any, float]]=None):
+    def get_single_lane_association(self, traveler_lane_intersections: dict[Any,Any], overlaps: None | dict[Any, float]=None):
         """
         filter traveling path of traveler, so that traveler is not assigned to lanes that are only reachable through a merging or crossing relation
         return format: road, lane

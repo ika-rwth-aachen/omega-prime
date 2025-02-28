@@ -1,16 +1,17 @@
-import pandas as pd
+import typing
+from pathlib import Path
+from warnings import warn
 
-from matplotlib import pyplot as plt
 import betterosi
 import numpy as np
-import shapely
-import typing
-from matplotlib.patches import Polygon as PltPolygon
-from .asam_odr import MapOdr
+import pandas as pd
 import pandera as pa
-from pathlib import Path
+import shapely
+from matplotlib import pyplot as plt
+from matplotlib.patches import Polygon as PltPolygon
+
+from .asam_odr import MapOdr
 from .map import MapOsi
-from warnings import warn
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
 
@@ -60,7 +61,7 @@ def nearest_interp(xi, x, y):
     return y[idx.argmin(axis=1)]
         
 
-class MovingObject():
+class MovingObject:
     def __init__(self, recording, idx):
         super().__init__()
         self.idx = int(idx)
@@ -71,7 +72,7 @@ class MovingObject():
         for k in ['x', 'y', 'z', 'vel_x', 'vel_y', 'vel_z', 'acc_x', 'acc_y', 'acc_z', 'yaw', 'roll', 'pitch', 'polygon']:
             setattr(self, k, self._df.loc[:, k].values)
         self.vel = np.linalg.norm([self.vel_x, self.vel_y], axis=0)
-        self.timestamps = self._df.loc[:,'total_nanos'].values/float(1e9)
+        self.timestamps = self._df.loc[:,'total_nanos'].values/1e9
         for k in ['length', 'width', 'height']:
             setattr(self, f'{k}s', self._df.loc[:, k].values)
             setattr(self, k, np.mean(self._df.loc[:, k].values))
@@ -102,7 +103,7 @@ class MovingObject():
     
 
 
-class Recording():
+class Recording:
     _MovingObjectClass: typing.ClassVar = MovingObject
     
     @staticmethod

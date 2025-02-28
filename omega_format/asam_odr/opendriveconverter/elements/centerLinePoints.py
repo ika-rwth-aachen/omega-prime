@@ -1,8 +1,9 @@
-import numpy as np
 import copy
-from ...logger import logger
+
+import numpy as np
 
 from ...eulerspiral import EulerSpiral
+from ...logger import logger
 
 
 def calculate_s_index(center_line_points, s_value):

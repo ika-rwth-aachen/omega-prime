@@ -1,13 +1,14 @@
-from .lane import calculate_borders, calculate_lanes, get_lane_subtype, get_lane_class, calculate_s_index
-from .centerLinePoints import get_center_line_points
+import re
 from dataclasses import dataclass
 from typing import Any
-import re
+
 from ...logger import logger
+from .centerLinePoints import get_center_line_points
+from .lane import calculate_borders, calculate_lanes, calculate_s_index, get_lane_class, get_lane_subtype
 
 
 @dataclass(repr=False)
-class Road():
+class Road:
     lanes: dict
     location: Any = None
     borders: Any = None

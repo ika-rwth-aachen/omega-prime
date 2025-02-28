@@ -1,12 +1,14 @@
+import typing
+from datetime import datetime
+
+import betterosi
 import numpy as np
-from .recording import MovingObject, Recording
 import xarray as xr
 
-from datetime import datetime
-import betterosi
-import typing
+from .recording import MovingObject, Recording
 
-class Road():
+
+class Road:
     def __init__(self, parent):
         super().__init__()
         self._parent = parent
@@ -15,7 +17,7 @@ class Road():
     def lanes(self):
         return self._parent.lanes
     
-class ParentReroute():
+class ParentReroute:
     def __init__(self, parent):
         super().__init__()
         self._parent = parent

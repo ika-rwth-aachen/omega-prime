@@ -1,14 +1,15 @@
-import betterosi
-import shapely
-from matplotlib import pyplot as plt
-import numpy as np
-from matplotlib.patches import Polygon as PltPolygon
 from dataclasses import dataclass, field
 from typing import Any
 
+import betterosi
+import numpy as np
+import shapely
+from matplotlib import pyplot as plt
+from matplotlib.patches import Polygon as PltPolygon
+
 
 @dataclass(repr=False)
-class LaneBoundary():
+class LaneBoundary:
     _map: "Map" = field(init=False)
     idx: Any
     type: betterosi.LaneBoundaryClassificationType
@@ -43,7 +44,7 @@ class LaneBoundaryOsi(LaneBoundary):
         return self._osi
 
 @dataclass(repr=False)
-class Lane():
+class Lane:
     _map: "Map" = field(init=False)
     idx: Any
     centerline: np.ndarray
@@ -133,7 +134,7 @@ class LaneOsi(Lane):
         
 
 @dataclass(repr=False)
-class Map():
+class Map:
     lane_boundaries: dict[int, LaneBoundary]
     lanes: dict[int: Lane]
     

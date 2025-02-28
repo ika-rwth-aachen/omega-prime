@@ -1,9 +1,10 @@
-import omega_format
-import typer
 from pathlib import Path
-from typing_extensions import Annotated
-import pandas as pd
+from typing import Annotated
 
+import pandas as pd
+import typer
+
+import omega_format
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 

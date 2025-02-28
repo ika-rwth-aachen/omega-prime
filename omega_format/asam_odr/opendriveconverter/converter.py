@@ -1,12 +1,13 @@
-from .elements.road import process_road, get_georeference
-from .elements.junction import setup_connections
-from ..logger import logger
-
 from dataclasses import dataclass
 from typing import Any
 
+from ..logger import logger
+from .elements.junction import setup_connections
+from .elements.road import get_georeference, process_road
+
+
 @dataclass(repr=False)
-class Map():
+class Map:
     roads: dict
     georeference: Any = None
 

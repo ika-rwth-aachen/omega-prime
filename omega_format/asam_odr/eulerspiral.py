@@ -3,7 +3,8 @@
 import numpy as np
 from scipy.special import fresnel
 
-class EulerSpiral(object):
+
+class EulerSpiral:
 
     def __init__(self, gamma):
         self._gamma = gamma

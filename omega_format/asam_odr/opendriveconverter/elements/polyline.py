@@ -1,6 +1,9 @@
 import math
+
 import numpy as np
+
 from ...logger import logger
+
 
 def calculate_object_center_point(current_s, center_line_points, t=None, hdg=None, z_offset=None):
     if t is None:

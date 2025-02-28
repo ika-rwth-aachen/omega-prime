@@ -1,5 +1,6 @@
 from ...logger import logger
 
+
 def setup_connections(my_roads, lookup_table, my_opendrive):
     """
     1. go through my_opendrive roads again
@@ -262,11 +263,9 @@ def lookup_table_search_precisely(opendrive_road_id, opendrive_lane_section_id, 
     counter = -1
     for row in lookup_table:
         counter += 1
-        if row[0] == opendrive_road_id:
-            if row[1] == opendrive_lane_section_id:
-                if row[2] == opendrive_lane_id:
-                    # found lane, return counter (row number)
-                    return counter
+        if row[0] == opendrive_road_id and row[1] == opendrive_lane_section_id and row[2] == opendrive_lane_id:
+            # found lane, return counter (row number)
+            return counter
     # none found --> issue warning
     raise RuntimeError('no matching road, lanesection, lane combination found')
 
@@ -289,11 +288,11 @@ def lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_ori
     counter = -1
     for row in lookup_table:
         counter += 1
-        if row[0] == opendrive_road_id:
-            if row[1] == opendrive_lane_section_id_search and row[1] != opendrive_lane_section_id_original:
-                if row[2] == opendrive_lane_id:
-                    # found lane, return counter (row number)
-                    return counter
+        if row[0] == opendrive_road_id \
+            and row[1] == opendrive_lane_section_id_search and row[1] != opendrive_lane_section_id_original \
+            and row[2] == opendrive_lane_id:
+                # found lane, return counter (row number)
+                return counter
 
     # if not found check if lane is in different lane section (work around solution, since not clear how to find out
     # beforehand in which road section lane is check if road has different lane sections
@@ -351,11 +350,11 @@ def lookup_table_search(opendrive_road_id, opendrive_lane_section_id, opendrive_
     counter = -1
     for row in lookup_table:
         counter += 1
-        if row[0] == opendrive_road_id:
-            if row[1] == opendrive_lane_section_id:
-                if row[2] == opendrive_lane_id:
-                    # found lane, return counter (row number)
-                    return counter
+        if row[0] == opendrive_road_id \
+            and row[1] == opendrive_lane_section_id \
+            and row[2] == opendrive_lane_id:
+            # found lane, return counter (row number)
+            return counter
 
     # if not found check if lane is in different lane section (work around solution, since not clear how to find out
     # beforehand in which road section lane is, check if road has different lane sections
@@ -385,7 +384,6 @@ def find_max_lane_section(opendrive_road_id, lookup_table):
     """
     max_lane_section = 0
     for row in lookup_table:
-        if row[0] == opendrive_road_id:
-            if row[1] > max_lane_section:
-                max_lane_section = row[1]
+        if row[0] == opendrive_road_id and row[1] > max_lane_section:
+            max_lane_section = row[1]
     return max_lane_section
