@@ -122,8 +122,9 @@ class Recording():
         return shapely.polygons(polys)
     
     @staticmethod
-    def get_moving_object_ground_truth(nanos: int, df: pd.DataFrame, host_vehicle=None) -> betterosi.GroundTruth:
-        recording_moving_object_schema.validate(df, lazy=True)
+    def get_moving_object_ground_truth(nanos: int, df: pd.DataFrame, host_vehicle=None, validate=True) -> betterosi.GroundTruth:
+        if validate:
+            recording_moving_object_schema.validate(df, lazy=True)
         mvs = []
         for idx, row in df.iterrows():
             mvs.append(betterosi.MovingObject(
@@ -160,7 +161,7 @@ class Recording():
         self.host_vehicle = host_vehicle
 
     def to_osi_gts(self) -> list[betterosi.GroundTruth]:
-        gts = [self.get_moving_object_ground_truth(nanos, group_df, host_vehicle=self.host_vehicle) for nanos, group_df in self._df.groupby('total_nanos')]
+        gts = [self.get_moving_object_ground_truth(nanos, group_df, host_vehicle=self.host_vehicle, validate=False) for nanos, group_df in self._df.groupby('total_nanos')]
         
         if self.map is not None and isinstance(self.map, MapOsi):
             gts[0].lane_boundary = [b._osi for b in self.map.lane_boundaries.values()]
