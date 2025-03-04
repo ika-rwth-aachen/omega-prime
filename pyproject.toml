@@ -41,7 +41,7 @@ dependencies = [
 version = "0.1.1"
 
 [project.optional-dependencies]
-test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress', 'nbval','ipywidgets']
+test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets']
 
 [project.scripts]
 omega-prime = "omega_prime.cli:app"
@@ -68,14 +68,15 @@ lint.isort.combine-as-imports = true
 using = "PEP631"
 ignore_licenses = ["mpl"]
 ignore_packages = [
-    "tzdata", "xarray", "types-python-dateutil" # APACHE SOFTWARE LICENSE
+    "tzdata", "xarray", "types-python-dateutil", "arrow", "multidict"# APACHE SOFTWARE LICENSE
 ]   
 zero = true
 
 [tool.pytest.ini_options]
-addopts = "-ra --junitxml=report.xml --nbval"
+addopts = "-ra --junitxml=report.xml --nbval --codeblocks"
 testpaths = [
     "tests",
     "tutorial.ipynb",
+    "README.md"
 ]
 log_cli = true
