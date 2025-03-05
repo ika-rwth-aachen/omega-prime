@@ -6,7 +6,7 @@ Data Model, Format and Python Library for ground truth data containing informati
 
 Omega-Prime is the successor of the [OMEGAFormat](https://github.com/ika-rwth-aachen/omega_format). It has the benefit that its definition is directly based on the established standards ASAM OSI and ASAM OpenDRIVE and carries over the data quality requirements and the data tooling from OMEGAFormat. Therefore, it should be easier to incorporate omega-prime into existing workflows and tooling. 
 
-To learn more about the example data read [example_files/README.md](example_files/README.md). Example data was taken and created from [esmini](https://github.com/esmini/esmini).
+To learn more about the example data read [example_files/README.md](https://github.com/ika-rwth-aachen/omega-prime/blob/main/example_files/README.md). Example data was taken and created from [esmini](https://github.com/esmini/esmini).
 
 
 
@@ -20,13 +20,13 @@ To learn more about the example data read [example_files/README.md](example_file
 - Interpolation
 - CLI and python functions to access features
 
-For a detailed introduction look at [tutorial.ipynb](tutorial.ipynb).
+For a detailed introduction look at [tutorial.ipynb](https://github.com/ika-rwth-aachen/omega-prime/blob/main/tutorial.ipynb).
 
 ## Installation
 `pip install omega-prime`
 
 ## Usage
-> A detailed introduction to the features and usage can be found in [tutorial.ipynb](tutorial.ipynb)
+> A detailed introduction to the features and usage can be found in [tutorial.ipynb](https://github.com/ika-rwth-aachen/omega-prime/blob/main/tutorial.ipynb)
 
 Create an omega-prime file from an OSI GroundTruth message trace and an OpenDRIVE map:
 ```python

@@ -68,24 +68,21 @@ numpy==2.2.3
     #   pandera
     #   scipy
     #   shapely
-    #   xarray
 packaging==24.2
     # via
     #   matplotlib
     #   pandera
-    #   xarray
 pandas==2.2.3
     # via
     #   omega-prime (./pyproject.toml)
     #   pandera
-    #   xarray
-pandera==0.22.1
+pandera==0.23.0
     # via omega-prime (./pyproject.toml)
 pillow==11.1.0
     # via matplotlib
 proj==0.2.0
     # via omega-prime (./pyproject.toml)
-protobuf==5.29.3
+protobuf==6.30.0
     # via mcap-protobuf-support
 pydantic==2.10.6
     # via pandera
@@ -137,7 +134,5 @@ typing-inspect==0.9.0
     # via pandera
 tzdata==2025.1
     # via pandas
-xarray==2025.1.2
-    # via omega-prime (./pyproject.toml)
 zstandard==0.23.0
     # via mcap

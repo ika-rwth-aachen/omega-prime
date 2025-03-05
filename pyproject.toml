@@ -11,13 +11,19 @@ name = "omega-prime"
 authors = [
     {name = "ika - RWTH Aachen", email = "michael.schuldes@ika.rwth-aachen.de"},
 ]
-description = "Omega-Prime: Data Model, Data Format and Python Library for Handling Traffic Data"
+description = "Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data"
 readme = "README.md"
 license = {text = "MPL-2.0"}
 requires-python = ">=3.10"
 keywords = ["omega-format", "osi", "open-simulation-interface", "simulation", "automated-driving", "traffic"]
 classifiers = [
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
@@ -26,7 +32,6 @@ dependencies = [
     'shapely',
     'pandas',
     'scipy',
-    'xarray',
     'numpy',
     'typer',
     'pandera',
@@ -38,7 +43,11 @@ dependencies = [
     'betterosi>=0.3.1'
     
 ]
-version = "0.1.1"
+version = "0.1.2"
+
+[project.urls]
+Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
+Repository = "https://github.com/ika-rwth-aachen/omega-prime"
 
 [project.optional-dependencies]
 test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets']
@@ -68,7 +77,7 @@ lint.isort.combine-as-imports = true
 using = "PEP631"
 ignore_licenses = ["mpl"]
 ignore_packages = [
-    "tzdata", "xarray", "types-python-dateutil", "arrow", "multidict"# APACHE SOFTWARE LICENSE
+    "tzdata", "types-python-dateutil", "arrow", "multidict"# APACHE SOFTWARE LICENSE
 ]   
 zero = true
 
