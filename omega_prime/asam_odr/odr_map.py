@@ -47,9 +47,11 @@ class MapOdr(Map):
             return self
         
     def parse(self):
+        if self._odr_object is not None:
+            return 
         xml = etree.fromstring(self.odr_xml.encode("utf-8"))
-        odr_object = parse_opendrive(xml)
-        self.roads, goerefrence = convert_opendrive(odr_object, step_size=self.step_size)
+        self._odr_object = parse_opendrive(xml)
+        self.roads, goerefrence = convert_opendrive(self._odr_object, step_size=self.step_size)
         self.lane_boundaries = {}
         self.lanes = {}
         for rid, r in self.roads.items():
