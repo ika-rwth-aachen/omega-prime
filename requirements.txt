@@ -4,12 +4,12 @@ annotated-types==0.7.0
     # via pydantic
 arrow==1.3.0
     # via proj
-betterosi==0.3.1
+betterosi==0.3.2
     # via omega-prime (./pyproject.toml)
-betterproto2==0.3.0
+betterproto2==0.3.1
     # via betterosi
 betterproto2-rust-codec==0.1.3
-    # via betterproto2
+    # via betterosi
 click==8.1.8
     # via
     #   proj
@@ -24,14 +24,6 @@ cycler==0.12.1
     # via matplotlib
 fonttools==4.56.0
     # via matplotlib
-grpclib==0.4.7
-    # via betterproto2
-h2==4.2.0
-    # via grpclib
-hpack==4.1.0
-    # via h2
-hyperframe==6.1.0
-    # via h2
 kiwisolver==1.4.8
     # via matplotlib
 lxml==5.3.1
@@ -52,8 +44,6 @@ mcap-protobuf-support==0.5.3
     # via betterosi
 mdurl==0.1.2
     # via markdown-it-py
-multidict==6.1.0
-    # via grpclib
 mypy-extensions==1.0.0
     # via typing-inspect
 networkx==3.4.2
@@ -83,7 +73,9 @@ pillow==11.1.0
 proj==0.2.0
     # via omega-prime (./pyproject.toml)
 protobuf==6.30.0
-    # via mcap-protobuf-support
+    # via
+    #   betterosi
+    #   mcap-protobuf-support
 pydantic==2.10.6
     # via pandera
 pydantic-core==2.27.2

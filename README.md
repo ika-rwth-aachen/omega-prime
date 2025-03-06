@@ -1,7 +1,12 @@
+<img src="https://www.ika.rwth-aachen.de/images/ika-logo-a-blau-blau-rgb.svg" align="right" width="240"> 
+</br>
+</br>
+
 > [!IMPORTANT]  
 > The data model and specification are not finalized and are still under discussion. See this repository as a proof of concept.
 
-# Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data
+
+# Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data 
 Data Model, Format and Python Library for ground truth data containing information on dynamic objects, map and environmental factors optimized for representing urban traffic. The data model and format heavily utilze [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) and [ASAM Open-Simulation-Interface GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html). omega-prime sets requirements on presence and quality of ASAM OSI GroundTruth messages and ASAM OpenDRIVE files and defines a file format the exchange and storage of such data.
 
 Omega-Prime is the successor of the [OMEGAFormat](https://github.com/ika-rwth-aachen/omega_format). It has the benefit that its definition is directly based on the established standards ASAM OSI and ASAM OpenDRIVE and carries over the data quality requirements and the data tooling from OMEGAFormat. Therefore, it should be easier to incorporate omega-prime into existing workflows and tooling. 
