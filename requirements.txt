@@ -2,18 +2,16 @@
 #    uv pip compile .\pyproject.toml
 annotated-types==0.7.0
     # via pydantic
-arrow==1.3.0
-    # via proj
-betterosi==0.3.2
+betterosi==0.3.3
     # via omega-prime (./pyproject.toml)
 betterproto2==0.3.1
     # via betterosi
 betterproto2-rust-codec==0.1.3
-    # via betterosi
+    # via betterproto2
+certifi==2025.1.31
+    # via pyproj
 click==8.1.8
-    # via
-    #   proj
-    #   typer
+    # via typer
 colorama==0.4.6
     # via
     #   click
@@ -24,6 +22,14 @@ cycler==0.12.1
     # via matplotlib
 fonttools==4.56.0
     # via matplotlib
+grpclib==0.4.7
+    # via betterproto2
+h2==4.2.0
+    # via grpclib
+hpack==4.1.0
+    # via h2
+hyperframe==6.1.0
+    # via h2
 kiwisolver==1.4.8
     # via matplotlib
 lxml==5.3.1
@@ -44,6 +50,8 @@ mcap-protobuf-support==0.5.3
     # via betterosi
 mdurl==0.1.2
     # via markdown-it-py
+multidict==6.1.0
+    # via grpclib
 mypy-extensions==1.0.0
     # via typing-inspect
 networkx==3.4.2
@@ -58,20 +66,21 @@ numpy==2.2.3
     #   pandera
     #   scipy
     #   shapely
+    #   xarray
 packaging==24.2
     # via
     #   matplotlib
     #   pandera
+    #   xarray
 pandas==2.2.3
     # via
     #   omega-prime (./pyproject.toml)
     #   pandera
+    #   xarray
 pandera==0.23.0
     # via omega-prime (./pyproject.toml)
 pillow==11.1.0
     # via matplotlib
-proj==0.2.0
-    # via omega-prime (./pyproject.toml)
 protobuf==6.30.0
     # via
     #   betterosi
@@ -84,9 +93,10 @@ pygments==2.19.1
     # via rich
 pyparsing==3.2.1
     # via matplotlib
+pyproj==3.7.1
+    # via omega-prime (./pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
-    #   arrow
     #   betterproto2
     #   matplotlib
     #   pandas
@@ -112,8 +122,6 @@ typer==0.15.2
     # via
     #   omega-prime (./pyproject.toml)
     #   betterosi
-types-python-dateutil==2.9.0.20241206
-    # via arrow
 typing-extensions==4.12.2
     # via
     #   betterproto2
@@ -126,5 +134,7 @@ typing-inspect==0.9.0
     # via pandera
 tzdata==2025.1
     # via pandas
+xarray==2025.1.2
+    # via omega-prime (./pyproject.toml)
 zstandard==0.23.0
     # via mcap
