@@ -8,7 +8,9 @@ import omega_prime
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
-@app.command()
+app.registered_commands += omega_prime.converters.app.registered_commands
+
+@app.command(help='Convert from ASAM OSI GroundTruth trace.')
 def from_osi(
     input: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Path to ASAM OSI trace file (either `.osi` or `.mcap`)")],
     output: Annotated[Path, typer.Argument(exists=False, dir_okay=False, help="Desired filename of omega file")],
@@ -18,7 +20,7 @@ def from_osi(
     r = omega_prime.Recording.from_file(input, xodr_path=odr, validate=validate, skip_odr_parse=skip_odr_parse)
     r.to_mcap(output)
     
-@app.command()
+@app.command(help='Convert from csv table according to schema')
 def from_csv(
     input: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Path to csv according to omega moving object csv schema")],
     output: Annotated[Path, typer.Argument(exists=False, dir_okay=False, help="Desired filename of omega file")],
@@ -32,7 +34,7 @@ def from_csv(
     r.to_mcap(output)
 
 
-@app.command()
+@app.command(help='Check an omega-prime file for specification conformance.')
 def validate(
     input: Annotated[Path, typer.Argument(help="Path to omega file to validate", exists=True, dir_okay=False)]
 ):

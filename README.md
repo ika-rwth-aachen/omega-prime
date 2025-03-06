@@ -16,6 +16,7 @@ Data Model, Format and Python Library for ground truth data containing informati
         - ASAM OSI GroundTruth trace (e.g., output of esmini)
         - Table of moving object data (e.g., csv data)
         - ASAM OpenDRIVE map
+        - [LevelXData datasets](https://levelxdata.com/) through [lxd-io](https://github.com/lenvt/lxd-io)
     - **Plotting** of data
     - **Validation** of data
     - **Interpolation** of data
@@ -49,6 +50,20 @@ Read and plot an omega-prime file:
 r = omega_prime.Recording.from_file('example.mcap')
 ax = r.plot()
 ```
+## Convert Existing Datasets to omega-prime
+### [LevelXData](https://levelxdata.com/)
+You can convert data from LevelXData to omega-prime. Under the hood [lxd-io](https://github.com/lenvt/lxd-io) is used to perform the conversion.
+Install the required dependencies with `pip install omega-prime[lxd]` (lxd-io uses cv2 which requires libGL. This could require extra installation steps on headless systems).
+
+<!--pytest.mark.skip-->
+```python
+from omega_prime.converters import convert_lxd
+convert_lxd('./exiD-dataset-v2.0', './exiD-as-omega-prime')
+```
+
+or with `omega-prime from-lxd ./exiD-dataset-v2.0 ./exiD-as-omega-prime`.
+
+Tested with exiD-v2.0 and inD-v1.1
 
 ## File Format
 Based on [MCAP](https://mcap.dev/), [ASAM OSI](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/specification/index.html) and [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) the ASAM OSI GroundTruth messages and ASAM OpenDRIVE map are packaged as shown in the following figure.
