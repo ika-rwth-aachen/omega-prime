@@ -1,7 +1,8 @@
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
+import betterosi
 import networkx as nx
 import numpy as np
 import shapely
@@ -144,11 +145,14 @@ class LaneRelation(StrEnum):
     neighbour_right = 'right neighbour'
     neighbour_left = 'left neighbour'
    
-
+@dataclass
+class MockRoad:
+    odr_idx: int
+    
 @dataclass
 class WrappedLane:
     idx: Any
-    road_idx: Any
+    road: Any
     centerline: shapely.LineString
     polygon: shapely.Polygon
     border_left: shapely.LineString
@@ -162,55 +166,56 @@ class WrappedLane:
     original_lane: Any = None
     db: Any = None
     
+    @classmethod
+    def from_odr_lane(cls, map, l):
+        start_points = np.stack([l.left_boundary.polyline[0,:2], l.right_boundary.polyline[0,:2]])
+        end_points = np.stack([l.left_boundary.polyline[-1,:2], l.right_boundary.polyline[-1,:2]])
+        l.odr_idx = l.idx[1]
+        l.road = MockRoad(odr_idx=l.idx[0])
+        return cls(
+            idx=l.idx,
+            road = l.road,
+            centerline=shapely.LineString(l.centerline[:,:2]),
+            polygon=l.polygon,
+            border_left=shapely.LineString(l.left_boundary.polyline[:,:2]),
+            border_right=shapely.LineString(l.right_boundary.polyline[:,:2]),
+            predecessor_idxs=l.predecessor_ids,
+            successor_idxs=l.successor_ids,
+            start_points=start_points,
+            end_points=end_points,
+            on_intersection=l.type==betterosi.LaneClassificationType.TYPE_INTERSECTION,
+            type=l.type,
+            original_lane=l
+        )
+    
 
 @dataclass
 class Locator:
     all_lanes: Any # array of all lanes
-    external2internal_laneid: dict[Any,int]
-    internal2external_laneid: list[Any]
-    lane_point_distances: list
-    str_tree: shapely.STRtree
-    extended_centerlines: list[shapely.LineString]
+    external2internal_laneid: dict[Any,int] = field(init=False)
+    internal2external_laneid: list[Any] = field(init=False)
+    lane_point_distances: list = field(init=False)
+    str_tree: shapely.STRtree = field(init=False)
+    extended_centerlines: list[shapely.LineString] = field(init=False)
     
-    g: nx.DiGraph # Lane Relation Graph
+    g: nx.DiGraph = field(init=False) # Lane Relation Graph
     xodr2external_laneid: None | dict = None
-    
+           
     @classmethod
-    def from_inter(cls, inter):
-        all_lanes =np.array([l for r in inter.roads for l in r.lanes] + [v for v in inter.transitions.values() if v.exists])
-        extended_centerlines = [ShapelyTrajectoryTools.extend_linestring(l.centerline) for l in all_lanes]
-        str_tree = shapely.STRtree([l.polygon for l in all_lanes])
-        external2internal_laneid = {l.full_idx: i for i, l in enumerate(all_lanes)}
+    def from_mapodr(cls, map):
+        all_lanes = [WrappedLane.from_odr_lane(map, l) for l in map.lanes.values()]
         return cls(
             all_lanes = all_lanes,
-            external2internal_laneid = external2internal_laneid,
-            internal2external_laneid = [l.full_idx for l in all_lanes],
-            str_tree = str_tree,
-            extended_centerlines = extended_centerlines,
-            lane_point_distances = [np.unique(shapely.line_locate_point(cl, shapely.points(cl.coords))) for cl in extended_centerlines],
-            xodr2external_laneid = {(l.road.odr_idx, l.odr_idx): l.full_idx for l in all_lanes},
-            g = cls._get_graph_from_inter(inter, all_lanes, external2internal_laneid, str_tree)
+            xodr2external_laneid = {l.idx: l.idx for l in all_lanes}
         )
-
-    @classmethod
-    def _get_graph_from_inter(cls, inter, all_lanes, external2internal_laneid, str_tree):
-        g = nx.DiGraph()
-        for k in inter.transitions.keys():
-            g.add_edge(external2internal_laneid[k[1]], external2internal_laneid[k[0]], label=LaneRelation.predecessor)
-            g.add_edge(external2internal_laneid[k[0]], external2internal_laneid[k[1]], label=LaneRelation.successor)
-        for l in [l for r in inter.roads for l in r.lanes]:
-            if l.full_idx[1]<len(l.road.lanes)-1:
-                g.add_edge(
-                    external2internal_laneid[l.full_idx],
-                    external2internal_laneid[(l.full_idx[0], l.full_idx[1]+1)], 
-                    label=LaneRelation.neighbour_right)
-            if l.full_idx[1]>0:
-                g.add_edge(
-                    external2internal_laneid[l.full_idx],
-                    external2internal_laneid[(l.full_idx[0], l.full_idx[1]-1)],
-                    label=LaneRelation.neighbour_left)
-        return g
         
+    def __post_init__(self):
+        self.external2internal_laneid = {l.idx: i for i, l in enumerate(self.all_lanes)}
+        self.extended_centerlines = [ShapelyTrajectoryTools.extend_linestring(l.centerline) for l in self.all_lanes]
+        self.str_tree = shapely.STRtree([l.polygon for l in self.all_lanes])
+        self.internal2external_laneid = [l.idx for l in self.all_lanes]
+        self.lane_point_distances = [np.unique(shapely.line_locate_point(cl, shapely.points(cl.coords))) for cl in self.extended_centerlines]
+        self.g = self._get_routing_graph()
         
     def fullid2xodrid(self, roadlane_id):
         """
@@ -298,6 +303,31 @@ class Locator:
         assert len(no_asscociation_new)==0
         return lat_distances, lon_distances
     
+    def _get_routing_graph(self):
+        all_lanes = self.all_lanes
+        str_tree = self.str_tree
+        external2internal_laneid = self.external2internal_laneid
+        g = nx.DiGraph()
+        for lid, lane in enumerate(all_lanes):
+            for external_pid in lane.predecessor_idxs:
+                try:
+                    g.add_edge(lid, external2internal_laneid[external_pid], label=LaneRelation.predecessor)
+                except KeyError:
+                    pass
+            for external_sid in lane.successor_idxs:
+                try:
+                    g.add_edge(lid, external2internal_laneid[external_sid], label=LaneRelation.successor)
+                except KeyError:
+                    pass
+            right_neigbours = [i for i in str_tree.query(lane.border_right, predicate='covered_by') if i!=lid]
+            left_neigbours = [i for i in str_tree.query(lane.border_left, predicate='covered_by') if i!=lid]
+            for rn in right_neigbours:
+                g.add_edge(lid, rn)
+            for ln in left_neigbours:
+                g.add_edge(lid, ln)
+        return g
+        
+    
     def get_single_lane_association(self, traveler_lane_intersections: dict[Any,Any], overlaps: None | dict[Any, float]=None):
         """
         filter traveling path of traveler, so that traveler is not assigned to lanes that are only reachable through a merging or crossing relation
@@ -340,16 +370,11 @@ class Locator:
         sp = nx.shortest_path(g, 'start', 'end', weight='weight')[1:-1]
         fixed_traveler_path = [self.internal2external_laneid[o[0]] for o in sp]
         
-        if False:
-            import matplotlib
-            from matplotlib import pyplot as plt
-            matplotlib.use('webagg')
-            nx.draw(g, nx.get_node_attributes(g,'pos'))
-            plt.show()
-        
         overlaps = [traveler_lane_intersections[lid][i] for i, lid in enumerate(fixed_traveler_path)]
         assert not np.any(np.isnan(overlaps))
         return fixed_traveler_path
 
     def __repr__(self):
             return f'Locator({len(self.all_lanes)} lanes)<{id(self)}>'
+        
+

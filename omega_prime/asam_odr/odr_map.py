@@ -4,6 +4,7 @@ from typing import Any
 
 import betterosi
 import numpy as np
+import shapely
 from lxml import etree
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
@@ -63,6 +64,24 @@ class MapOdr(Map):
     def to_osi(self):
         return betterosi.MapAsamOpenDrive(map_reference=self.name, open_drive_xml_content=self.odr_xml)
     
+    def to_hdf(self, filename):
+        import tables
+        with tables.open_file(filename, mode="a") as h5file:
+            try:
+                gmap = h5file.get_node('/map')
+            except tables.NoSuchNodeError:
+                gmap = h5file.create_group('/', 'map')
+            atom = tables.StringAtom(itemsize=len(self.odr_xml))
+            ds = h5file.create_carray(gmap, "odr_xml", atom, shape=(1,))
+            ds[0] = self.odr_xml.encode('utf-8')
+            
+    @classmethod
+    def from_hdf(cls, filename):
+        import tables
+        with tables.open_file(filename, mode="r") as h5file:
+            odr_xml = h5file.get_node('/map').odr_xml[0].decode()
+        return cls.create(odr_xml, str(filename))
+
     
     def plot(self, ax=None):
         if ax is None:
@@ -82,3 +101,17 @@ class MapOdr(Map):
 
     def setup_lanes_and_boundaries(self):
         self.parse()
+        for lid, l in self.lanes.items():
+            l.idx = lid
+            l.left_boundary = self.lane_boundaries[l.left_boundary_id]
+            l.right_boundary = self.lane_boundaries[l.right_boundary_id]
+            
+            l.centerline = l.left_boundary.polyline+(np.diff(np.stack([l.left_boundary.polyline, l.right_boundary.polyline]),axis=0)/2)[0,...]
+            #l.centerline = shapely.LineString(l.centerline)
+            
+            poly_points = np.concatenate([l.left_boundary.polyline[:,:2], np.flip(l.right_boundary.polyline[:,:2], axis=0)])
+            l.polygon = shapely.Polygon(poly_points)
+            if not l.polygon.is_valid:
+                l.polygon = shapely.convex_hull(l.polygon)
+            l.start_points = np.stack([l.left_boundary.polyline[0,:2], l.right_boundary.polyline[0,:2]])
+            l.end_points = np.stack([l.left_boundary.polyline[-1,:2], l.right_boundary.polyline[-1,:2]])

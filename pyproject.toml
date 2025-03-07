@@ -87,6 +87,7 @@ addopts = "-ra --junitxml=report.xml --nbval --codeblocks"
 testpaths = [
     "tests",
     "tutorial.ipynb",
+    "tutorial_locator.ipynb",
     "README.md"
 ]
 log_cli = true

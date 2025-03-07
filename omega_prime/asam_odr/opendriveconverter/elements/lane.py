@@ -15,6 +15,7 @@ class LaneOdr(map.Lane):
     type: Any
     subtype: Any
     
+    
 @dataclass(repr=False)
 class LaneBoundaryOdr(map.LaneBoundary):
     polyline: Any
