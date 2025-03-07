@@ -126,9 +126,8 @@ class Recording:
     def get_moving_object_ground_truth(nanos: int, df: pd.DataFrame, host_vehicle=None, validate=True) -> betterosi.GroundTruth:
         if validate:
             recording_moving_object_schema.validate(df, lazy=True)
-        mvs = []
-        for idx, row in df.iterrows():
-            mvs.append(betterosi.MovingObject(
+        def get_object(row):
+            return betterosi.MovingObject(
                 id=betterosi.Identifier(value=row['idx']),
                 type=betterosi.MovingObjectType(row['type']),
                 base=betterosi.BaseMoving(
@@ -139,11 +138,12 @@ class Recording:
                     acceleration=betterosi.Vector3D(x=row['acc_x'], y=row['acc_y'], z=row['acc_z']),
                 ),
                 vehicle_classification=betterosi.MovingObjectVehicleClassification(type=row['subtype'], role=row['role'])
-            ))
+            )
+        mvs = list(df.apply(get_object, axis=1).values)
         gt = betterosi.GroundTruth(
             version=betterosi.InterfaceVersion(version_major=3, version_minor=7, version_patch=9),
             timestamp=betterosi.Timestamp(seconds=int(nanos//1_000_000_000), nanos=int(nanos%1_000_000_000)),
-            #host_vehicle_id=betterosi.Identifier(value=0) if host_vehicle is None else betterosi.Identifier(value=host_vehicle),
+            host_vehicle_id=betterosi.Identifier(value=0) if host_vehicle is None else betterosi.Identifier(value=host_vehicle),
             moving_object=mvs
         )
         return gt
