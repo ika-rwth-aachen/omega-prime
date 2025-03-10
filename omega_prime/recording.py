@@ -6,6 +6,7 @@ import betterosi
 import numpy as np
 import pandas as pd
 import pandera as pa
+import pandera.extensions as extensions
 import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
@@ -15,34 +16,62 @@ from .map import MapOsi
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
 
+@extensions.register_check_method(statistics=['column_name', 'column_value', 'other_column_name', 'other_column_unset_value'])
+def other_column_set_on_column_value(pandas_obj, *, column_name:str , column_value, other_column_name: str, other_column_unset_value):
+    return ~np.logical_and(pandas_obj[column_name]==column_value, pandas_obj[other_column_name]==other_column_unset_value)
+
+@extensions.register_check_method(statistics=['column_name', 'column_value', 'other_column_name', 'other_column_unset_value'])
+def other_column_unset_on_column_value(pandas_obj, *, column_name, column_value, other_column_name: str, other_column_unset_value: int):
+    return ~np.logical_and(pandas_obj[column_name]!=column_value, pandas_obj[other_column_name]!=other_column_unset_value)
+
 recording_moving_object_schema = pa.DataFrameSchema(
     columns={
-        'x': pa.Column(float), 
-        'y': pa.Column(float),
-        'z': pa.Column(float),
-        'vel_x': pa.Column(float),
-        'vel_y': pa.Column(float),
-        'vel_z': pa.Column(float),
-        'acc_x': pa.Column(float),
-        'acc_y': pa.Column(float),
-        'acc_z': pa.Column(float),
-        'length': pa.Column(float, pa.Check.ge(0)),
-        'width': pa.Column(float, pa.Check.ge(0)),
-        'height': pa.Column(float),
-        'type': pa.Column(int, pa.Check.between(0,4, error=f"Type must be one of {({o.name: o.value for o in betterosi.MovingObjectType})}")),
+        'x': pa.Column(float, description='MovingObject.base.position.x'), 
+        'y': pa.Column(float, description='MovingObject.base.position.y'),
+        'z': pa.Column(float, description='MovingObject.base.position.z'),
+        'vel_x': pa.Column(float, description='MovingObject.base.velocity.x'),
+        'vel_y': pa.Column(float, description='MovingObject.base.velocity.y'),
+        'vel_z': pa.Column(float, description='MovingObject.base.velocity.z'),
+        'acc_x': pa.Column(float, description='MovingObject.base.acceleration.x'),
+        'acc_y': pa.Column(float, description='MovingObject.base.acceleration.y'),
+        'acc_z': pa.Column(float, description='MovingObject.base.acceleration.z'),
+        'length': pa.Column(float, pa.Check.gt(0), description='MovingObject.base.dimesion.length'),
+        'width': pa.Column(float, pa.Check.gt(0), description='MovingObject.base.dimesion.width'),
+        'height': pa.Column(float, pa.Check.ge(0), description='MovingObject.base.dimesion.height'),
+        'type': pa.Column(int, pa.Check.between(0,4, error=f"Type must be one of {({o.name: o.value for o in betterosi.MovingObjectType})}"), description="MovingObject.type"),
         'role': pa.Column(int, pa.Check.between(-1,10, error=f"Type must be one of {({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationRole})}")),
         'subtype': pa.Column(int,  pa.Check.between(-1, 17, error=f"Subtype must be one of {({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationType})}")),
-        'roll': pa.Column(float, pi_valued),
-        'pitch': pa.Column(float, pi_valued),
-        'yaw': pa.Column(float, pi_valued),
-        'idx': pa.Column(int, pa.Check.ge(0)),
-        'total_nanos': pa.Column(int, pa.Check.ge(0))},
+        'roll': pa.Column(float, pi_valued, description='MovingObject.base.dimesion.width'),
+        'pitch': pa.Column(float, pi_valued, description='MovingObject.base.dimesion.width'),
+        'yaw': pa.Column(float, pi_valued, description='MovingObject.base.dimesion.width'),
+        'idx': pa.Column(int, pa.Check.ge(0), description='MovingObject.id.value'),
+        'total_nanos': pa.Column(int, pa.Check.ge(0), description="GroundTruth.timestamp.nanos+1e9*GroundTruth.timestamp.seconds")},
     unique=['idx','total_nanos'],
     checks=[
-        pa.Check(lambda df: ~np.logical_and(df['type']==betterosi.MovingObjectType.TYPE_VEHICLE, df['role']==-1), error="`role` is `-1` despite type beeing `TYPE_VEHICLE`"),
-        pa.Check(lambda df: ~np.logical_and(df['type']!=betterosi.MovingObjectType.TYPE_VEHICLE, df['role']!=-1), error="`role` is set despite type not beeing `TYPE_VEHICLE`"),
-        pa.Check(lambda df: ~np.logical_and(df['type']==betterosi.MovingObjectType.TYPE_VEHICLE, df['subtype']==-1), error="`subtype` is `-1` despite type beeing `TYPE_VEHICLE`"),
-        pa.Check(lambda df: ~np.logical_and(df['type']!=betterosi.MovingObjectType.TYPE_VEHICLE, df['subtype']!=-1), error="`subtype` is set despite type not beeing `TYPE_VEHICLE`"),
+        pa.Check.other_column_set_on_column_value(
+            'type', 
+            int(betterosi.MovingObjectType.TYPE_VEHICLE), 
+            'role', 
+            -1, 
+            error="`role` is `-1` despite type beeing `TYPE_VEHICLE`"),
+        pa.Check.other_column_unset_on_column_value(
+            'type', 
+            int(betterosi.MovingObjectType.TYPE_VEHICLE), 
+            'role', 
+            -1, 
+            error="`role` is set despite type not beeing `TYPE_VEHICLE`"),
+        pa.Check.other_column_set_on_column_value(
+            'type', 
+            int(betterosi.MovingObjectType.TYPE_VEHICLE), 
+            'subtype', 
+            -1, 
+            error="`subtype` is `-1` despite type beeing `TYPE_VEHICLE`"),
+        pa.Check.other_column_unset_on_column_value(
+            'type', 
+            int(betterosi.MovingObjectType.TYPE_VEHICLE), 
+            'subtype', 
+            -1, 
+            error="`subtype` is set despite type not beeing `TYPE_VEHICLE`"),
     ])
 
 
