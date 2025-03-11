@@ -7,8 +7,9 @@ import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
 
+
 @dataclass
-class ProjectionOffset():
+class ProjectionOffset:
     x: float
     y: float
     z: float = 0.0

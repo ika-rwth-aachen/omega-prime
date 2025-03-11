@@ -5,14 +5,16 @@ from warnings import warn
 import betterosi
 import numpy as np
 import pandas as pd
-import pandera as pa
-import pandera.extensions as extensions
+import pyproj
 import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
 
+import pandera as pa
+import pandera.extensions as extensions
+
 from .asam_odr import MapOdr
-from .map import MapOsi
+from .map import MapOsi, ProjectionOffset
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
 
@@ -177,7 +179,7 @@ class Recording:
         )
         return gt
 
-    def __init__(self, df, map=None, host_vehicle=None, validate=True):
+    def __init__(self, df, map=None, projections=None, host_vehicle=None, validate=True):
         if validate:
             recording_moving_object_schema.validate(df, lazy=True)
         super().__init__()
@@ -185,6 +187,7 @@ class Recording:
         df['frame'] = df.total_nanos.map(self.nanos2frame)
         if 'polygon' not in df.columns:
             df['polygon'] = self._get_polygons(df)
+        self.projections = projections
         self._df = df
         self.map = map
         self.moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df['idx'].unique()}
@@ -202,8 +205,20 @@ class Recording:
     def from_osi_gts(cls, gts: list[betterosi.GroundTruth], validate: bool = True):
         mvs = []
         map = None
-        for gt in gts:
+        projs = []
+        for i, gt in enumerate(gts):
             total_nanos = gt.timestamp.seconds*1_000_000_000 + gt.timestamp.nanos
+            if gt.proj_frame_offset is not None and gt.proj_frame_offset.position is None:
+                    raise ValueError(f'Offset of {i}th ground truth message (total_nanos={total_nanos}) is set without position.')
+            projs.append(dict(
+                proj_string = gt.proj_string,
+                projection = pyproj.CRS.from_proj4(gt.proj_string) if gt.proj_string is not None and gt.proj_string != "" else None,
+                offset = ProjectionOffset(
+                    x=gt.proj_frame_offset.posiiton.x,
+                    y=gt.proj_frame_offset.position.y,
+                    z=gt.proj_frame_offset.position.z,
+                    yaw=gt.proj_frame_offset.yaw) if gt.proj_frame_offset is not None else None
+            ))
             mvs += [dict(
                 total_nanos = total_nanos,
                 idx = mv.id.value,
@@ -230,7 +245,7 @@ class Recording:
             if map is None:
                 map = MapOsi.create(gt)
         df_mv = pd.DataFrame(mvs).sort_values(by=['total_nanos', 'idx']).reset_index(drop='index')
-        return cls(df_mv, map, validate=validate)
+        return cls(df_mv, map, projections=projs, validate=validate)
     
     @classmethod
     def from_file(cls, filepath, xodr_path: str|None = None, validate:bool = True, skip_odr_parse: bool = False):

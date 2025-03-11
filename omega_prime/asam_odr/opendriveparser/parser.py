@@ -1,9 +1,10 @@
 # ruff: noqa: F405
 from lxml import etree
 
+from ...map import ProjectionOffset
 from ..logger import logger
 from .elements import *  # noqa: F403
-from ...map import ProjectionOffset
+
 
 def parse_opendrive(root_node):
     # Only accept xml element

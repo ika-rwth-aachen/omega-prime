@@ -57,7 +57,7 @@ test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','py
 omega-prime = "omega_prime.cli:app"
 
 [tool.ruff]
-lint.ignore = ["E741", "E701", "E501"]
+lint.ignore = ["E741", "E701", "E501", "I001"]
 target-version = "py311"
 line-length = 120
 lint.select = [

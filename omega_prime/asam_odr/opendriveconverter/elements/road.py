@@ -1,8 +1,6 @@
-import re
 from dataclasses import dataclass
 from typing import Any
 
-from ...logger import logger
 from .centerLinePoints import get_center_line_points
 from .lane import calculate_borders, calculate_lanes, calculate_s_index, get_lane_class, get_lane_subtype
 
