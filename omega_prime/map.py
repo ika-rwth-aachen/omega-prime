@@ -7,6 +7,13 @@ import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
 
+@dataclass
+class ProjectionOffset():
+    x: float
+    y: float
+    z: float = 0.0
+    yaw: float = 0.0
+    
 
 @dataclass(repr=False)
 class LaneBoundary:

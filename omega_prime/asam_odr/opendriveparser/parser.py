@@ -3,7 +3,7 @@ from lxml import etree
 
 from ..logger import logger
 from .elements import *  # noqa: F403
-
+from ...map import ProjectionOffset
 
 def parse_opendrive(root_node):
     # Only accept xml element
@@ -43,16 +43,19 @@ def parse_opendrive_header(opendrive, header):
     parsed_header.rev_major = header.get("revMajor")
     parsed_header.rev_minor = header.get("revMinor")
     parsed_header.name = header.get("name")
-    parsed_header.version = header.get("version")
-    parsed_header.date = header.get("date")
-    parsed_header.north = header.get("north")
-    parsed_header.south = header.get("south")
-    parsed_header.west = header.get("west")
-    parsed_header.vendor = header.get("vendor")
 
     # get geo reference point
     if header.find("geoReference") is not None:
         parsed_header.geo_reference = header.find("geoReference").text
+        
+    if header.find('offset') is not None:
+        xml_offset = header.find('offset')
+        parsed_header.offset = ProjectionOffset(
+            x = float(xml_offset.get('x')),
+            y = float(xml_offset.get('y')),
+            z = float(xml_offset.get('z')),
+            yaw = float(xml_offset.get('hdg'))
+        )
 
     opendrive.header = parsed_header
 

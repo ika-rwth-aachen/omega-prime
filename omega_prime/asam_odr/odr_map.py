@@ -1,15 +1,14 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
+import pyproj
 import betterosi
 import numpy as np
 import shapely
 from lxml import etree
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
-
-from ..map import Map
+from ..map import Map, ProjectionOffset
 from .opendriveconverter.converter import convert_opendrive
 from .opendriveparser.elements.openDrive import OpenDrive
 from .opendriveparser.parser import parse_opendrive
@@ -22,6 +21,9 @@ class MapOdr(Map):
     roads: dict[Any, Any] | None = None
     _odr_object: OpenDrive | None = None
     step_size: float = 0.1
+    proj_string: str | None = None
+    proj_offset: ProjectionOffset | None = None
+    projection: pyproj.CRS | None = None
     
     @classmethod
     def from_file(cls, filename, topic='ground_truth_map', is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.1, skip_parse: bool = False):
@@ -52,7 +54,14 @@ class MapOdr(Map):
             return 
         xml = etree.fromstring(self.odr_xml.encode("utf-8"))
         self._odr_object = parse_opendrive(xml)
-        self.roads, goerefrence = convert_opendrive(self._odr_object, step_size=self.step_size)
+        self.proj_string = self._odr_object.header.geo_reference
+        if self.proj_string is not None:
+            try:
+                self.projection = pyproj.CRS.from_proj4(self.proj_string)
+            except pyproj.exceptions.CRSError as e:
+                raise pyproj.exceptions.CRSError('Povided ASAM OpenDRIVE XML does not contain a valid georeference!') from e
+        self.proj_offsets = self._odr_object.header.offset
+        self.roads = convert_opendrive(self._odr_object, step_size=self.step_size)
         self.lane_boundaries = {}
         self.lanes = {}
         for rid, r in self.roads.items():

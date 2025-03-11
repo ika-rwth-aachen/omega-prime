@@ -3,7 +3,7 @@ from typing import Any
 
 from ..logger import logger
 from .elements.junction import setup_connections
-from .elements.road import get_georeference, process_road
+from .elements.road import process_road
 
 
 @dataclass(repr=False)
@@ -22,7 +22,7 @@ def convert_opendrive(my_opendrive, step_size=0.1) -> tuple[dict, tuple[float,fl
 
     # create roads object and set geo reference
     my_roads = {}
-    georeference = get_georeference(my_opendrive.header)
+    #georeference = get_georeference(my_opendrive.header)
 
     # tables needed for matching their ids in open drive to VVM format since many connections can only be set later
     lookup_table = []   # [road id | lane_section | laneID | road id VVM | lane id VVM]
@@ -43,4 +43,4 @@ def convert_opendrive(my_opendrive, step_size=0.1) -> tuple[dict, tuple[float,fl
     logger.info('Setting up roads connections.')
     my_roads = setup_connections(my_roads, lookup_table, my_opendrive)
 
-    return my_roads, georeference
+    return my_roads

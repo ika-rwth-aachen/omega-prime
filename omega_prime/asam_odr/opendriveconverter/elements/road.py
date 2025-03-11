@@ -82,38 +82,3 @@ def extract_road_data(index, center_line_points, end_point_index, start_point_in
     my_road, lookup_table = calculate_lanes(road.lanes.lane_section[index], my_road, road.id, index, lookup_table, vvm_road_id, lane_class, lane_subtype)
 
     return my_road, lookup_table, reference_table
-
-
-
-
-def get_georeference(header, latitude='50.8', longitude='6.1') -> tuple[float,float,str]:
-    """
-    parse opendrive header for lat/long values (converter always assumes that lat/long values are present in header)
-    :param my_roads:
-    :param header: parsed header of odr file
-    :return:
-    """
-    logger.info(header.geo_reference)
-    if header.geo_reference:
-        # Latitude
-        pattern = re.compile(r".*\+lat_0=(.*?)\s\+.*")
-        result = pattern.findall(header.geo_reference)
-        if result:
-            latitude = result[0]
-            latitude = latitude.replace('d', '.')
-        else:
-            logger.warning("Lat value was not provided in header of openDRIVE file! A default value is set.")
-
-        # Longitude
-        pattern = re.compile(r".*\+lon_0=(.*?)\s\+.*")
-        result = pattern.findall(header.geo_reference)
-        if result:
-            longitude = result[0]
-            longitude = longitude.replace('d', '.')
-        else:
-            logger.warning("Lon value was not provided in header of openDRIVE file! A default value is set.")
-    else:
-        logger.warning("Header of openDRIVE file provides no geo reference. Please update!"
-              " Converter takes default values for now.")
-
-    return float(latitude), float(longitude), "1.0"

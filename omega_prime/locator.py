@@ -88,9 +88,9 @@ class ShapelyTrajectoryTools:
             xy_points = shapely.points(np.stack([x_or_xy,y],axis=1))
         lon_distances = l.project(xy_points)
         is_driver_side_of_centerline =np.asarray([o.is_ccw for o in shapely.linearrings(np.array([
-            [np.asarray(o.coords)[0] for o in l.interpolate(np.clip(lon_distances - cls.epsi, 0, np.inf))],
-            [np.asarray(o.coords)[0] for o in l.interpolate(np.clip(lon_distances + cls.epsi, 0, l.length))],
-            [np.asarray(o.coords)[0] for o in xy_points]]).transpose(1,0,2))])
+            [np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_distances - .1, 0, np.inf))],
+            [np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_distances + .1, 0, l.length))],
+            [np.asarray(o.coords)[0,:2] for o in xy_points]]).transpose(1,0,2))])
         lat_distances = l.distance(xy_points) * (-is_driver_side_of_centerline.astype(int)*2+1)
 
         delta_s = np.zeros_like(lon_distances)
@@ -100,11 +100,11 @@ class ShapelyTrajectoryTools:
             lane_point_distances = line_point_distances
         delta_s_idxs = cls.needs_angle_adjustment(lane_point_distances, lon_distances)
         if np.sum(delta_s_idxs)>0:
-            points = np.stack([p.centroid.coords for p in xy_points[delta_s_idxs]])[:,0,:]
+            points = np.stack([p.centroid.coords for p in xy_points[delta_s_idxs]])[:,0,:2]
             lon_dist_to_fix = lon_distances[delta_s_idxs]
-            before_nearest_points = np.stack([np.asarray(o.coords)[0] for o in l.interpolate(np.clip(lon_dist_to_fix - cls.epsi, 0, l.length))])
-            nearest_points = np.stack([np.asarray(o.coords)[0] for o in l.interpolate(np.clip(lon_dist_to_fix, 0, l.length))])
-            after_nearest_points = np.stack([np.asarray(o.coords)[0] for o in l.interpolate(np.clip(lon_dist_to_fix + cls.epsi, 0, l.length))])
+            before_nearest_points = np.stack([np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_dist_to_fix - cls.epsi, 0, l.length))])
+            nearest_points = np.stack([np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_dist_to_fix, 0, l.length))])
+            after_nearest_points = np.stack([np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_dist_to_fix + cls.epsi, 0, l.length))])
 
             before_vec = nearest_points-before_nearest_points
             before_angle = np.arctan2(before_vec[:,1], before_vec[:,0])
