@@ -44,7 +44,7 @@ dependencies = [
     'betterosi>=0.3.3',
     
 ]
-version = "0.1.2"
+version = "0.1.4"
 
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
