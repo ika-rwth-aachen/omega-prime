@@ -3,7 +3,7 @@ requires = ["setuptools", "ruff"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["omega_prime", "omega_prime.asam_odr", "omega_prime.asam_odr.opendriveconverter", "omega_prime.asam_odr.opendriveconverter.elements", "omega_prime.asam_odr.opendriveparser", "omega_prime.asam_odr.opendriveparser.elements"]
+packages = ["omega_prime", "omega_prime.asam_odr", "omega_prime.asam_odr.opendriveconverter", "omega_prime.asam_odr.opendriveconverter.elements", "omega_prime.asam_odr.opendriveparser", "omega_prime.asam_odr.opendriveparser.elements", "omega_prime.converters"]
 
 
 [project]
@@ -39,7 +39,6 @@ dependencies = [
     'matplotlib',
     'StrEnum',
     'networkx',
-    'lxd-io',
     'xarray',
     'pyproj',
     'betterosi>=0.3.3',

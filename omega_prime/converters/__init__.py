@@ -3,7 +3,6 @@ try:
     lxd_installed = True
 except ImportError:
     lxd_installed = False
-import multiprocessing as mp
 from pathlib import Path
 from typing import Annotated
 

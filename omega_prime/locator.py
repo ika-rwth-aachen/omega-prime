@@ -87,10 +87,11 @@ class ShapelyTrajectoryTools:
         else:
             xy_points = shapely.points(np.stack([x_or_xy,y],axis=1))
         lon_distances = l.project(xy_points)
-        is_driver_side_of_centerline =np.asarray([o.is_ccw for o in shapely.linearrings(np.array([
-            [np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_distances - .1, 0, np.inf))],
-            [np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_distances + .1, 0, l.length))],
-            [np.asarray(o.coords)[0,:2] for o in xy_points]]).transpose(1,0,2))])
+        is_driver_side_of_centerline = shapely.is_ccw(
+            shapely.linearrings(np.array([
+                [np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_distances - .1, 0, np.inf))],
+                [np.asarray(o.coords)[0,:2] for o in l.interpolate(np.clip(lon_distances + .1, 0, l.length))],
+                [np.asarray(o.coords)[0,:2] for o in xy_points]]).transpose(1,0,2)))
         lat_distances = l.distance(xy_points) * (-is_driver_side_of_centerline.astype(int)*2+1)
 
         delta_s = np.zeros_like(lon_distances)

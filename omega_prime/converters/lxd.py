@@ -7,7 +7,9 @@ from loguru import logger
 from lxd_io import Dataset
 from tqdm.auto import tqdm
 import multiprocessing as mp
-import omega_prime
+from ..asam_odr import MapOdr
+from ..recording import Recording
+
 
 __all__ = ['convert_lxd']
 logger.configure(handlers=[{"sink": sys.stdout, "level": "WARNING"}])
@@ -85,7 +87,7 @@ def convert_recording(args):
     converter, recording_id, out_filename = args
     tracks = converter.rec2df(recording_id)
     xodr_path = converter.get_recording_opendrive_path(recording_id)
-    rec = omega_prime.Recording(df=tracks, map=omega_prime.MapOdr.from_file(xodr_path))
+    rec = Recording(df=tracks, map=MapOdr.from_file(xodr_path))
     rec.to_mcap(out_filename)
 
 def convert_lxd(dataset_dir: Path, outpath: Path, n_workers = 1):
@@ -103,4 +105,4 @@ def convert_lxd(dataset_dir: Path, outpath: Path, n_workers = 1):
             list(tqdm(work_iterator, total=len(args_list)))
     else:
         for args in tqdm(args_list):
-            convert_recording(*args)
+            convert_recording(args)

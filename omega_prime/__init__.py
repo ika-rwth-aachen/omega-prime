@@ -1,3 +1,5 @@
+__pdoc__ = {}
+__pdoc__['converters'] = False
 """ .. include:: ./../README.md """
 from . import converters
 from .asam_odr import MapOdr

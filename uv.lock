@@ -739,7 +739,7 @@ wheels = [
 
 [[package]]
 name = "lxd-io"
-version = "0.4.0"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "loguru" },
@@ -748,9 +748,9 @@ dependencies = [
     { name = "opencv-python" },
     { name = "pandas" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/f0/1637e7e79a293f656e5a7c1f9ec15959ccfedd3153053ef2e891252b588a/lxd_io-0.4.0.tar.gz", hash = "sha256:d4ff52879cd6b7673252c3aeb21092ac56d09fce0a0ebe7ea413b29960ae2941", size = 9933 }
+sdist = { url = "https://files.pythonhosted.org/packages/10/88/1d2d2d815817fa9f9446564e4a613d41c554bc3624cc617747392c9bcd5e/lxd_io-0.4.1.tar.gz", hash = "sha256:7a6d44b7a314dab35ae2350c9e47ce2c71c1bd4af68d264523240c6214a3806e", size = 10272 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/b6/fe4869502d5e7d37e277fe835a79464f467fd5a6b5df42cd0a6f31c7d43f/lxd_io-0.4.0-py3-none-any.whl", hash = "sha256:02ac17c209db157ae2aaac0f2ac487482b4171b2152b447a7f4e084d41ffa642", size = 9472 },
+    { url = "https://files.pythonhosted.org/packages/e2/b5/016430b70d4a2a105b1d387957c8bac74a37a3e39aea97f1adf1b1207362/lxd_io-0.4.1-py3-none-any.whl", hash = "sha256:cf7975b46cc5c6660f1a82aa74a3987e27478a81ef49b60e4445e2b65a4a6bc7", size = 9658 },
 ]
 
 [[package]]
@@ -1251,11 +1251,10 @@ wheels = [
 
 [[package]]
 name = "omega-prime"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "." }
 dependencies = [
     { name = "betterosi" },
-    { name = "lxd-io" },
     { name = "lxml" },
     { name = "matplotlib" },
     { name = "networkx" },
@@ -1291,7 +1290,6 @@ test = [
 requires-dist = [
     { name = "betterosi", specifier = ">=0.3.3" },
     { name = "ipywidgets", marker = "extra == 'test'" },
-    { name = "lxd-io" },
     { name = "lxd-io", marker = "extra == 'lxd'" },
     { name = "lxml" },
     { name = "matplotlib" },
