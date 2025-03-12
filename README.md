@@ -58,10 +58,10 @@ Install the required dependencies with `pip install omega-prime[lxd]` (lxd-io us
 <!--pytest.mark.skip-->
 ```python
 from omega_prime.converters import convert_lxd
-convert_lxd('./exiD-dataset-v2.0', './exiD-as-omega-prime')
+convert_lxd('./exiD-dataset-v2.0', './exiD-as-omega-prime', n_workers=4)
 ```
 
-or with `omega-prime from-lxd ./exiD-dataset-v2.0 ./exiD-as-omega-prime`.
+or with `omega-prime from-lxd ./exiD-dataset-v2.0 ./exiD-as-omega-prime --n-workers=4`.
 
 Tested with exiD-v2.0 and inD-v1.1
 

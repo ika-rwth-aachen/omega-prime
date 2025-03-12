@@ -6,7 +6,7 @@ import numpy as np
 from loguru import logger
 from lxd_io import Dataset
 from tqdm.auto import tqdm
-
+import multiprocessing as mp
 import omega_prime
 
 __all__ = ['convert_lxd']
@@ -81,13 +81,26 @@ class DatasetConverter:
         
         return tracks
 
-def convert_lxd(dataset_dir: Path, outpath: Path):
+def convert_recording(args):
+    converter, recording_id, out_filename = args
+    tracks = converter.rec2df(recording_id)
+    xodr_path = converter.get_recording_opendrive_path(recording_id)
+    rec = omega_prime.Recording(df=tracks, map=omega_prime.MapOdr.from_file(xodr_path))
+    rec.to_mcap(out_filename)
+
+def convert_lxd(dataset_dir: Path, outpath: Path, n_workers = 1):
+    if n_workers == -1:
+        n_workers = mp.cpu_count()-1
     outpath = Path(outpath)
     dataset_dir = Path(dataset_dir)
     outpath.mkdir(exist_ok=True)
     converter = DatasetConverter(dataset_dir)
-    for recording_id in tqdm(converter.get_recording_ids()):
-        tracks = converter.rec2df(recording_id)
-        xodr_path = converter.get_recording_opendrive_path(recording_id)
-        rec = omega_prime.Recording(df=tracks, map=omega_prime.MapOdr.from_file(xodr_path))
-        rec.to_mcap(outpath/f'{str(recording_id).zfill(2)}_tracks.mcap')
+    args_list = [[converter, recording_id, outpath/f'{str(recording_id).zfill(2)}_tracks.mcap'] for recording_id in converter.get_recording_ids()]
+    
+    if n_workers > 1:
+        with mp.Pool(n_workers, maxtasksperchild=1) as pool:
+            work_iterator = pool.imap(convert_recording, args_list, chunksize=1)
+            list(tqdm(work_iterator, total=len(args_list)))
+    else:
+        for args in tqdm(args_list):
+            convert_recording(*args)
