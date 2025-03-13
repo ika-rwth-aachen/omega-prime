@@ -33,13 +33,23 @@ def from_csv(
         r.map=omega_prime.asam_odr.MapOdr.from_file(odr, skip_parse=skip_odr_parse)
     r.to_mcap(output)
 
-
 @app.command(help='Check an omega-prime file for specification conformance.')
 def validate(
     input: Annotated[Path, typer.Argument(help="Path to omega file to validate", exists=True, dir_okay=False)]
 ):
     omega_prime.Recording.from_file(input)
     print(f"File {input} is valid.")
+
+@app.command(help='Extracts the ASAM OpenDRIVE file from the omega-prime file.')
+def to_odr(
+    input: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Path to the omega-prime mcap file.")],
+    output: Annotated[Path|None, typer.Argument(help="Where to store the ASAM OpenDRIVE file. If None or directory, stored filename will be used.")] = None,
+):
+    r = omega_prime.Recording.from_file(input, validate=False, skip_odr_parse=False)
+    if isinstance(r.map, omega_prime.MapOdr):
+        r.map.to_file(output)
+    else:
+        raise ValueError('The provided omega-prime file does not contain a map in ASAM OpenDRIVE format.')
 
 if __name__ == "__main__":
     app()

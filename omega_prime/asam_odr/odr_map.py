@@ -72,6 +72,19 @@ class MapOdr(Map):
             for lid, l in r.lanes.items():
                 self.lanes[(rid, lid)] = l
  
+    def to_file(self, filename: Path|None = None):
+        if filename is None:
+            p = Path(self.name)
+        else:
+            p = Path(filename)
+            if p.is_dir():
+                p = p/f'{self.name}'
+        if p.suffix == '':
+            p = Path(str(p) +'.xodr')
+        with open(p, 'w') as f:
+            f.write(self.odr_xml)
+        print(f'Extracted {p}')
+ 
     def to_osi(self):
         return betterosi.MapAsamOpenDrive(map_reference=self.name, open_drive_xml_content=self.odr_xml)
     
