@@ -42,6 +42,7 @@ dependencies = [
     'xarray',
     'pyproj',
     'betterosi>=0.3.3',
+    'lxd-io>=0.4.4'
     
 ]
 version = "0.1.6"
@@ -52,7 +53,7 @@ Repository = "https://github.com/ika-rwth-aachen/omega-prime"
 
 [project.optional-dependencies]
 test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets']
-lxd = ["lxd-io"]
+
 [project.scripts]
 omega-prime = "omega_prime.cli:app"
 
@@ -78,7 +79,7 @@ lint.isort.combine-as-imports = true
 using = "PEP631"
 ignore_licenses = ["mpl"]
 ignore_packages = [
-    "tzdata", "types-python-dateutil", "xarray", "multidict", "opencv-python"# APACHE SOFTWARE LICENSE
+    "tzdata", "types-python-dateutil", "xarray", "multidict" # APACHE SOFTWARE LICENSE
 ]   
 zero = true
 

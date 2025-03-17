@@ -53,11 +53,10 @@ ax = r.plot()
 ## Convert Existing Datasets to omega-prime
 ### [LevelXData](https://levelxdata.com/)
 You can convert data from LevelXData to omega-prime. Under the hood [lxd-io](https://github.com/lenvt/lxd-io) is used to perform the conversion.
-Install the required dependencies with `pip install omega-prime[lxd]` (lxd-io uses cv2 which requires libGL. This could require extra installation steps on headless systems).
 
 <!--pytest.mark.skip-->
 ```python
-from omega_prime.converters import convert_lxd
+from omega_prime import convert_lxd
 convert_lxd('./exiD-dataset-v2.0', './exiD-as-omega-prime', n_workers=4)
 ```
 

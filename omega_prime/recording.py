@@ -28,7 +28,7 @@ def other_column_unset_on_column_value(pandas_obj, *, column_name, column_value,
 
 recording_moving_object_schema = pa.DataFrameSchema(
     title='DataFrame Schema for ASAM OSI GroundTruth of MovingObjects',
-    description='some description',
+    description='',
     columns={
         'x': pa.Column(float, 
                        title='MovingObject.base.position.x',
