@@ -56,7 +56,7 @@ mcap-protobuf-support==0.5.3
     # via betterosi
 mdurl==0.1.2
     # via markdown-it-py
-multidict==6.1.0
+multidict==6.2.0
     # via grpclib
 mypy-extensions==1.0.0
     # via typing-inspect
