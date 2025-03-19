@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 
 from ...logger import logger
@@ -40,12 +38,12 @@ def calculate_object_center_point(current_s, center_line_points, t=None, hdg=Non
     After finding the objects center coordinates the polyline must be calculated depending on the objects geometry.
     For further calculations the heading angle of the street and object are added onto another right away.
     """
-    t_corrected = t * math.cos(starting_point[5])
+    t_corrected = t * np.cos(starting_point[5])
     # in reference to the center_line_point [x, y, hdg, z]
-    object_center_point = [starting_point[1] + t_corrected * math.cos(starting_point[3] + math.pi / 2),
-                           starting_point[2] + t_corrected * math.sin(starting_point[3] + math.pi / 2),
+    object_center_point = [starting_point[1] + t_corrected * np.cos(starting_point[3] + np.pi / 2),
+                           starting_point[2] + t_corrected * np.sin(starting_point[3] + np.pi / 2),
                            starting_point[3] + hdg,
-                           starting_point[4] + t_corrected * math.sin(starting_point[5]) + z_offset]
+                           starting_point[4] + t_corrected * np.sin(starting_point[5]) + z_offset]
 
     return object_center_point
 
@@ -103,11 +101,11 @@ def get_polyline_from_outlines(center_line_points, center_point, outlines):
             # CornerLocal geometry is defined by u,v,z which are relative to the already calculated center_point
             for i, corner_local in enumerate(geometry.corner_local):
                 # the vector of the u,v coordinates in combination with center_points hdg angle leads to its absolute pos
-                vector = math.sqrt(corner_local.u ** 2 + corner_local.v ** 2)
-                hdg_total = math.atan2(corner_local.v, corner_local.u) + center_point[2]
+                vector = np.sqrt(corner_local.u ** 2 + corner_local.v ** 2)
+                hdg_total = np.atan2(corner_local.v, corner_local.u) + center_point[2]
                 # actual coordinates:
-                pos_x[i] = center_point[0] + vector * math.cos(hdg_total)
-                pos_y[i] = center_point[1] + vector * math.sin(hdg_total)
+                pos_x[i] = center_point[0] + vector * np.cos(hdg_total)
+                pos_y[i] = center_point[1] + vector * np.sin(hdg_total)
                 pos_z[i] = center_point[3] + corner_local.z
 
         elif geometry.corner_road:
@@ -155,11 +153,11 @@ def get_polyline_from_width(center_point, width):
     pos_x = np.zeros(2)
     pos_y = np.zeros(2)
     pos_z = np.zeros(2)
-    pos_x[0] = center_point[0] - width / 2 * math.sin(center_point[2])
-    pos_y[0] = center_point[1] + width / 2 * math.cos(center_point[2])
+    pos_x[0] = center_point[0] - width / 2 * np.sin(center_point[2])
+    pos_y[0] = center_point[1] + width / 2 * np.cos(center_point[2])
     pos_z[0] = center_point[3]
-    pos_x[1] = center_point[0] + width / 2 * math.sin(center_point[2])
-    pos_y[1] = center_point[1] - width / 2 * math.cos(center_point[2])
+    pos_x[1] = center_point[0] + width / 2 * np.sin(center_point[2])
+    pos_y[1] = center_point[1] - width / 2 * np.cos(center_point[2])
     pos_z[1] = center_point[3]
 
     return np.stack([pos_x, pos_y, pos_z])
@@ -175,11 +173,11 @@ def get_polyline_from_length(center_point, length):
     pos_x = np.zeros(2)
     pos_y = np.zeros(2)
     pos_z = np.zeros(2)
-    pos_x[0] = center_point[0] + length / 2 * math.cos(center_point[2])
-    pos_y[0] = center_point[1] + length / 2 * math.sin(center_point[2])
+    pos_x[0] = center_point[0] + length / 2 * np.cos(center_point[2])
+    pos_y[0] = center_point[1] + length / 2 * np.sin(center_point[2])
     pos_z[0] = center_point[3]
-    pos_x[1] = center_point[0] - length / 2 * math.cos(center_point[2])
-    pos_y[1] = center_point[1] - length / 2 * math.sin(center_point[2])
+    pos_x[1] = center_point[0] - length / 2 * np.cos(center_point[2])
+    pos_y[1] = center_point[1] - length / 2 * np.sin(center_point[2])
     pos_z[1] = center_point[3]
 
     return np.stack([pos_x, pos_y, pos_z])
@@ -196,17 +194,17 @@ def get_polyline_from_length_and_width(center_point, length, width):
     pos_y = np.zeros(4)
     pos_z = np.zeros(4)
 
-    pos_x[0] = center_point[0] + length / 2 * math.cos(center_point[2]) - width / 2 * math.sin(center_point[2])
-    pos_y[0] = center_point[1] + length / 2 * math.sin(center_point[2]) + width / 2 * math.cos(center_point[2])
+    pos_x[0] = center_point[0] + length / 2 * np.cos(center_point[2]) - width / 2 * np.sin(center_point[2])
+    pos_y[0] = center_point[1] + length / 2 * np.sin(center_point[2]) + width / 2 * np.cos(center_point[2])
     pos_z[0] = center_point[3]
-    pos_x[1] = center_point[0] - length / 2 * math.cos(center_point[2]) - width / 2 * math.sin(center_point[2])
-    pos_y[1] = center_point[1] - length / 2 * math.sin(center_point[2]) + width / 2 * math.cos(center_point[2])
+    pos_x[1] = center_point[0] - length / 2 * np.cos(center_point[2]) - width / 2 * np.sin(center_point[2])
+    pos_y[1] = center_point[1] - length / 2 * np.sin(center_point[2]) + width / 2 * np.cos(center_point[2])
     pos_z[1] = center_point[3]
-    pos_x[2] = center_point[0] - length / 2 * math.cos(center_point[2]) + width / 2 * math.sin(center_point[2])
-    pos_y[2] = center_point[1] - length / 2 * math.sin(center_point[2]) - width / 2 * math.cos(center_point[2])
+    pos_x[2] = center_point[0] - length / 2 * np.cos(center_point[2]) + width / 2 * np.sin(center_point[2])
+    pos_y[2] = center_point[1] - length / 2 * np.sin(center_point[2]) - width / 2 * np.cos(center_point[2])
     pos_z[2] = center_point[3]
-    pos_x[3] = center_point[0] + length / 2 * math.cos(center_point[2]) + width / 2 * math.sin(center_point[2])
-    pos_y[3] = center_point[1] + length / 2 * math.sin(center_point[2]) - width / 2 * math.cos(center_point[2])
+    pos_x[3] = center_point[0] + length / 2 * np.cos(center_point[2]) + width / 2 * np.sin(center_point[2])
+    pos_y[3] = center_point[1] + length / 2 * np.sin(center_point[2]) - width / 2 * np.cos(center_point[2])
     pos_z[3] = center_point[3]
 
     return np.stack([pos_x, pos_y, pos_z])
@@ -226,8 +224,8 @@ def get_polyline_from_radius(center_point, radius, resolution=None):
     pos_y = np.zeros(resolution)
     pos_z = np.zeros(resolution)
     for i in range(resolution):
-        pos_x[i] = center_point[0] + radius * math.cos((i / resolution) * 2 * math.pi)
-        pos_y[i] = center_point[1] + radius * math.sin((i / resolution) * 2 * math.pi)
+        pos_x[i] = center_point[0] + radius * np.cos((i / resolution) * 2 * np.pi)
+        pos_y[i] = center_point[1] + radius * np.sin((i / resolution) * 2 * np.pi)
         pos_z[i] = center_point[3]
 
     return np.stack([pos_x, pos_y, pos_z])
@@ -244,17 +242,17 @@ def get_polyline_for_rect_obj_repeat(point_start, point_end, width_start, width_
     pos_y = np.zeros(4)
     pos_z = np.zeros(4)
 
-    pos_x[0] = point_start[0] - width_start / 2 * math.sin(point_start[2])
-    pos_y[0] = point_start[1] + width_start / 2 * math.cos(point_start[2])
+    pos_x[0] = point_start[0] - width_start / 2 * np.sin(point_start[2])
+    pos_y[0] = point_start[1] + width_start / 2 * np.cos(point_start[2])
     pos_z[0] = point_start[3]
-    pos_x[1] = point_start[0] - width_start / 2 * math.sin(point_start[2])
-    pos_y[1] = point_start[1] + width_start / 2 * math.cos(point_start[2])
+    pos_x[1] = point_start[0] - width_start / 2 * np.sin(point_start[2])
+    pos_y[1] = point_start[1] + width_start / 2 * np.cos(point_start[2])
     pos_z[1] = point_start[3]
-    pos_x[2] = point_end[0] + width_end / 2 * math.sin(point_end[2])
-    pos_y[2] = point_end[1] - width_end / 2 * math.cos(point_end[2])
+    pos_x[2] = point_end[0] + width_end / 2 * np.sin(point_end[2])
+    pos_y[2] = point_end[1] - width_end / 2 * np.cos(point_end[2])
     pos_z[2] = point_end[3]
-    pos_x[3] = point_end[0] + width_end / 2 * math.sin(point_end[2])
-    pos_y[3] = point_end[1] - width_end / 2 * math.cos(point_end[2])
+    pos_x[3] = point_end[0] + width_end / 2 * np.sin(point_end[2])
+    pos_y[3] = point_end[1] - width_end / 2 * np.cos(point_end[2])
     pos_z[3] = point_end[3]
 
     return np.stack([pos_x, pos_y, pos_z])

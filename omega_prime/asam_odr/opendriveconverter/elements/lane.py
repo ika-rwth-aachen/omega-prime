@@ -79,7 +79,7 @@ def calculate_borders(lane_section, center_line_points, end_point_index, start_p
         # save center as previous border
         # copy.copy makes an actual copy of the data instead of referencing the original data as done with equals in
         # order to keep the original data available throughout the whole function
-        pos_previous = copy.copy(center_line_points[start_point_index:end_point_index+1, [1, 2, 4]])
+        pos_previous = copy.copy(center_line_points[start_point_index:end_point_index+1, [1, 2, 4]]) # x,y,heading
 
         # get lane sides
         lane_order = np.empty([len(lane_side), 2])
@@ -95,7 +95,7 @@ def calculate_borders(lane_section, center_line_points, end_point_index, start_p
         # run over lanes of one side in correct order
         for row in sorted_lane_order:
             current_lane = lane_side[int(row[1])]
-            pos = np.ndarray(shape=(end_point_index - start_point_index + 1, 3), dtype=float)
+            pos = np.zeros(shape=(end_point_index - start_point_index + 1, 3), dtype=float)
             # starting point of width element - for first entry it is starting point, later on it is the end-point
             # of the previous width entry
             
@@ -138,8 +138,7 @@ def calculate_borders(lane_section, center_line_points, end_point_index, start_p
     return my_road
 
 
-def add_width(center_line_points, current_lane_width, index_from, index_to, index_section_start, pos_previous, pos,
-              orientation):
+def add_width(center_line_points, current_lane_width, index_from, index_to, index_section_start, pos_previous, pos, orientation):
     """
     :param center_line_points:
     :param current_lane_width: lane_width element

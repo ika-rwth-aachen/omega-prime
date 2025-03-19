@@ -1,4 +1,4 @@
 import logging
 
-logger = logging.getLogger('OmegaFormat OpenDrive Reader')
+logger = logging.getLogger('omega-prime ASAM OpenDRIVE Reader')
 logger.setLevel(logging.INFO)

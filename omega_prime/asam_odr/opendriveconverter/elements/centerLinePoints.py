@@ -35,14 +35,15 @@ def get_center_line_points(road, step_size):
     for i in range(1,len(deltas)):
         deltas[i] = deltas[i-1][-1]+deltas[i]
     n_coordinates_per_segment = [x.shape[1] for x in center_line_points]
-    center_line_points_xy = np.concatenate(center_line_points, axis=1).T
+    center_line_points_xyyaw = np.concatenate(center_line_points, axis=1).T
     delta_ss = np.concatenate(deltas)
-    center_line_points = np.zeros([len(center_line_points_xy), 6])
-    center_line_points[:,1:4] = center_line_points_xy
+    center_line_points = np.zeros([len(center_line_points_xyyaw), 6])
+    center_line_points[:,1:4] = center_line_points_xyyaw
     center_line_points[:,0] = delta_ss
     # remove duplicates (because each segment produces 0 to length)
     center_line_points = center_line_points[~np.concatenate([np.diff(delta_ss)==0, [False]]), :]
     
+    # add z value
     if road.elevation_profile.elevations:
         for i, elevations in enumerate(road.elevation_profile.elevations):
             delta_s = center_line_points[:,0]
@@ -52,6 +53,8 @@ def get_center_line_points(road, step_size):
             delta_s = delta_s[idxs] - elevations.s
             center_line_points[idxs, 4] = elevations.a + elevations.b * delta_s + \
                                 elevations.c * np.power(delta_s, 2) + elevations.d * np.power(delta_s, 3)
+                                
+    # add z yaw
     if road.lateral_profile.superelevations:
         for i, supelev in enumerate(road.lateral_profile.superelevations):
             delta_s = center_line_points[:,0]
@@ -88,8 +91,8 @@ def get_center_line_points(road, step_size):
 
 def sample_points(geometry_entry, step_size):
     # get distance from start point of geometry segment
-    delta_s = np.arange(0, #geometry_entry.s, 
-                        geometry_entry.length, # + geometry_entry.s
+    delta_s = np.arange(0, 
+                        geometry_entry.length,
                         step_size)
     if delta_s[-1]<geometry_entry.length:
         delta_s = np.concatenate([delta_s, [geometry_entry.length]])
@@ -102,18 +105,18 @@ def sample_points(geometry_entry, step_size):
             geometry_entry.y + delta_s * np.sin(geometry_entry.hdg),
             np.ones_like(delta_s)*geometry_entry.hdg
         ])
-
     elif geometry_entry.arc.curvature is not None:
+        arc_s = delta_s
         # https://github.com/pageldev/libOpenDRIVE/blob/master/src/Geometries/Arc.cpp#L15
         r = 1 / geometry_entry.arc.curvature
-        angle_at_s = delta_s * geometry_entry.arc.curvature - np.pi / 2
+        angle_at_s = arc_s * geometry_entry.arc.curvature - np.pi / 2
         xs = r * (np.cos(geometry_entry.hdg + angle_at_s) - np.sin(geometry_entry.hdg)) + geometry_entry.x
         ys = r * (np.sin(geometry_entry.hdg + angle_at_s) + np.cos(geometry_entry.hdg)) + geometry_entry.y
-        delta_phi = delta_s / r
+        delta_phi = arc_s * geometry_entry.arc.curvature
         center_line_points = np.stack([
             xs,
             ys,
-            geometry_entry.hdg + delta_phi
+            delta_phi + geometry_entry.hdg
         ])
 
     elif geometry_entry.spiral.curv_end is not None:
