@@ -48,7 +48,7 @@ Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
 Repository = "https://github.com/ika-rwth-aachen/omega-prime"
 
 [project.optional-dependencies]
-test = ['ruff', 'pdoc3', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets']
+test = ['ruff', 'pdoc3', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets']
 
 [project.scripts]
 omega-prime = "omega_prime.cli:app"
@@ -80,7 +80,7 @@ ignore_packages = [
 zero = true
 
 [tool.pytest.ini_options]
-addopts = "-ra --junitxml=report.xml --nbval --codeblocks"
+addopts = "--nbval --codeblocks --cov=omega_prime --cov-report=xml --cov-report=html --cov-report=term-missing"
 testpaths = [
     "tests",
     "tutorial.ipynb",

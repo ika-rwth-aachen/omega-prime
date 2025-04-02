@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        # Install a specific version of uv.
+        version: "0.6.6"
+
+    - name: "Set up Python"
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: ".python-version"
+
+    - name: Install the project
+      run: uv sync --all-extras --dev
+
+    - name: Run tests with coverage
+      run: |
+        uv run pytest | tee pytest-coverage.log
+        exit_code=${PIPESTATUS[0]}
+        exit $exit_code
+
+    - name: Upload coverage files
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-files
+        path: |
+          coverage.xml
+          pytest-coverage.log
+          htmlcov/
+        compression-level: 9
+
+  lint-and-format:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        # Install a specific version of uv.
+        version: "0.6.6"
+
+    - name: "Set up Python"
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: ".python-version"
+
+    - name: Install the project
+      run: uv sync --all-extras --dev
+
+    - name: Run pre-commit hooks
+      run: |
+        uv run pre-commit run --all-files || (
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git commit -m "Apply Ruff formatting"
+          git push
+        )
