@@ -45,7 +45,7 @@ wheels = [
 
 [[package]]
 name = "betterosi"
-version = "0.3.3"
+version = "0.3.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "betterproto2", extra = ["all"] },
@@ -57,9 +57,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/43/a9c96f987a390d40f76d68848f6441b68dd4b6e97f3e9ef9e7cb1c1df5c8/betterosi-0.3.3.tar.gz", hash = "sha256:649809085f4808f5ff140b0e0990b3ffa0b925b047c1f9e4b97f556921ad11e9", size = 387061 }
+sdist = { url = "https://files.pythonhosted.org/packages/98/2b/03154f1caab94e9468c270506a2bf304a052d85a821638904c1dc04e97dd/betterosi-0.3.4.tar.gz", hash = "sha256:b67fd11b4945c976801656350b0ca316d1f2b78e513caa000100661b991bf89a", size = 209056 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/73/f4/b998a8e25964140b83828dd8598f0868cbdc970c96bac7fbc6c742b3e251/betterosi-0.3.3-py3-none-any.whl", hash = "sha256:fba9bb28800031c35395029c782dcf1078753af31c4b432aa0b1b80ef25bd89b", size = 210902 },
+    { url = "https://files.pythonhosted.org/packages/af/2c/33efe8a245130ce35311aa3d2d02f9c0f5558ede95cbe7bc5db2c4d6e096/betterosi-0.3.4-py3-none-any.whl", hash = "sha256:2e83cdd4dbe422c7d5bf59721dffca66655fb037f8a0749d6373c1754117ca78", size = 211487 },
 ]
 
 [[package]]
@@ -1349,7 +1349,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "betterosi", specifier = ">=0.3.3" },
+    { name = "betterosi", specifier = ">=0.3.4" },
     { name = "ipywidgets", marker = "extra == 'test'" },
     { name = "lxd-io", specifier = ">=0.4.4" },
     { name = "lxml" },

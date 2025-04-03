@@ -37,7 +37,7 @@ dependencies = [
     'networkx',
     'xarray',
     'pyproj',
-    'betterosi>=0.3.3',
+    'betterosi>=0.3.4',
     'lxd-io>=0.4.4'
     
 ]
