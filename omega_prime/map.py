@@ -53,7 +53,7 @@ class LaneBoundaryOsi(LaneBoundary):
 
 
 @dataclass(repr=False)
-class Lane:
+class LaneBase:
     _map: "Map" = field(init=False)
     idx: Any
     centerline: np.ndarray
@@ -61,6 +61,11 @@ class Lane:
     subtype: betterosi.LaneClassificationSubtype
     successor_ids: list[Any]
     predecessor_ids: list[Any]
+    source_reference: Any = field(init=False)
+
+
+@dataclass(repr=False)
+class Lane(LaneBase):
     right_boundary_id: Any
     left_boundary_id: Any
     polygon: shapely.Polygon = field(init=False)
@@ -70,11 +75,8 @@ class Lane:
 
 
 @dataclass(repr=False)
-class LaneOsi(Lane):
+class LaneOsiCenterline(LaneBase):
     _osi: betterosi.Lane
-    right_boundary_ids: list[int]
-    left_boundary_ids: list[int]
-    free_boundary_ids: list[int]
 
     @staticmethod
     def _get_centerline(lane: betterosi.Lane):
@@ -82,6 +84,31 @@ class LaneOsi(Lane):
         if not lane.classification.centerline_is_driving_direction:
             cl = np.flip(cl, axis=0)
         return cl
+
+    @classmethod
+    def create(cls, lane: betterosi.Lane):
+        return cls(
+            _osi=lane,
+            idx=lane.id.value,
+            centerline=cls._get_centerline(lane),
+            type=betterosi.LaneClassificationType(lane.classification.type),
+            subtype=betterosi.LaneClassificationSubtype(lane.classification.subtype),
+            successor_ids=[],
+            predecessor_ids=[],
+            right_boundary_id=None,
+            left_boundary_id=None,
+        )
+
+    def plot(self, ax: plt.Axes):
+        c = "black" if not self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION else "green"
+        ax.plot(*np.array(self.centerline).T, color=c, alpha=0.3, zorder=-10)
+
+
+@dataclass(repr=False)
+class LaneOsi(Lane, LaneOsiCenterline):
+    right_boundary_ids: list[int]
+    left_boundary_ids: list[int]
+    free_boundary_ids: list[int]
 
     @classmethod
     def create(cls, lane: betterosi.Lane):
@@ -133,7 +160,6 @@ class LaneOsi(Lane):
         ax.add_patch(PltPolygon(self.polygon.exterior.coords, fc="blue", alpha=0.2, ec="black"))
 
     # for ase_engine/omega_prime
-
     def _get_oriented_borders(self):
         center_start = shapely.LineString(self.centerline).interpolate(0, normalized=True)
         left = self.left_boundary.polyline
@@ -175,9 +201,8 @@ class MapOsi(Map):
 
     @classmethod
     def create(cls, gt: betterosi.GroundTruth):
-        if not hasattr(gt, "lane") or not hasattr(gt, "lane_boundary"):
-            return None
-
+        if len(gt.lane_boundary) == 0:
+            raise RuntimeError("Empty Map")
         return cls(
             _osi=gt,
             lane_boundaries={b.id.value: LaneBoundaryOsi.create(b) for b in gt.lane_boundary},
@@ -194,3 +219,23 @@ class MapOsi(Map):
             l._map = self
             l.set_boundaries()
             l.set_polygon()
+
+
+@dataclass(repr=False)
+class MapOsiCenterline(Map):
+    _osi: betterosi.GroundTruth
+    lanes: dict[int, LaneOsiCenterline]
+
+    @classmethod
+    def create(cls, gt: betterosi.GroundTruth):
+        if len(gt.lane) == 0:
+            raise RuntimeError("No Map")
+        return cls(
+            _osi=gt,
+            lanes={l.id.value: LaneOsiCenterline.create(l) for l in gt.lane},
+            lane_boundaries={},
+        )
+
+    def setup_lanes_and_boundaries(self):
+        for l in self.lanes.values():
+            l._map = self

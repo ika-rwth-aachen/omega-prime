@@ -1,12 +1,20 @@
-<img src="https://www.ika.rwth-aachen.de/images/ika-logo-a-blau-blau-rgb.svg" align="right" width="240"> 
+
+<img src="https://www.ika.rwth-aachen.de/images/ika-logo-a-blau-blau-rgb.svg" align="right" width="240">
 </br>
 </br>
+
+[![](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](https://github.com/ika-rwth-aachen/omega-prime/blob/master/LICENSE) 
+[![](https://img.shields.io/pypi/v/omega-prime.svg)](https://pypi.python.org/pypi/omega-prime)
+[![](https://github.com/ika-rwth-aachen/omega-prime/workflows/CI/badge.svg)](https://github.com/ika-rwth-aachen/omega-prime/actions)
+[![](https://img.shields.io/pypi/pyversions/omega-prime.svg)](https://pypi.python.org/pypi/omega-prime/)
+[![](https://img.shields.io/github/issues-raw/ika-rwth-aachen/omega-prime.svg)](https://github.com/ika-rwth-aachen/omega-prime/issues)
 
 > [!IMPORTANT]  
 > The data model and specification are not finalized and are still under discussion. See this repository as a proof of concept.
 
 
 # Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data 
+
 Data Model, Format and Python Library for ground truth data containing information on dynamic objects, map and environmental factors optimized for representing urban traffic. The repository contains:
 - **Sepcification Document:** to be released
     - **Data Model**: What signals exists and how these are defined.

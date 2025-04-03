@@ -1,15 +1,6 @@
-from dataclasses import dataclass
-from typing import Any
-
 from ..logger import logger
 from .elements.junction import setup_connections
 from .elements.road import process_road
-
-
-@dataclass(repr=False)
-class Map:
-    roads: dict
-    georeference: Any = None
 
 
 def convert_opendrive(my_opendrive, step_size=0.1) -> tuple[dict, tuple[float, float, str]]:

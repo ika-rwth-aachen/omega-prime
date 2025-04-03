@@ -14,7 +14,8 @@ import pandera as pa
 import pandera.extensions as extensions
 
 from .asam_odr import MapOdr
-from .map import MapOsi, ProjectionOffset
+from .map import MapOsi, ProjectionOffset, MapOsiCenterline
+import itertools
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
 
@@ -292,7 +293,7 @@ class Recording:
             for nanos, group_df in self._df.groupby("total_nanos")
         ]
 
-        if self.map is not None and isinstance(self.map, MapOsi):
+        if self.map is not None and isinstance(self.map, MapOsi | MapOsiCenterline):
             gts[0].lane_boundary = [b._osi for b in self.map.lane_boundaries.values()]
             gts[0].lane = [l._osi for l in self.map.lanes.values()]
         return gts
@@ -300,7 +301,6 @@ class Recording:
     @classmethod
     def from_osi_gts(cls, gts: list[betterosi.GroundTruth], validate: bool = True):
         mvs = []
-        map = None
         projs = []
         for i, gt in enumerate(gts):
             total_nanos = gt.timestamp.seconds * 1_000_000_000 + gt.timestamp.nanos
@@ -351,11 +351,8 @@ class Recording:
                 )
                 for mv in gt.moving_object
             ]
-
-            if map is None:
-                map = MapOsi.create(gt)
         df_mv = pd.DataFrame(mvs).sort_values(by=["total_nanos", "idx"]).reset_index(drop="index")
-        return cls(df_mv, map, projections=projs, validate=validate)
+        return cls(df_mv, projections=projs, validate=validate)
 
     @classmethod
     def from_file(cls, filepath, xodr_path: str | None = None, validate: bool = True, skip_odr_parse: bool = False):
@@ -363,6 +360,8 @@ class Recording:
             filepath,
             return_ground_truth=True,
         )
+        gts, tmp_gts = itertools.tee(gts, 2)
+        first_gt = next(tmp_gts)
         r = cls.from_osi_gts(gts, validate=validate)
         if xodr_path is not None:
             r.map = MapOdr.from_file(xodr_path, skip_parse=skip_odr_parse)
@@ -370,10 +369,19 @@ class Recording:
             try:
                 r.map = MapOdr.from_file(filepath, skip_parse=skip_odr_parse)
             except StopIteration:
-                if r.map is not None:
-                    warn("No map provided in mcap. OSI GroundTruth map is used!")
+                pass
         if r.map is None:
-            warn("No xodr map provided in mcap nor OSI map in GroundTruth!")
+            try:
+                r.map = MapOsi.create(first_gt)
+                warn("No map provided in mcap. OSI GroundTruth map is used!")
+            except RuntimeError:
+                try:
+                    r.map = MapOsiCenterline.create(first_gt)
+                    warn("No map provided in mcap. OSI GroundTruth map is used!")
+                except RuntimeError:
+                    pass
+        if r.map is None:
+            warn("No xodr map provided in MCAP nor OSI map in GroundTruth!")
         return r
 
     def to_mcap(self, filepath):
