@@ -1,11 +1,9 @@
-
 # copied from https://github.com/stefan-urban/pyeulerspiral/blob/master/eulerspiral/eulerspiral.py (MIT License)
 import numpy as np
 from scipy.special import fresnel
 
 
 class EulerSpiral:
-
     def __init__(self, gamma):
         self._gamma = gamma
 
@@ -14,7 +12,6 @@ class EulerSpiral:
         return EulerSpiral(1 * (curvEnd - curvStart) / length)
 
     def calc(self, s, x0=0, y0=0, kappa0=0, theta0=0):
-
         # Start
         C0 = x0 + 1j * y0
 

@@ -54,32 +54,35 @@ def setup_connections(my_roads, lookup_table, my_opendrive):
         if road.link.predecessor is not None:
             predecessor_exists_global = True
             # check if road or junction
-            if road.link.predecessor.element_type == 'road':
+            if road.link.predecessor.element_type == "road":
                 road_predecessor = road.link.predecessor.element_id
-            elif road.link.predecessor.element_type == 'junction':
+            elif road.link.predecessor.element_type == "junction":
                 # need to find current opendrive_road_id in connections and find connecting road
-                connection_road_lane_list_predecessor = find_junction(opendrive_road_id,
-                                                                      road.link.predecessor.element_id, my_opendrive)
+                connection_road_lane_list_predecessor = find_junction(
+                    opendrive_road_id, road.link.predecessor.element_id, my_opendrive
+                )
                 predecessor_junction_global = True
                 if not connection_road_lane_list_predecessor:
                     # oneway streets going out of a junction are not defined, so it is not necessarily bad
                     pass
             else:
-                logger.error('Unknown road linkage type')
+                logger.error("Unknown road linkage type")
 
         if road.link.successor is not None:
             successor_exists_global = True
-            if road.link.successor.element_type == 'road':
+            if road.link.successor.element_type == "road":
                 road_successor = road.link.successor.element_id
-            elif road.link.successor.element_type == 'junction':
+            elif road.link.successor.element_type == "junction":
                 # need to find current opendrive_road_id in connections and find connecting road
-                connection_road_lane_list_successor = find_junction(opendrive_road_id, road.link.successor.element_id, my_opendrive)
+                connection_road_lane_list_successor = find_junction(
+                    opendrive_road_id, road.link.successor.element_id, my_opendrive
+                )
                 successor_junction_global = True
                 if not connection_road_lane_list_successor:
                     # oneway streets going out of a junction are not defined, so it is not necessarily bad
                     pass
             else:
-                logger.error('Unknown road linkage type')
+                logger.error("Unknown road linkage type")
 
         # go over all lane sections
         for section_count, lane_section in enumerate(road.lanes.lane_section):
@@ -124,11 +127,14 @@ def setup_connections(my_roads, lookup_table, my_opendrive):
                 for i in range(0, len(lanes_of_side)):
                     # find corresponding entry in lookup_table (runs with correct lane section)
                     # --> find VVM id of current lane
-                    row_number_origin = lookup_table_search_precisely(opendrive_road_id, section_count,
-                                                                      lanes_of_side[i].id, lookup_table)
+                    row_number_origin = lookup_table_search_precisely(
+                        opendrive_road_id, section_count, lanes_of_side[i].id, lookup_table
+                    )
                     if row_number_origin is None:
-                        logger.warning('For some reason the correct road_id, section_id and lane_id set could not be '
-                              'identified in the lookup_table')
+                        logger.warning(
+                            "For some reason the correct road_id, section_id and lane_id set could not be "
+                            "identified in the lookup_table"
+                        )
                     else:
                         # get correct VVM road and lane id
                         vvm_road_id = lookup_table[row_number_origin][3]
@@ -143,34 +149,57 @@ def setup_connections(my_roads, lookup_table, my_opendrive):
                                 # assuming that in those cases the lane is linked to another lane of the same road in a
                                 # different lane section
                                 if not predecessor_exists:
-                                    row_number_predecessor = lookup_table_search_section(opendrive_road_id,
-                                                                                         section_count,
-                                                                                         section_count - 1, predecessor,
-                                                                                         lookup_table, True)
+                                    row_number_predecessor = lookup_table_search_section(
+                                        opendrive_road_id,
+                                        section_count,
+                                        section_count - 1,
+                                        predecessor,
+                                        lookup_table,
+                                        True,
+                                    )
                                 # no good method to find correct lane section number straight away. Therefore method is
                                 # looking recursively, probably should not be junction and contain in formation in the
                                 # lane link element at the same time
                                 elif not predecessor_junction:
                                     # predecessor is connected at its end --> search for max lane section
                                     max_lane_section = find_max_lane_section(road_predecessor, lookup_table)
-                                    row_number_predecessor = lookup_table_search(road_predecessor, max_lane_section,
-                                                                                 predecessor, lookup_table, True)
+                                    row_number_predecessor = lookup_table_search(
+                                        road_predecessor, max_lane_section, predecessor, lookup_table, True
+                                    )
 
-                                my_roads = set_xccessor(row_number_predecessor, my_roads, vvm_road_id, vvm_lane_id, side_flag, lookup_table, False)
+                                my_roads = set_xccessor(
+                                    row_number_predecessor,
+                                    my_roads,
+                                    vvm_road_id,
+                                    vvm_lane_id,
+                                    side_flag,
+                                    lookup_table,
+                                    False,
+                                )
                         # if part of junction: each lane usually does not contain successor/predecessor in lane link.
                         # it is noted in connection. which is read previously
                         elif predecessor_junction:
                             # search in connection_road_lane_list_predecessor list
                             for row_junction_lookup in connection_road_lane_list_predecessor:
-
                                 if row_junction_lookup[1] == lanes_of_side[i].id:
                                     max_lane_section = find_max_lane_section(row_junction_lookup[0], lookup_table)
-                                    row_number_predecessor = lookup_table_search(row_junction_lookup[0],
-                                                                                 max_lane_section,
-                                                                                 row_junction_lookup[2], lookup_table,
-                                                                                 True)
+                                    row_number_predecessor = lookup_table_search(
+                                        row_junction_lookup[0],
+                                        max_lane_section,
+                                        row_junction_lookup[2],
+                                        lookup_table,
+                                        True,
+                                    )
 
-                                    my_roads = set_xccessor(row_number_predecessor, my_roads, vvm_road_id, vvm_lane_id, side_flag, lookup_table, False)
+                                    my_roads = set_xccessor(
+                                        row_number_predecessor,
+                                        my_roads,
+                                        vvm_road_id,
+                                        vvm_lane_id,
+                                        side_flag,
+                                        lookup_table,
+                                        False,
+                                    )
 
                         # successor_ids
                         if lanes_of_side[i].link.successor:
@@ -181,29 +210,48 @@ def setup_connections(my_roads, lookup_table, my_opendrive):
                                 # --> we are assuming that in those cases the lane is linked to another lane of the same
                                 # road in a different lane section
                                 if not successor_exists:
-                                    row_number_successor = lookup_table_search_section(opendrive_road_id, section_count,
-                                                                                       section_count + 1, successor,
-                                                                                       lookup_table, True)
+                                    row_number_successor = lookup_table_search_section(
+                                        opendrive_road_id,
+                                        section_count,
+                                        section_count + 1,
+                                        successor,
+                                        lookup_table,
+                                        True,
+                                    )
                                 # no good method to find correct lane section number straight away. Therefore method is
                                 # looking recursively
                                 elif not successor_junction:
                                     # successor is connected at its beginning --> start search with lane section 0
-                                    row_number_successor = lookup_table_search(road_successor, 0, successor,
-                                                                               lookup_table, True)
+                                    row_number_successor = lookup_table_search(
+                                        road_successor, 0, successor, lookup_table, True
+                                    )
 
-                                my_roads = set_xccessor(row_number_successor, my_roads, vvm_road_id, vvm_lane_id, side_flag, lookup_table, True)
+                                my_roads = set_xccessor(
+                                    row_number_successor,
+                                    my_roads,
+                                    vvm_road_id,
+                                    vvm_lane_id,
+                                    side_flag,
+                                    lookup_table,
+                                    True,
+                                )
                         elif successor_junction:
                             # search in connection_road_lane_list_predecessor list
                             for row_junction_lookup in connection_road_lane_list_successor:
                                 if row_junction_lookup[1] == lanes_of_side[i].id:
                                     row_number_successor = lookup_table_search(
-                                        row_junction_lookup[0], 
-                                        0,
-                                        row_junction_lookup[2], 
-                                        lookup_table,
-                                        True)
+                                        row_junction_lookup[0], 0, row_junction_lookup[2], lookup_table, True
+                                    )
 
-                                    my_roads = set_xccessor(row_number_successor, my_roads, vvm_road_id, vvm_lane_id, side_flag, lookup_table, True)
+                                    my_roads = set_xccessor(
+                                        row_number_successor,
+                                        my_roads,
+                                        vvm_road_id,
+                                        vvm_lane_id,
+                                        side_flag,
+                                        lookup_table,
+                                        True,
+                                    )
 
     return my_roads
 
@@ -216,12 +264,14 @@ def set_xccessor(row_number, my_roads, vvm_road_id, vvm_lane_id, side_flag, look
         vvm_lane = my_roads.get(vvm_road_id).lanes.get(vvm_lane_id)
         # insert reference element
         # if right lanes successor_ids should really be successor_ids, for left lanes successor_ids are actually predecessor_ids
-        if (set_successor and side_flag == 'right') or (not set_successor and side_flag != 'right'):
+        if (set_successor and side_flag == "right") or (not set_successor and side_flag != "right"):
             vvm_lane.successor_ids.add((successor_road_id, successor_lane_id))
         else:
             vvm_lane.predecessor_ids.add((successor_road_id, successor_lane_id))
     else:
-        raise RuntimeError('For some reason the correct road_id, section_id and lane_id set for the successor/predecessor lane could not be identified in the lookup_table')
+        raise RuntimeError(
+            "For some reason the correct road_id, section_id and lane_id set for the successor/predecessor lane could not be identified in the lookup_table"
+        )
     return my_roads
 
 
@@ -244,9 +294,12 @@ def find_junction(opendrive_road_id, opendrive_junction_id, my_opendrive):
             for connection in junction.connection:
                 if connection.incoming_road == opendrive_road_id:
                     for lane_link in connection.lane_link:
-                        connecting_road = connection.connecting_road if connection.connecting_road is not None else connection.linked_road
-                        connection_road_lane_list.append(
-                            (connecting_road, lane_link.from_value, lane_link.to))
+                        connecting_road = (
+                            connection.connecting_road
+                            if connection.connecting_road is not None
+                            else connection.linked_road
+                        )
+                        connection_road_lane_list.append((connecting_road, lane_link.from_value, lane_link.to))
     assert not any(o[0] is None for o in connection_road_lane_list)
     return connection_road_lane_list
 
@@ -267,11 +320,17 @@ def lookup_table_search_precisely(opendrive_road_id, opendrive_lane_section_id, 
             # found lane, return counter (row number)
             return counter
     # none found --> issue warning
-    raise RuntimeError('no matching road, lanesection, lane combination found')
+    raise RuntimeError("no matching road, lanesection, lane combination found")
 
 
-def lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_original, opendrive_lane_section_id_search,
-                                opendrive_lane_id, lookup_table, first_run):
+def lookup_table_search_section(
+    opendrive_road_id,
+    opendrive_lane_section_id_original,
+    opendrive_lane_section_id_search,
+    opendrive_lane_id,
+    lookup_table,
+    first_run,
+):
     """
     look for VVM road id and VVM lane id that corresponds with the given opendrive road id, lane section id_search and
     lane id.
@@ -288,11 +347,14 @@ def lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_ori
     counter = -1
     for row in lookup_table:
         counter += 1
-        if row[0] == opendrive_road_id \
-            and row[1] == opendrive_lane_section_id_search and row[1] != opendrive_lane_section_id_original \
-            and row[2] == opendrive_lane_id:
-                # found lane, return counter (row number)
-                return counter
+        if (
+            row[0] == opendrive_road_id
+            and row[1] == opendrive_lane_section_id_search
+            and row[1] != opendrive_lane_section_id_original
+            and row[2] == opendrive_lane_id
+        ):
+            # found lane, return counter (row number)
+            return counter
 
     # if not found check if lane is in different lane section (work around solution, since not clear how to find out
     # beforehand in which road section lane is check if road has different lane sections
@@ -303,16 +365,16 @@ def lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_ori
             # run function for all found lane sections (forward search)
             for i in range(opendrive_lane_section_id_search + 1, max_lane_section + 1):
                 # forward search
-                row_number = lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_original, i,
-                                                         opendrive_lane_id, lookup_table,
-                                                         False)
+                row_number = lookup_table_search_section(
+                    opendrive_road_id, opendrive_lane_section_id_original, i, opendrive_lane_id, lookup_table, False
+                )
                 if row_number is not None:
                     return row_number
             for i in range(opendrive_lane_section_id_search - 1, -1, -1):
                 # backward search
-                row_number = lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_original, i,
-                                                         opendrive_lane_id, lookup_table,
-                                                         False)
+                row_number = lookup_table_search_section(
+                    opendrive_road_id, opendrive_lane_section_id_original, i, opendrive_lane_id, lookup_table, False
+                )
                 if row_number is not None:
                     return row_number
 
@@ -320,16 +382,16 @@ def lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_ori
         if opendrive_lane_section_id_original > opendrive_lane_section_id_search:
             for i in range(opendrive_lane_section_id_search - 1, -1, -1):
                 # backward search
-                row_number = lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_original, i,
-                                                         opendrive_lane_id, lookup_table,
-                                                         False)
+                row_number = lookup_table_search_section(
+                    opendrive_road_id, opendrive_lane_section_id_original, i, opendrive_lane_id, lookup_table, False
+                )
                 if row_number is not None:
                     return row_number
             for i in range(opendrive_lane_section_id_search + 1, max_lane_section + 1):
                 # forward search
-                row_number = lookup_table_search_section(opendrive_road_id, opendrive_lane_section_id_original, i,
-                                                         opendrive_lane_id, lookup_table,
-                                                         False)
+                row_number = lookup_table_search_section(
+                    opendrive_road_id, opendrive_lane_section_id_original, i, opendrive_lane_id, lookup_table, False
+                )
                 if row_number is not None:
                     return row_number
 
@@ -350,9 +412,7 @@ def lookup_table_search(opendrive_road_id, opendrive_lane_section_id, opendrive_
     counter = -1
     for row in lookup_table:
         counter += 1
-        if row[0] == opendrive_road_id \
-            and row[1] == opendrive_lane_section_id \
-            and row[2] == opendrive_lane_id:
+        if row[0] == opendrive_road_id and row[1] == opendrive_lane_section_id and row[2] == opendrive_lane_id:
             # found lane, return counter (row number)
             return counter
 

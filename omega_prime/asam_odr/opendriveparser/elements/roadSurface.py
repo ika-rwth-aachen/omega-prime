@@ -1,13 +1,23 @@
 class RoadSurface:
-
     def __init__(self):
         self.crg = []
 
 
 class RoadSurfaceCrg:
-
-    def __init__(self, file=None, s_start=None, s_end=None, orientation=None, mode=None, purpose=None, s_offset=None, t_offset=None,
-                 z_offset=None, z_scale=None, h_offset=None):
+    def __init__(
+        self,
+        file=None,
+        s_start=None,
+        s_end=None,
+        orientation=None,
+        mode=None,
+        purpose=None,
+        s_offset=None,
+        t_offset=None,
+        z_offset=None,
+        z_scale=None,
+        h_offset=None,
+    ):
         self.file = file
         self.s_start = s_start
         self.s_end = s_end

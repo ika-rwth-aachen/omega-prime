@@ -40,16 +40,19 @@ def calculate_object_center_point(current_s, center_line_points, t=None, hdg=Non
     """
     t_corrected = t * np.cos(starting_point[5])
     # in reference to the center_line_point [x, y, hdg, z]
-    object_center_point = [starting_point[1] + t_corrected * np.cos(starting_point[3] + np.pi / 2),
-                           starting_point[2] + t_corrected * np.sin(starting_point[3] + np.pi / 2),
-                           starting_point[3] + hdg,
-                           starting_point[4] + t_corrected * np.sin(starting_point[5]) + z_offset]
+    object_center_point = [
+        starting_point[1] + t_corrected * np.cos(starting_point[3] + np.pi / 2),
+        starting_point[2] + t_corrected * np.sin(starting_point[3] + np.pi / 2),
+        starting_point[3] + hdg,
+        starting_point[4] + t_corrected * np.sin(starting_point[5]) + z_offset,
+    ]
 
     return object_center_point
 
 
-def calculate_polyline(center_line_points, object_center_point, length=None, width=None, radius=None, outlines=[], object_id=None):
-
+def calculate_polyline(
+    center_line_points, object_center_point, length=None, width=None, radius=None, outlines=[], object_id=None
+):
     if object_center_point is None:
         # if there is no center point the object will be dropped
         return None
@@ -83,7 +86,6 @@ def calculate_polyline(center_line_points, object_center_point, length=None, wid
 
 
 def get_polyline_from_outlines(center_line_points, center_point, outlines):
-
     for outline in outlines:
         """
         Multiple outlines are used to define e.g. a tree that has a narrow trunk and a wide crown. Our representation is
@@ -101,7 +103,7 @@ def get_polyline_from_outlines(center_line_points, center_point, outlines):
             # CornerLocal geometry is defined by u,v,z which are relative to the already calculated center_point
             for i, corner_local in enumerate(geometry.corner_local):
                 # the vector of the u,v coordinates in combination with center_points hdg angle leads to its absolute pos
-                vector = np.sqrt(corner_local.u ** 2 + corner_local.v ** 2)
+                vector = np.sqrt(corner_local.u**2 + corner_local.v**2)
                 hdg_total = np.atan2(corner_local.v, corner_local.u) + center_point[2]
                 # actual coordinates:
                 pos_x[i] = center_point[0] + vector * np.cos(hdg_total)

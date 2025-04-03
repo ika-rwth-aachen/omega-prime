@@ -1,5 +1,4 @@
 class Objects:
-
     def __init__(self):
         self.tunnel = []
         self.bridge = []
@@ -8,7 +7,6 @@ class Objects:
 
 
 class ObjectsTunnel:
-
     def __init__(self, s=None, length=None, name=None, id=None, type=None, lighting=None, daylight=None):
         self.s = s
         self.length = length
@@ -21,7 +19,6 @@ class ObjectsTunnel:
 
 
 class ObjectsBridge:
-
     def __init__(self, s=None, length=None, name=None, id=None, type=None):
         self.s = s
         self.length = length
@@ -32,7 +29,6 @@ class ObjectsBridge:
 
 
 class ObjectsReference:
-
     def __init__(self, s=None, t=None, id=None, orientation=None):
         self.s = s
         self.t = t
@@ -44,7 +40,6 @@ class ObjectsReference:
 
 
 class Object:
-
     def __init__(self):
         self.t = None
         self.z_offset = None
@@ -74,7 +69,6 @@ class Object:
 
 
 class ObjectParkingSpace:
-
     def __init__(self):
         self.access = None
         self.restrictions = None

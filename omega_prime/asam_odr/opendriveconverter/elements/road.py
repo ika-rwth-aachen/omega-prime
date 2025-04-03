@@ -20,27 +20,27 @@ def process_road(roads, road, my_opendrive, step_size, lookup_table, reference_t
 
     for i in range(0, len(road.lanes.lane_section)):
         start_point_index = calculate_s_index(center_line_points, road.lanes.lane_section[i].s)
-        if i<len(road.lanes.lane_section)-1:
-            end_point_index =  calculate_s_index(center_line_points, road.lanes.lane_section[i+1].s)
+        if i < len(road.lanes.lane_section) - 1:
+            end_point_index = calculate_s_index(center_line_points, road.lanes.lane_section[i + 1].s)
         else:
-            end_point_index = len(center_line_points)-1
-
+            end_point_index = len(center_line_points) - 1
 
         my_road = Road(lanes={}, borders={}, boundaries={})
 
         my_road, lookup_table, reference_table = extract_road_data(
-            i, 
+            i,
             center_line_points,
-            end_point_index, 
-            start_point_index, 
-            my_road, 
-            road, 
-            lookup_table, 
-            len(roads), 
-            my_opendrive.junction_group, 
-            reference_table, 
-            clp_no_offset, 
-            step_size)
+            end_point_index,
+            start_point_index,
+            my_road,
+            road,
+            lookup_table,
+            len(roads),
+            my_opendrive.junction_group,
+            reference_table,
+            clp_no_offset,
+            step_size,
+        )
         # insert into my_roads structure
         my_road.centerline_points = center_line_points
         roads.update({len(roads): my_road})
@@ -48,8 +48,20 @@ def process_road(roads, road, my_opendrive, step_size, lookup_table, reference_t
     return roads, lookup_table, reference_table
 
 
-
-def extract_road_data(index, center_line_points, end_point_index, start_point_index, my_road, road, lookup_table, vvm_road_id, junction_group, reference_table, clp_no_offset, step_size):
+def extract_road_data(
+    index,
+    center_line_points,
+    end_point_index,
+    start_point_index,
+    my_road,
+    road,
+    lookup_table,
+    vvm_road_id,
+    junction_group,
+    reference_table,
+    clp_no_offset,
+    step_size,
+):
     """
     Extracts all data from the input road, including geometrical data as its borders polyline as well es every other
     informations stored within.
@@ -68,7 +80,9 @@ def extract_road_data(index, center_line_points, end_point_index, start_point_in
     :return:
     """
     # get borders for index lane section
-    my_road = calculate_borders(road.lanes.lane_section[index], center_line_points, end_point_index, start_point_index, my_road, road, step_size)
+    my_road = calculate_borders(
+        road.lanes.lane_section[index], center_line_points, end_point_index, start_point_index, my_road, road, step_size
+    )
 
     # get lane class (junction etc.)
     lane_class = get_lane_class(road.junction, junction_group)
@@ -77,6 +91,8 @@ def extract_road_data(index, center_line_points, end_point_index, start_point_in
     lane_subtype = get_lane_subtype(road)
 
     # get actual lanes
-    my_road, lookup_table = calculate_lanes(road.lanes.lane_section[index], my_road, road.id, index, lookup_table, vvm_road_id, lane_class, lane_subtype)
+    my_road, lookup_table = calculate_lanes(
+        road.lanes.lane_section[index], my_road, road.id, index, lookup_table, vvm_road_id, lane_class, lane_subtype
+    )
 
     return my_road, lookup_table, reference_table

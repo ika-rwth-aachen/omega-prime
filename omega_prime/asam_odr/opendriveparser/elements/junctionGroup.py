@@ -1,5 +1,4 @@
 class JunctionGroup:
-
     def __init__(self):
         self.id = None
         self.name = None
@@ -8,6 +7,5 @@ class JunctionGroup:
 
 
 class JunctionReference:
-
     def __init__(self):
         self.junction = None

@@ -1,12 +1,10 @@
 class Signals:
-
     def __init__(self):
         self.signal = []
         self.signal_reference = []
 
 
 class Signal:
-
     def __init__(self):
         self.s = None
         self.t = None

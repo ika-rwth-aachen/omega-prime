@@ -1,7 +1,7 @@
 class ObjectRepeat:
-
-    def __init__(self, s=None, length=None, distance=None, t_start=None, t_end=None, height_start=None,
-                 height_end=None):
+    def __init__(
+        self, s=None, length=None, distance=None, t_start=None, t_end=None, height_start=None, height_end=None
+    ):
         self.s = float(s)
         self.length = float(length)
         self.distance = float(distance)

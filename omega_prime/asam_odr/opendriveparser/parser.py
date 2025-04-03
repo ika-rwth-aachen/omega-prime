@@ -48,21 +48,20 @@ def parse_opendrive_header(opendrive, header):
     # get geo reference point
     if header.find("geoReference") is not None:
         parsed_header.geo_reference = header.find("geoReference").text
-        
-    if header.find('offset') is not None:
-        xml_offset = header.find('offset')
+
+    if header.find("offset") is not None:
+        xml_offset = header.find("offset")
         parsed_header.offset = ProjectionOffset(
-            x = float(xml_offset.get('x')),
-            y = float(xml_offset.get('y')),
-            z = float(xml_offset.get('z')),
-            yaw = float(xml_offset.get('hdg'))
+            x=float(xml_offset.get("x")),
+            y=float(xml_offset.get("y")),
+            z=float(xml_offset.get("z")),
+            yaw=float(xml_offset.get("hdg")),
         )
 
     opendrive.header = parsed_header
 
 
 def parse_opendrive_road(opendrive, opendrive_road):
-
     new_road = Road()
 
     # get top level information
@@ -128,7 +127,6 @@ def parse_opendrive_road(opendrive, opendrive_road):
 
 
 def parse_opendrive_road_link(new_road, opendrive_road_link):
-
     predecessor = opendrive_road_link.find("predecessor")
 
     if predecessor is not None:
@@ -155,26 +153,24 @@ def parse_opendrive_road_link(new_road, opendrive_road_link):
 
 
 def parse_opendrive_road_type(new_road, opendrive_road_type):
-
     speed = None
     if opendrive_road_type.find("speed") is not None:
-
         speed = RoadTypeSpeed(
-            speed_max = float(opendrive_road_type.find("speed").get("max")),
+            speed_max=float(opendrive_road_type.find("speed").get("max")),
             unit=opendrive_road_type.find("speed").get("unit"),
         )
 
     parsed_road_type = RoadType(
-        s = float(opendrive_road_type.get("s")),
-        type = opendrive_road_type.get("type"),
-        country = opendrive_road_type.get("country"),
-        speed = speed
+        s=float(opendrive_road_type.get("s")),
+        type=opendrive_road_type.get("type"),
+        country=opendrive_road_type.get("country"),
+        speed=speed,
     )
     new_road.type.append(parsed_road_type)
 
 
 def parse_opendrive_road_plan_view(new_road, opendrive_road_plan_view):
-    #read geometry --> needs to be sampled later to transfor into polylines
+    # read geometry --> needs to be sampled later to transfor into polylines
     for geometry in opendrive_road_plan_view.findall("geometry"):
         new_geometry = RoadPlanViewGeometry()
         new_geometry.s = float(geometry.get("s"))
@@ -182,20 +178,18 @@ def parse_opendrive_road_plan_view(new_road, opendrive_road_plan_view):
         new_geometry.y = float(geometry.get("y"))
         new_geometry.hdg = float(geometry.get("hdg"))
         new_geometry.length = float(geometry.get("length"))
-        #check for geometric element
+        # check for geometric element
         if geometry.find("line") is not None:
             new_geometry.line = RoadPlanViewGeometryLine(line=True)
         elif geometry.find("spiral") is not None:
             spiral = geometry.find("spiral")
             new_geometry.spiral = RoadPlanViewGeometrySpiral(
-                curv_start = float(spiral.get("curvStart")),
-                curv_end = float(spiral.get("curvEnd")),
+                curv_start=float(spiral.get("curvStart")),
+                curv_end=float(spiral.get("curvEnd")),
             )
         elif geometry.find("arc") is not None:
             arc = geometry.find("arc")
-            new_geometry.arc = RoadPlanViewGeometryArc(
-                curvature=float(arc.get("curvature"))
-            )
+            new_geometry.arc = RoadPlanViewGeometryArc(curvature=float(arc.get("curvature")))
         elif geometry.find("poly3") is not None:
             poly3 = geometry.find("poly3")
             new_geometry.poly3 = RoadPlanViewGeometryPoly3(
@@ -215,28 +209,26 @@ def parse_opendrive_road_plan_view(new_road, opendrive_road_plan_view):
                 b_v=float(param_poly3.get("bV")),
                 c_v=float(param_poly3.get("cV")),
                 d_v=float(param_poly3.get("dV")),
-                p_range=param_poly3.get("pRange")
+                p_range=param_poly3.get("pRange"),
             )
-        #add query if none is persent?
+        # add query if none is persent?
 
         new_road.plan_view.geometry.append(new_geometry)
 
 
 def parse_opendrive_road_elevation_profile(new_road, opendrive_road_elevation_profile):
-
     for elevation in opendrive_road_elevation_profile.findall("elevation"):
         new_elevation = RoadElevationProfileElevation(
-            s = float(elevation.get("s")),
-            a = float(elevation.get("a")),
-            b = float(elevation.get("b")),
-            c = float(elevation.get("c")),
-            d = float(elevation.get("d")),
+            s=float(elevation.get("s")),
+            a=float(elevation.get("a")),
+            b=float(elevation.get("b")),
+            c=float(elevation.get("c")),
+            d=float(elevation.get("d")),
         )
         new_road.elevation_profile.elevations.append(new_elevation)
 
 
 def parse_opendrive_road_lateral_profile(new_road, opendrive_road_lateral_profile):
-
     for superelevation in opendrive_road_lateral_profile.findall("superelevation"):
         new_superelevation = RoadLateralProfileSuperelevation(
             s=float(superelevation.get("s")),
@@ -260,7 +252,6 @@ def parse_opendrive_road_lane_offset(new_road, opendrive_lanes_lane_offset):
 
 
 def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
-
     new_lane_section = RoadLanesLaneSection()
     new_lane_section.s = float(opendrive_lanes_lane_section.get("s"))
     new_lane_section.single_side = opendrive_lanes_lane_section.get("singleSide")
@@ -302,10 +293,10 @@ def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
             if lane.find("material") is not None:
                 for material in lane.findall("material"):
                     new_lane_material = RoadLanesLaneSectionLaneMaterial(
-                        s_offset = float(material.get("sOffset")),
-                        surface = material.get("surface"),
-                        friction = material.get("friction"),
-                        roughness = material.get("roughness"),
+                        s_offset=float(material.get("sOffset")),
+                        surface=material.get("surface"),
+                        friction=material.get("friction"),
+                        roughness=material.get("roughness"),
                     )
                     new_lane.material.append(new_lane_material)
 
@@ -313,9 +304,9 @@ def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
             if lane.find("speed") is not None:
                 for speed in lane.findall("speed"):
                     new_lane_speed = RoadLanesLaneSectionLaneSpeed(
-                        s_offset = float(speed.get("sOffset")),
-                        max = speed.get("max"),
-                        unit = speed.get("unit"),
+                        s_offset=float(speed.get("sOffset")),
+                        max=speed.get("max"),
+                        unit=speed.get("unit"),
                     )
                     new_lane.speed.append(new_lane_speed)
 
@@ -323,9 +314,9 @@ def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
             if lane.find("access") is not None:
                 for access in lane.findall("access"):
                     new_lane_access = RoadLanesLaneSectionLaneAccess(
-                        s_offset = float(access.get("sOffset")),
-                        rule = access.get("rule"),
-                        restriction = access.get("restriction"),
+                        s_offset=float(access.get("sOffset")),
+                        rule=access.get("rule"),
+                        restriction=access.get("restriction"),
                     )
                     new_lane.access.append(new_lane_access)
 
@@ -333,12 +324,12 @@ def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
             if lane.find("roadMark") is not None:
                 for road_mark in lane.findall("roadMark"):
                     new_lane_road_mark = RoadLanesLaneSectionLaneRoadMark(
-                        s_offset = float(road_mark.get("sOffset")),
-                        type = road_mark.get("type"),
-                        weight = road_mark.get("weight"),
-                        color = road_mark.get("color"),
-                        material = road_mark.get("material"),
-                        lane_change = road_mark.get("laneChange"),
+                        s_offset=float(road_mark.get("sOffset")),
+                        type=road_mark.get("type"),
+                        weight=road_mark.get("weight"),
+                        color=road_mark.get("color"),
+                        material=road_mark.get("material"),
+                        lane_change=road_mark.get("laneChange"),
                     )
                     if road_mark.get("height"):
                         new_lane_road_mark.height = float(road_mark.get("height"))
@@ -351,8 +342,8 @@ def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
             if lane.find("rule") is not None:
                 for rule in lane.findall("rule"):
                     new_lane_rule = RoadLanesLaneSectionLaneRule(
-                        s_offset = float(rule.get("sOffset")),
-                        value = rule.get("value"),
+                        s_offset=float(rule.get("sOffset")),
+                        value=rule.get("value"),
                     )
                     new_lane.rule.append(new_lane_rule)
 
@@ -360,11 +351,11 @@ def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
             if lane.find("width") is not None:
                 for width in lane.findall("width"):
                     new_lane_width = RoadLanesLaneSectionLaneWidth(
-                        s_offset = float(width.get("sOffset")),
-                        a = float(width.get("a")),
-                        b = float(width.get("b")),
-                        c = float(width.get("c")),
-                        d = float(width.get("d")),
+                        s_offset=float(width.get("sOffset")),
+                        a=float(width.get("a")),
+                        b=float(width.get("b")),
+                        c=float(width.get("c")),
+                        d=float(width.get("d")),
                     )
                     new_lane.width.append(new_lane_width)
 
@@ -373,9 +364,9 @@ def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
                 for height in lane.findall("height"):
                     if height.find("inner") is not None:
                         new_lane_height = RoadLanesLaneSectionLaneHeight(
-                            s_offset = float(height.get("sOffset")),
-                            inner = float(height.get("inner")),
-                            outer = float(height.get("outer")),
+                            s_offset=float(height.get("sOffset")),
+                            inner=float(height.get("inner")),
+                            outer=float(height.get("outer")),
                         )
                         new_lane.height.append(new_lane_height)
 
@@ -383,11 +374,11 @@ def parse_opendrive_road_lane_section(new_road, opendrive_lanes_lane_section):
             if lane.find("border") is not None:
                 for border in lane.findall("border"):
                     new_lane_border = RoadLanesLaneSectionLaneBorder(
-                        s_offset = float(border.get("sOffset")),
-                        a = float(border.get("a")),
-                        b = float(border.get("b")),
-                        c = float(border.get("c")),
-                        d = float(border.get("d")),
+                        s_offset=float(border.get("sOffset")),
+                        a=float(border.get("a")),
+                        b=float(border.get("b")),
+                        c=float(border.get("c")),
+                        d=float(border.get("d")),
                     )
                     new_lane.border.append(new_lane_border)
 
@@ -399,13 +390,13 @@ def parse_opendrive_road_surface(new_road, opendrive_road_surface):
     if opendrive_road_surface.find("CRG") is not None:
         for surface_crg in opendrive_road_surface.findall("CRG"):
             new_road_surface_crg = RoadSurfaceCrg(
-                file = surface_crg.get("file"),
-                s_start = float(surface_crg.get("sStart")),
-                s_end= float(surface_crg.get("sEnd")),
+                file=surface_crg.get("file"),
+                s_start=float(surface_crg.get("sStart")),
+                s_end=float(surface_crg.get("sEnd")),
                 orientation=surface_crg.get("orientation"),
-                mode = surface_crg.get("mode"),
-                purpose = surface_crg.get("purpose"),
-                s_offset = float(surface_crg.get("sOffset")),
+                mode=surface_crg.get("mode"),
+                purpose=surface_crg.get("purpose"),
+                s_offset=float(surface_crg.get("sOffset")),
                 t_offset=float(surface_crg.get("tOffset")),
                 z_offset=float(surface_crg.get("zOffset")),
                 z_scale=float(surface_crg.get("zScale")),
@@ -459,32 +450,32 @@ def parse_opendrive_object_lane_validity(road_object):
 
 def parse_opendrive_road_objects_tunnel(new_object, road_objects_tunnel):
     new_road_objects_tunnel = RoadObjectsTunnel(
-        s = float(road_objects_tunnel.get("s")),
-        length = float(road_objects_tunnel.get("length")),
-        name = road_objects_tunnel.get("name"),
-        id = int(road_objects_tunnel.get("id")),
-        type = road_objects_tunnel.get("type"),
-        lighting = road_objects_tunnel.get("lighting"),
-        daylight = road_objects_tunnel.get("daylight"),
+        s=float(road_objects_tunnel.get("s")),
+        length=float(road_objects_tunnel.get("length")),
+        name=road_objects_tunnel.get("name"),
+        id=int(road_objects_tunnel.get("id")),
+        type=road_objects_tunnel.get("type"),
+        lighting=road_objects_tunnel.get("lighting"),
+        daylight=road_objects_tunnel.get("daylight"),
     )
     new_road_objects_tunnel.validity = parse_opendrive_object_lane_validity(road_objects_tunnel)
     new_object.tunnel.append(new_road_objects_tunnel)
 
 
 def parse_opendrive_road_objects_bridge(new_object, road_objects_bridge):
-    idx = road_objects_bridge.get('id')
-    try: 
+    idx = road_objects_bridge.get("id")
+    try:
         idx = int(idx)
     except ValueError:
-        new_idx = int('b0_r'.split('_')[0][1:])
-        logger.warn(f'Cannot parse bridge id {idx}: interpreting as {new_idx}.')
+        new_idx = int("b0_r".split("_")[0][1:])
+        logger.warn(f"Cannot parse bridge id {idx}: interpreting as {new_idx}.")
         idx = new_idx
 
     new_road_objects_bridge = RoadObjectsBridge(
-        s = float(road_objects_bridge.get("s")),
-        length = float(road_objects_bridge.get("length")),
-        name = road_objects_bridge.get("name"),
-        id = idx,
+        s=float(road_objects_bridge.get("s")),
+        length=float(road_objects_bridge.get("length")),
+        name=road_objects_bridge.get("name"),
+        id=idx,
         type=road_objects_bridge.get("type"),
     )
     new_road_objects_bridge.validity = parse_opendrive_object_lane_validity(road_objects_bridge)
@@ -493,10 +484,10 @@ def parse_opendrive_road_objects_bridge(new_object, road_objects_bridge):
 
 def parse_opendrive_road_objects_reference(new_object, road_objects_reference):
     new_road_objects_reference = RoadObjectsReference(
-        s = float(road_objects_reference.get("s")),
-        t = float(road_objects_reference.get("t")),
-        id = int(road_objects_reference.get("id")),
-        orientation = road_objects_reference.get("orientation"),
+        s=float(road_objects_reference.get("s")),
+        t=float(road_objects_reference.get("t")),
+        id=int(road_objects_reference.get("id")),
+        orientation=road_objects_reference.get("orientation"),
     )
     if road_objects_reference.get("zOffset"):
         new_road_objects_reference.z_offset = float(road_objects_reference.get("zOffset"))
@@ -513,23 +504,23 @@ def parse_opendrive_road_objects_object(new_object, road_objects_object):
     if road_objects_object.get("zOffset"):
         new_objects_object.z_offset = float(road_objects_object.get("zOffset"))
     if road_objects_object.get("type"):
-        if road_objects_object.get("type") != '-1':
+        if road_objects_object.get("type") != "-1":
             new_objects_object.type = road_objects_object.get("type")
         else:
-            new_objects_object.type = 'UNKNOWN'
+            new_objects_object.type = "UNKNOWN"
     else:
-        new_objects_object.type = 'none'
+        new_objects_object.type = "none"
     if road_objects_object.get("validLength"):
         new_objects_object.valid_length = float(road_objects_object.get("validLength"))
     new_objects_object.orientation = road_objects_object.get("orientation")
-    new_objects_object.subtype = road_objects_object.get("subtype"),
-    new_objects_object.dynamic = road_objects_object.get("dynamic"),
+    new_objects_object.subtype = (road_objects_object.get("subtype"),)
+    new_objects_object.dynamic = (road_objects_object.get("dynamic"),)
     if road_objects_object.get("hdg"):
         new_objects_object.hdg = float(road_objects_object.get("hdg"))
-    new_objects_object.name = road_objects_object.get("name"),
+    new_objects_object.name = (road_objects_object.get("name"),)
     if road_objects_object.get("pitch"):
         new_objects_object.pitch = float(road_objects_object.get("pitch"))
-    new_objects_object.id = int(road_objects_object.get("id")),
+    new_objects_object.id = (int(road_objects_object.get("id")),)
     if road_objects_object.get("roll"):
         new_objects_object.roll = float(road_objects_object.get("roll"))
     if road_objects_object.get("height"):
@@ -545,22 +536,22 @@ def parse_opendrive_road_objects_object(new_object, road_objects_object):
     if road_objects_object.find("material") is not None:
         for material in road_objects_object.findall("material"):
             new_object_material = ObjectMaterial()
-            new_object_material.surface=material.get("surface"),
-            new_object_material.friction=material.get("friction"),
-            new_object_material.roughness=material.get("roughness"),
+            new_object_material.surface = (material.get("surface"),)
+            new_object_material.friction = (material.get("friction"),)
+            new_object_material.roughness = (material.get("roughness"),)
             new_objects_object.material.append(new_object_material)
 
     # Repeat
     if road_objects_object.find("repeat") is not None:
         for repeat in road_objects_object.findall("repeat"):
             new_object_repeat = ObjectRepeat(
-                s = float(repeat.get("s")),
-                length = float(repeat.get("length")),
-                distance = float(repeat.get("distance")),
-                t_start = float(repeat.get("tStart")),
-                t_end = float(repeat.get("tEnd")),
-                height_start = float(repeat.get("heightStart")),
-                height_end = float(repeat.get("heightEnd"))
+                s=float(repeat.get("s")),
+                length=float(repeat.get("length")),
+                distance=float(repeat.get("distance")),
+                t_start=float(repeat.get("tStart")),
+                t_end=float(repeat.get("tEnd")),
+                height_start=float(repeat.get("heightStart")),
+                height_end=float(repeat.get("heightEnd")),
             )
             if repeat.get("zOffsetStart"):
                 new_object_repeat.z_offset_start = float(repeat.get("zOffsetStart"))
@@ -572,7 +563,7 @@ def parse_opendrive_road_objects_object(new_object, road_objects_object):
                 new_object_repeat.width_end = float(repeat.get("widthEnd"))
             if repeat.get("lengthStart"):
                 new_object_repeat.length_start = float(repeat.get("lengthStart"))
-            if  repeat.get("lengthEnd"):
+            if repeat.get("lengthEnd"):
                 new_object_repeat.length_end = float(repeat.get("lengthEnd"))
             if repeat.get("radiusStart"):
                 new_object_repeat.radius_start = float(repeat.get("radiusStart"))
@@ -660,18 +651,14 @@ def parse_opendrive_road_objects_object(new_object, road_objects_object):
         # Border
         for border in borders.findall("border"):
             new_border = ObjectBorder(
-                width = float(border.get("width")),
-                type = border.get("type"),
-                outline_id = int(border.get("outlineId"))
+                width=float(border.get("width")), type=border.get("type"), outline_id=int(border.get("outlineId"))
             )
             new_border.use_complete_outline = border.get("useCompleteOutline")
 
             # cornerReference
             if border.findall("cornerReference") is not None:
                 for cornerReference in border.findall("cornerReference"):
-                    new_corner_reference = MarkingCornerReference(
-                        id = int(cornerReference.get("id"))
-                    )
+                    new_corner_reference = MarkingCornerReference(id=int(cornerReference.get("id")))
                     new_border.corner_reference.append(new_corner_reference)
             new_object_borders.borders.append(new_border)
         new_objects_object.borders = new_object_borders
@@ -683,13 +670,13 @@ def parse_opendrive_road_objects_object(new_object, road_objects_object):
         # Marking
         for marking in object_markings.findall("marking"):
             new_marking = ObjectMarking(
-                side = marking.get("side"),
-                weight = marking.get("weight"),
-                color = marking.get("color"),
-                space_length = float(marking.get("spaceLength")),
-                line_length = float(marking.get("lineLength")),
-                start_offset = float(marking.get("startOffset")),
-                stop_offset = float(marking.get("stopOffset"))
+                side=marking.get("side"),
+                weight=marking.get("weight"),
+                color=marking.get("color"),
+                space_length=float(marking.get("spaceLength")),
+                line_length=float(marking.get("lineLength")),
+                start_offset=float(marking.get("startOffset")),
+                stop_offset=float(marking.get("stopOffset")),
             )
             if marking.get("width"):
                 new_marking.width = float(marking.get("width"))
@@ -699,9 +686,7 @@ def parse_opendrive_road_objects_object(new_object, road_objects_object):
             # cornerReference
             if marking.findall("cornerReference") is not None:
                 for cornerReference in marking.findall("cornerReference"):
-                    new_corner_reference = MarkingCornerReference(
-                        id = int(cornerReference.get("id"))
-                    )
+                    new_corner_reference = MarkingCornerReference(id=int(cornerReference.get("id")))
                     new_marking.corner_reference.append(new_corner_reference)
             new_object_markings.marking.append(new_marking)
         new_objects_object.markings = new_object_markings
@@ -823,7 +808,7 @@ def parse_opendrive_road_signals_signal_reference(new_signals, opendrive_road_si
         s=float(opendrive_road_signals_signal_reference.get("s")),
         t=float(opendrive_road_signals_signal_reference.get("t")),
         id=int(opendrive_road_signals_signal_reference.get("id")),
-        orientation=opendrive_road_signals_signal_reference.get("orientation")
+        orientation=opendrive_road_signals_signal_reference.get("orientation"),
     )
 
     # Validity
@@ -851,7 +836,7 @@ def parse_opendrive_junction(opendrive, junction):
         connecting_road = connection.get("connectingRoad")
         if connecting_road:
             new_connection.connecting_road = int(connecting_road)
-        linked_road = connection.get('linkedRoad')
+        linked_road = connection.get("linkedRoad")
         if linked_road:
             new_connection.linked_road = int(linked_road)
         new_connection.contact_point = connection.get("contactPoint")
@@ -885,14 +870,14 @@ def parse_opendrive_junction(opendrive, junction):
     # parse priority (0 to n allowed)
     if junction.find("priority") is not None:
         for priority in junction.findall("priority"):
-            new_priority = JunctionPriority(high = priority.get("high"), low = priority.get("low"))
+            new_priority = JunctionPriority(high=priority.get("high"), low=priority.get("low"))
 
             new_junction.priority.append(new_priority)
 
     # parse controller (0 to n allowed)
     if junction.find("controller") is not None:
         for controller in junction.findall("controller"):
-            new_controller = JunctionController(id = int(controller.get("id")))
+            new_controller = JunctionController(id=int(controller.get("id")))
             new_controller.type = controller.get("type")
             if controller.get("sequence"):
                 new_controller.sequence = controller.get("sequence")

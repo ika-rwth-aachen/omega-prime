@@ -1,5 +1,4 @@
 class Junction:
-
     def __init__(self):
         self.id = None
         self.name = None
@@ -13,7 +12,6 @@ class Junction:
 
 
 class JunctionConnection:
-
     def __init__(self):
         self.id = None
         self.incoming_road = None
@@ -28,7 +26,6 @@ class JunctionConnection:
 
 
 class JunctionPredecessor:
-
     def __init__(self):
         self.element_type = None
         self.element_id = None
@@ -48,14 +45,12 @@ class JunctionLaneLink:
 
 
 class JunctionPriority:
-
     def __init__(self, high=None, low=None):
         self.high = high
         self.low = low
 
 
 class JunctionController:
-
     def __init__(self, id=None):
         self.id = id
         self.type = None
@@ -63,13 +58,11 @@ class JunctionController:
 
 
 class JunctionSurface:
-
     def __init__(self):
         self.crg = []
 
 
 class JunctionSurfaceCrg:
-
     def __init__(self, file=None, mode=None, purpose=None, z_offset=None, z_scale=None):
         self.file = file
         self.mode = mode

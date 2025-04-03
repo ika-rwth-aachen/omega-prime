@@ -1,11 +1,9 @@
 class RoadPlanView:
-
     def __init__(self):
         self.geometry = []
 
 
 class RoadGeometry:
-
     def __init__(self):
         self.s = None
         self.x = None
@@ -22,6 +20,7 @@ class RoadGeometry:
 
 class RoadLine:
     """ """
+
     def __init__(self, line=None):
         # according to documentation line actually does not contain any additional information
         self.line = line
@@ -47,8 +46,7 @@ class RoadPoly3:
 
 
 class RoadParamPoly3:
-    def __init__(self, a_u=None, b_u=None, c_u=None, d_u=None, a_v=None, b_v=None, c_v=None, d_v=None,
-                 p_range=None):
+    def __init__(self, a_u=None, b_u=None, c_u=None, d_u=None, a_v=None, b_v=None, c_v=None, d_v=None, p_range=None):
         self.a_u = a_u
         self.b_u = b_u
         self.c_u = c_u

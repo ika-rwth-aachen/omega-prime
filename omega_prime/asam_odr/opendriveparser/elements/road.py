@@ -7,7 +7,6 @@ from .roadSurface import RoadSurface as Surface
 
 
 class Road:
-
     def __init__(self):
         self.name = None
         self.length = None

@@ -1,12 +1,10 @@
 class Lanes:
-
     def __init__(self):
         self.lane_offset = []
         self.lane_section = []
 
 
 class LaneOffset:
-
     def __init__(self, s=None, a=None, b=None, c=None, d=None):
         self.s = s
         self.a = a
@@ -16,7 +14,6 @@ class LaneOffset:
 
 
 class LaneSection:
-
     def __init__(self):
         self.s = None
         self.single_side = None
@@ -26,7 +23,6 @@ class LaneSection:
 
 
 class Lane:
-
     def __init__(self):
         self.id = None
         self.type = None
@@ -34,16 +30,15 @@ class Lane:
         self.link = LaneLink()
         self.material = []
         self.speed = []
-        self.access =[]
+        self.access = []
         self.road_mark = []
         self.rule = []
         self.width = []
-        self.height =[]
+        self.height = []
         self.borders = []
 
 
 class LaneWidth:
-
     def __init__(self, s_offset=None, a=None, b=None, c=None, d=None):
         self.s_offset = s_offset
         self.a = a
@@ -53,7 +48,6 @@ class LaneWidth:
 
 
 class LaneBorder:
-
     def __init__(self, s_offset=None, a=None, b=None, c=None, d=None):
         self.s_offset = s_offset
         self.a = a
@@ -63,7 +57,6 @@ class LaneBorder:
 
 
 class LaneLink:
-
     def __init__(self):
         # here multiple are allowed
         self.predecessor = []
@@ -71,7 +64,6 @@ class LaneLink:
 
 
 class LaneRoadMark:
-
     def __init__(self, s_offset=None, type=None, weight=None, color=None, material=None, lane_change=None):
         self.s_offset = s_offset
         self.type = type
@@ -84,7 +76,6 @@ class LaneRoadMark:
 
 
 class LaneSpeed:
-
     def __init__(self, s_offset, max, unit):
         self.s_offset = s_offset
         self.max = max
@@ -92,7 +83,6 @@ class LaneSpeed:
 
 
 class LaneMaterial:
-
     def __init__(self, s_offset=None, surface=None, friction=None, roughness=None):
         self.s_offset = s_offset
         self.surface = surface
@@ -101,7 +91,6 @@ class LaneMaterial:
 
 
 class LaneAccess:
-
     def __init__(self, s_offset=None, rule=None, restriction=None):
         self.s_offset = s_offset
         self.rule = rule
@@ -109,14 +98,12 @@ class LaneAccess:
 
 
 class LaneRule:
-
     def __init__(self, s_offset=None, value=None):
         self.s_offset = s_offset
         self.value = value
 
 
 class LaneHeight:
-
     def __init__(self, s_offset=None, inner=None, outer=None):
         self.s_offset = s_offset
         self.inner = inner

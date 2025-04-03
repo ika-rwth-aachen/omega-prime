@@ -1,13 +1,19 @@
 class ObjectMarkings:
-
     def __init__(self):
         self.marking = []
 
 
 class ObjectMarking:
-
-    def __init__(self, side = None, weight = None, color = None, space_length = None,
-                 line_length = None, start_offset = None, stop_offset = None):
+    def __init__(
+        self,
+        side=None,
+        weight=None,
+        color=None,
+        space_length=None,
+        line_length=None,
+        start_offset=None,
+        stop_offset=None,
+    ):
         self.side = side
         self.weight = weight
         self.width = None
@@ -21,6 +27,5 @@ class ObjectMarking:
 
 
 class MarkingCornerReference:
-
-    def __init__(self, id = None):
+    def __init__(self, id=None):
         self.id = id

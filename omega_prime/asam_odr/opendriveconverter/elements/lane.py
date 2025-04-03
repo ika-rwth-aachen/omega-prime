@@ -14,20 +14,22 @@ from .centerLinePoints import calculate_s_index
 class LaneOdr(map.Lane):
     type: Any
     subtype: Any
-    
-    
+
+
 @dataclass(repr=False)
 class LaneBoundaryOdr(map.LaneBoundary):
     polyline: Any
-    
+
+
 def lane_type_to_boundary_mapping(value: str):
     boundary_lane_types = {
         "curb": betterosi.LaneBoundaryClassificationType.TYPE_UNKNOWN,
-        "border": betterosi.LaneBoundaryClassificationType.TYPE_UNKNOWN
+        "border": betterosi.LaneBoundaryClassificationType.TYPE_UNKNOWN,
     }
     if value.lower() in boundary_lane_types.keys():
         return boundary_lane_types.get(value.lower())
-    
+
+
 def check_lane_type(lane_type):
     """
     Checks the lane type for such types that are not a lane in omega
@@ -41,22 +43,28 @@ def check_lane_type(lane_type):
         new_type = lane_type_to_boundary_mapping(lane_type)
         not_a_lane = True
         is_a_boundary = True
-    return new_type, not_a_lane, is_a_boundary   
- 
+    return new_type, not_a_lane, is_a_boundary
+
+
 def insert_centerline_as_border(start_point_index, end_point_index, center_line_points, my_road):
     new_idx = len(my_road.borders)
     my_road.borders[new_idx] = LaneBoundaryOdr(
-        polyline=np.stack([
-                center_line_points[start_point_index:end_point_index + 1, 1],
-                center_line_points[start_point_index:end_point_index + 1, 2],
-                center_line_points[start_point_index:end_point_index + 1, 4]]).T,
-        idx = new_idx,
-        type=None
+        polyline=np.stack(
+            [
+                center_line_points[start_point_index : end_point_index + 1, 1],
+                center_line_points[start_point_index : end_point_index + 1, 2],
+                center_line_points[start_point_index : end_point_index + 1, 4],
+            ]
+        ).T,
+        idx=new_idx,
+        type=None,
     )
     return my_road
 
 
-def calculate_borders(lane_section, center_line_points, end_point_index, start_point_index, my_road, xodr_road, step_size):
+def calculate_borders(
+    lane_section, center_line_points, end_point_index, start_point_index, my_road, xodr_road, step_size
+):
     """
     -   this assumes the traditional way in openDRIVE using center line and width (borders are also possible in newer
         versions, but not implemented here)
@@ -79,7 +87,7 @@ def calculate_borders(lane_section, center_line_points, end_point_index, start_p
         # save center as previous border
         # copy.copy makes an actual copy of the data instead of referencing the original data as done with equals in
         # order to keep the original data available throughout the whole function
-        pos_previous = copy.copy(center_line_points[start_point_index:end_point_index+1, [1, 2, 4]]) # x,y,heading
+        pos_previous = copy.copy(center_line_points[start_point_index : end_point_index + 1, [1, 2, 4]])  # x,y,heading
 
         # get lane sides
         lane_order = np.empty([len(lane_side), 2])
@@ -98,38 +106,38 @@ def calculate_borders(lane_section, center_line_points, end_point_index, start_p
             pos = np.zeros(shape=(end_point_index - start_point_index + 1, 3), dtype=float)
             # starting point of width element - for first entry it is starting point, later on it is the end-point
             # of the previous width entry
-            
+
             subsection_start_index = copy.copy(start_point_index)
-            if len(current_lane.width) == 0: 
-                raise ValueError(f'No lane width element in lane with id {lane.id}. A default value is set but should be corrected in the openDrive file!') 
-            
+            if len(current_lane.width) == 0:
+                raise ValueError(
+                    f"No lane width element in lane with id {lane.id}. A default value is set but should be corrected in the openDrive file!"
+                )
+
             for i in range(0, len(current_lane.width)):
                 if i < len(current_lane.width) - 1:
                     # if not last entry, find s_index for endpoint of section in center_line_points
-                    subsection_end_index = calculate_s_index(center_line_points,
-                                                            lane_section.s + current_lane.width[i + 1].s_offset)
+                    subsection_end_index = calculate_s_index(
+                        center_line_points, lane_section.s + current_lane.width[i + 1].s_offset
+                    )
                 else:
                     # for the last entry it is the end_point_index
                     subsection_end_index = end_point_index
 
                 # lane width is applied between width elements start_index and end_index which are calculated before
                 pos = add_width(
-                    center_line_points, 
+                    center_line_points,
                     current_lane.width[i],
                     subsection_start_index,
-                    subsection_end_index, 
-                    lane_section_s_index, 
-                    pos_previous, 
-                    pos, 
-                    sideTag
+                    subsection_end_index,
+                    lane_section_s_index,
+                    pos_previous,
+                    pos,
+                    sideTag,
                 )
                 subsection_start_index = subsection_end_index + 1
 
             new_id = len(my_road.borders)
-            my_border = LaneBoundaryOdr(
-                idx=new_id, 
-                polyline=pos,
-                type=None)
+            my_border = LaneBoundaryOdr(idx=new_id, polyline=pos, type=None)
             my_road.borders[new_id] = my_border
 
             # set previous for next lane as starting point
@@ -138,7 +146,9 @@ def calculate_borders(lane_section, center_line_points, end_point_index, start_p
     return my_road
 
 
-def add_width(center_line_points, current_lane_width, index_from, index_to, index_section_start, pos_previous, pos, orientation):
+def add_width(
+    center_line_points, current_lane_width, index_from, index_to, index_section_start, pos_previous, pos, orientation
+):
     """
     :param center_line_points:
     :param current_lane_width: lane_width element
@@ -150,32 +160,42 @@ def add_width(center_line_points, current_lane_width, index_from, index_to, inde
     :param orientation: left or right
     :return: coordinates of the border
     """
-    j = np.arange(index_from, index_to+1)
+    j = np.arange(index_from, index_to + 1)
     delta_s = center_line_points[j, 0] - current_lane_width.s_offset - center_line_points[index_section_start, 0]
-    current_lane_width_value = current_lane_width.a + current_lane_width.b * delta_s + current_lane_width.c * np.pow(delta_s, 2) + current_lane_width.d * np.pow(delta_s, 3)
+    current_lane_width_value = (
+        current_lane_width.a
+        + current_lane_width.b * delta_s
+        + current_lane_width.c * np.pow(delta_s, 2)
+        + current_lane_width.d * np.pow(delta_s, 3)
+    )
 
-    if orientation == 'left':
-        angle_offset = np.pi/2
+    if orientation == "left":
+        angle_offset = np.pi / 2
     else:
         # right
-        angle_offset = -np.pi/2
-    pos[j-index_section_start, 0] = \
-        pos_previous[j-index_section_start, 0] + \
-        + current_lane_width_value * np.cos(
-            center_line_points[j-index_section_start, 3] + angle_offset)
-    pos[j-index_section_start, 1] = \
-        pos_previous[j-index_section_start, 1] \
-        + current_lane_width_value * np.sin(
-            center_line_points[j-index_section_start, 3] + angle_offset)
-    pos[j-index_section_start, 2] = \
-        pos_previous[j-index_section_start, 2] \
-        +  current_lane_width_value * np.sin(
-            center_line_points[j-index_section_start, 5])
+        angle_offset = -np.pi / 2
+    pos[j - index_section_start, 0] = pos_previous[j - index_section_start, 0] + +current_lane_width_value * np.cos(
+        center_line_points[j - index_section_start, 3] + angle_offset
+    )
+    pos[j - index_section_start, 1] = pos_previous[j - index_section_start, 1] + current_lane_width_value * np.sin(
+        center_line_points[j - index_section_start, 3] + angle_offset
+    )
+    pos[j - index_section_start, 2] = pos_previous[j - index_section_start, 2] + current_lane_width_value * np.sin(
+        center_line_points[j - index_section_start, 5]
+    )
     return pos
 
 
-def calculate_lanes(lane_section, my_road, opendrive_road_id, opendrive_lanesection_id, lookup_table, vvm_road_id,
-                    lane_class, lane_subtype):
+def calculate_lanes(
+    lane_section,
+    my_road,
+    opendrive_road_id,
+    opendrive_lanesection_id,
+    lookup_table,
+    vvm_road_id,
+    lane_class,
+    lane_subtype,
+):
     """
     get actual lanes, pay attention to correct direction
     :param lane_section:
@@ -194,7 +214,7 @@ def calculate_lanes(lane_section, my_road, opendrive_road_id, opendrive_lanesect
 
     # sanity check: number left lanes+ number right lanes should be number of borders -1
     if len(my_road.borders) - 1 != number_right_lanes + number_left_lanes:
-        logger.error('Number of borders and number of right and left lane does not match up')
+        logger.error("Number of borders and number of right and left lane does not match up")
 
     # left lanes
     # same order as borders need to be used (from inner to outer border)
@@ -214,14 +234,25 @@ def calculate_lanes(lane_section, my_road, opendrive_road_id, opendrive_lanesect
         new_type, not_a_lane, is_a_boundary = check_lane_type(lane_section.left_lanes[int(row[1])].type)
         if not_a_lane:
             if is_a_boundary:
-                pass    # conversion is done in calculate_boundaries
+                pass  # conversion is done in calculate_boundaries
             else:
                 raise RuntimeError()
-            new_type = betterosi.LaneClassificationType.TYPE_UNKNOWN # ReferenceTypes.LaneType.FREESPACE
+            new_type = betterosi.LaneClassificationType.TYPE_UNKNOWN  # ReferenceTypes.LaneType.FREESPACE
 
-        my_road, lookup_table = set_lanes(my_road, False, count, count + 1, lane_section.left_lanes[int(row[1])].id,
-                                          opendrive_road_id, opendrive_lanesection_id, lookup_table, vvm_road_id,
-                                          new_type, lane_class, lane_subtype)
+        my_road, lookup_table = set_lanes(
+            my_road,
+            False,
+            count,
+            count + 1,
+            lane_section.left_lanes[int(row[1])].id,
+            opendrive_road_id,
+            opendrive_lanesection_id,
+            lookup_table,
+            vvm_road_id,
+            new_type,
+            lane_class,
+            lane_subtype,
+        )
 
         count += 1
 
@@ -240,41 +271,73 @@ def calculate_lanes(lane_section, my_road, opendrive_road_id, opendrive_lanesect
         new_type, not_a_lane, is_a_boundary = check_lane_type(lane_section.right_lanes[int(row[1])].type)
         if not_a_lane:
             if is_a_boundary:
-                pass    # conversion is done in calculate_boundaries
+                pass  # conversion is done in calculate_boundaries
             else:
                 raise RuntimeError()
-            new_type = betterosi.LaneClassificationType.TYPE_UNKNOWN #ReferenceTypes.LaneType.FREESPACE
+            new_type = betterosi.LaneClassificationType.TYPE_UNKNOWN  # ReferenceTypes.LaneType.FREESPACE
 
         # first right lane (needs to start with center line again)
         if count == 0:
             # set first right lane with correct borders
-            my_road, lookup_table = set_lanes(my_road, True, 0, number_left_lanes + 1,
-                                              lane_section.right_lanes[int(row[1])].id, opendrive_road_id,
-                                              opendrive_lanesection_id, lookup_table, vvm_road_id, new_type,
-                                              lane_class, lane_subtype)
+            my_road, lookup_table = set_lanes(
+                my_road,
+                True,
+                0,
+                number_left_lanes + 1,
+                lane_section.right_lanes[int(row[1])].id,
+                opendrive_road_id,
+                opendrive_lanesection_id,
+                lookup_table,
+                vvm_road_id,
+                new_type,
+                lane_class,
+                lane_subtype,
+            )
             count += 1
         else:
             # set other right lanes with correct borders
-            my_road, lookup_table = set_lanes(my_road, True, count+number_left_lanes, count+number_left_lanes+1,
-                                              lane_section.right_lanes[int(row[1])].id, opendrive_road_id,
-                                              opendrive_lanesection_id, lookup_table, vvm_road_id, new_type,
-                                              lane_class, lane_subtype)
+            my_road, lookup_table = set_lanes(
+                my_road,
+                True,
+                count + number_left_lanes,
+                count + number_left_lanes + 1,
+                lane_section.right_lanes[int(row[1])].id,
+                opendrive_road_id,
+                opendrive_lanesection_id,
+                lookup_table,
+                vvm_road_id,
+                new_type,
+                lane_class,
+                lane_subtype,
+            )
             count += 1
 
     return my_road, lookup_table
 
 
-def set_lanes(my_road, direction_correct, left_index, right_index, opendrive_lane_id, opendrive_road_id, opendrive_lanesection_id, lookup_table, vvm_road_id, lane_type, lane_class, lane_subtype):
-
+def set_lanes(
+    my_road,
+    direction_correct,
+    left_index,
+    right_index,
+    opendrive_lane_id,
+    opendrive_road_id,
+    opendrive_lanesection_id,
+    lookup_table,
+    vvm_road_id,
+    lane_type,
+    lane_class,
+    lane_subtype,
+):
     my_lane = LaneOdr(
-        idx = None,
+        idx=None,
         centerline=None,
         type=lane_type,
         subtype=lane_subtype,
-        left_boundary_id = (vvm_road_id, left_index),
-        right_boundary_id = (vvm_road_id, right_index),
+        left_boundary_id=(vvm_road_id, left_index),
+        right_boundary_id=(vvm_road_id, right_index),
         predecessor_ids=set(),
-        successor_ids=set()
+        successor_ids=set(),
     )
     # set lane class (none, intersection or roundabout)
     if lane_class["intersection"] or lane_class["roundabout"]:
@@ -284,7 +347,7 @@ def set_lanes(my_road, direction_correct, left_index, right_index, opendrive_lan
     my_road.lanes.update({len(my_road.lanes): my_lane})
 
     # update lookup table
-    new_lane_id = (vvm_road_id, len(my_road.lanes)-1)
+    new_lane_id = (vvm_road_id, len(my_road.lanes) - 1)
     lookup_table.append([opendrive_road_id, opendrive_lanesection_id, opendrive_lane_id, *new_lane_id])
 
     return my_road, lookup_table
@@ -299,7 +362,6 @@ def get_lane_subtype(road):
     """
     lane_subtype = None
     if road.objects is not None:
-
         if road.objects.bridge is not None:
             lane_subtype = betterosi.LaneClassificationSubtype.SUBTYPE_UNKNOWN
 
