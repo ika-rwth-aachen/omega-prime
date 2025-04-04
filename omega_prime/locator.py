@@ -244,7 +244,7 @@ class Locator:
     def __post_init__(self):
         self.external2internal_laneid = {l.idx: i for i, l in enumerate(self.all_lanes)}
         self.extended_centerlines = [ShapelyTrajectoryTools.extend_linestring(l.centerline) for l in self.all_lanes]
-        if self.all_lanes[0].polygon is not None:
+        if hasattr(self.all_lanes[0], 'polygon') and self.all_lanes[0].polygon is not None:
             self.str_tree = shapely.STRtree([l.polygon for l in self.all_lanes])
         else:
             self.str_tree = shapely.STRtree([l.centerline for l in self.all_lanes])
