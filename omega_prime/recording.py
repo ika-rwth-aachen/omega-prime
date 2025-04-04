@@ -280,10 +280,10 @@ class Recording:
         super().__init__()
         self.nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
         mapping = pl.DataFrame({"total_nanos": list(self.nanos2frame.keys()), "frame": list(self.nanos2frame.values())})
-        if 'frame' in df.columns:
-            df = df.drop('frame')
+        if "frame" in df.columns:
+            df = df.drop("frame")
         df = df.join(mapping, on="total_nanos", how="left")
-        if 'polygon' not in df.columns:
+        if "polygon" not in df.columns:
             df = df.with_columns([pl.Series(name="polygon", values=self._get_polygons(df))])
         self.projections = projections
         self._df = df
