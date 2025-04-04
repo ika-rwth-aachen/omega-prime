@@ -95,8 +95,6 @@ class LaneOsiCenterline(LaneBase):
             subtype=betterosi.LaneClassificationSubtype(lane.classification.subtype),
             successor_ids=[],
             predecessor_ids=[],
-            right_boundary_id=None,
-            left_boundary_id=None,
         )
 
     def plot(self, ax: plt.Axes):

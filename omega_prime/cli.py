@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Annotated
 
-import pandas as pd
+import polars as pl
 import typer
 
 import omega_prime
@@ -40,7 +40,7 @@ def from_csv(
     validate: bool = True,
     skip_odr_parse: bool = False,
 ):
-    df = pd.read_csv(input)
+    df = pl.read_csv(input)
     r = omega_prime.Recording(df, validate=validate)
     if odr is not None:
         r.map = omega_prime.asam_odr.MapOdr.from_file(odr, skip_parse=skip_odr_parse)
@@ -51,7 +51,7 @@ def from_csv(
 def validate(
     input: Annotated[Path, typer.Argument(help="Path to omega file to validate", exists=True, dir_okay=False)],
 ):
-    omega_prime.Recording.from_file(input)
+    omega_prime.Recording.from_file(input, validate=True)
     print(f"File {input} is valid.")
 
 

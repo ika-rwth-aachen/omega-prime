@@ -2,7 +2,7 @@
 #    uv pip compile pyproject.toml
 annotated-types==0.7.0
     # via pydantic
-betterosi==0.3.4
+betterosi==0.3.5
     # via omega-prime (pyproject.toml)
 betterproto2==0.3.1
     # via betterosi
@@ -56,7 +56,7 @@ mcap-protobuf-support==0.5.3
     # via betterosi
 mdurl==0.1.2
     # via markdown-it-py
-multidict==6.2.0
+multidict==6.3.2
     # via grpclib
 mypy-extensions==1.0.0
     # via typing-inspect
@@ -89,14 +89,18 @@ pandera==0.23.1
 pillow==11.1.0
     # via matplotlib
 polars==1.26.0
-    # via lxd-io
+    # via
+    #   lxd-io
+    #   pandera
 protobuf==6.30.2
     # via
     #   betterosi
     #   mcap-protobuf-support
-pydantic==2.11.1
+pyarrow==19.0.1
+    # via pandas
+pydantic==2.11.2
     # via pandera
-pydantic-core==2.33.0
+pydantic-core==2.33.1
     # via pydantic
 pygments==2.19.1
     # via rich
@@ -131,7 +135,7 @@ typer==0.15.2
     # via
     #   omega-prime (pyproject.toml)
     #   betterosi
-typing-extensions==4.13.0
+typing-extensions==4.13.1
     # via
     #   betterproto2
     #   pydantic
