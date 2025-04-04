@@ -7,7 +7,7 @@ from loguru import logger
 from lxd_io import Dataset
 from tqdm.auto import tqdm
 import multiprocessing as mp
-from ..asam_odr import MapOdr
+from ..map_odr import MapOdr
 from ..recording import Recording
 import polars as pl
 

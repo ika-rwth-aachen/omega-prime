@@ -16,7 +16,7 @@ import pandera.extensions as extensions
 import pyarrow
 import pyarrow.parquet as pq
 import polars as pl
-from .asam_odr import MapOdr
+from .map_odr import MapOdr
 from .map import MapOsi, ProjectionOffset, MapOsiCenterline
 import itertools
 from functools import partial
@@ -387,10 +387,10 @@ class Recording:
         first_gt = next(tmp_gts)
         r = cls.from_osi_gts(gts, validate=validate)
         if xodr_path is not None:
-            r.map = MapOdr.from_file(xodr_path, skip_parse=skip_odr_parse)
+            r.map = MapOdr.from_file(xodr_path)
         elif Path(filepath).suffix == ".mcap":
             try:
-                r.map = MapOdr.from_file(filepath, skip_parse=skip_odr_parse)
+                r.map = MapOdr.from_file(filepath)
             except StopIteration:
                 pass
         if r.map is None:
