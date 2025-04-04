@@ -341,7 +341,7 @@ def set_lanes(
     )
     # set lane class (none, intersection or roundabout)
     if lane_class["intersection"] or lane_class["roundabout"]:
-        my_lane.classification = betterosi.LaneClassificationType.TYPE_INTERSECTION
+        my_lane.type = betterosi.LaneClassificationType.TYPE_INTERSECTION
 
     # add lane to road
     my_road.lanes.update({len(my_road.lanes): my_lane})

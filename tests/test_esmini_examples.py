@@ -14,7 +14,7 @@ def test_validation():
     with cProfile.Profile() as pr:
         rec = omega_prime.Recording.from_file(p / mapping[3][0], p / mapping[3][1])
         rec.to_mcap("validated.mcap")
-        rec = omega_prime.Recording.from_file("validated.mcap")
+        rec = omega_prime.Recording.from_file("validated.mcap", validate=True)
         stats = Stats(pr)
     stats.dump_stats("test_validate.prof")
 
@@ -34,7 +34,12 @@ def test_interpolate():
     rec.interpolate(hz=10)
 
 
+def test_parquet():
+    rec = omega_prime.Recording.from_file(p / mapping[3][0], p / mapping[3][1])
+    rec.to_parquet("test.parquet")
+    rec = omega_prime.Recording.from_file("test.parquet")
+    assert rec.map is not None
+
+
 if __name__ == "__main__":
-    test_validation()
-    test_esmini_examples()
-    test_validation()
+    pass

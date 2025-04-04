@@ -25,11 +25,11 @@ classifiers = [
 
 dependencies = [
     'shapely',
-    'pandas',
     'scipy',
     'numpy',
     'typer',
-    'pandera',
+    'pandera[polars]',
+    'pandas[pyarrow]',
     'lxml',
     'matplotlib',
     'StrEnum',
@@ -37,7 +37,7 @@ dependencies = [
     'xarray',
     'pyproj',
     'betterosi>=0.3.4',
-    'lxd-io>=0.4.4'
+    'lxd-io>=0.4.6'
     
 ]
 version = "0.1.8"
