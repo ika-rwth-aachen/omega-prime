@@ -39,8 +39,8 @@ def test_interpolate():
 def test_centerline():
     with cProfile.Profile() as pr:
         # Load the recording
-        rec = omega_prime.Recording.from_file(p / mapping[3][0], p / mapping[3][1], validate=False)
-        
+        # rec = omega_prime.Recording.from_file(p / mapping[3][0], p / mapping[3][1], validate=False)
+        rec = omega_prime.Recording.from_file("example_files/01_tracks.mcap")
         # Create a locator and remove all polygons from the lanes
         locator = omega_prime.Locator.from_mapodr(rec.map)
         for lane in locator.all_lanes:

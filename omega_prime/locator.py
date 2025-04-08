@@ -335,7 +335,23 @@ class Locator:
         except ValueError:
             # no arrays to stack
             no_associations = np.array(list(range(len(xys))))
-        no_asscociation_idxs, intersection_lane_ids = self.str_tree.query_nearest(polys[no_associations])
+        if hasattr(self.all_lanes[0], 'polygon') and self.all_lanes[0].polygon is not None:
+            no_asscociation_idxs, intersection_lane_ids = self.str_tree.query_nearest(polys[no_associations])
+        else:
+            # Create an empty numpy array for no_asscociation_idxs
+            no_asscociation_idxs = np.array([])
+            intersection_lane_ids = np.array([])
+            if len(no_associations) > 0:
+                for idx, poly in enumerate(polys[no_associations]):
+                    #Returns the indxes of all centerlines that are in range
+                    nearby_idx = self.query_centerlines(poly, range_percentage=0.1)
+                    # Connect the no_assosciation_idxs with the intersection_lane_ids
+                    no_asscociation_idxs = np.append(no_asscociation_idxs, no_associations[idx] * len(nearby_idx))
+                    intersection_lane_ids = np.append(intersection_lane_ids, nearby_idx)
+                    
+                    
+                    
+        
         for l_id in set(intersection_lane_ids):
             lps = no_associations[no_asscociation_idxs[intersection_lane_ids == l_id]]
             (
@@ -347,6 +363,29 @@ class Locator:
 
         assert len(no_asscociation_new) == 0
         return lat_distances, lon_distances
+
+    def query_centerlines(self, point, range_percentage=0.1):
+        """
+        Query the nearest centerline and all centerlines within a range percentage.
+        
+        :param point: A shapely Point object representing the query location.
+        :param range_percentage: The range as a percentage of the total length of the nearest centerline. Default is 0.1 (10%).
+        :return: A NDArray with all the Lane Idx in the Range.
+        """
+        # Query the nearest centerline
+        nearest_idx = self.str_tree.query_nearest(point)
+        nearest_centerline = self.extended_centerlines[nearest_idx[0]]
+
+        # Calculate the range based on the nearest centerline's length
+        range_distance = nearest_centerline.distance(point) * (1+range_percentage)
+
+        # Create a buffer around the point
+        buffer = point.buffer(range_distance)
+
+        # Query all centerlines within the buffer
+        nearby_idxs = self.str_tree.query(buffer, predicate="intersects")
+
+        return nearby_idxs
 
     def _get_routing_graph(self):
         all_lanes = self.all_lanes
