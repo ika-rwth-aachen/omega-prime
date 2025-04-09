@@ -40,7 +40,7 @@ dependencies = [
     'lxd-io>=0.4.6'
     
 ]
-version = "0.1.9"
+version = "0.1.10"
 
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
