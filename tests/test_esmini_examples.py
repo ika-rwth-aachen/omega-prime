@@ -5,7 +5,7 @@ from pstats import Stats
 
 import omega_prime
 
-p = Path("example_files/")
+p = Path(__file__).parent.parent / "example_files/"
 with open(p / "mapping.json") as f:
     mapping = json.load(f)
 

@@ -335,7 +335,7 @@ class Recording:
                     if gt.proj_string is not None and gt.proj_string != ""
                     else None,
                     offset=ProjectionOffset(
-                        x=gt.proj_frame_offset.posiiton.x,
+                        x=gt.proj_frame_offset.position.x,
                         y=gt.proj_frame_offset.position.y,
                         z=gt.proj_frame_offset.position.z,
                         yaw=gt.proj_frame_offset.yaw,
