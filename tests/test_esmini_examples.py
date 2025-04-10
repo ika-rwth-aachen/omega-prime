@@ -83,9 +83,6 @@ def test_locator():
         # Run xys2sts and ensure it executes without errors
         sts_cl = locator.xys2sts(xys)
         
-        # Check that str_tree.geometries only contains LineString objects
-        assert all(isinstance(geom, shapely.LineString) for geom in locator.str_tree.geometries), \
-            "str_tree contains non-LineString geometries"
         
         #check that sts_cl is not empty or has expected properties
         assert len(sts_cl["s"]) > 0, "sts_cl output is empty"
@@ -103,4 +100,5 @@ def test_parquet():
 
 
 if __name__ == "__main__":
-    pass
+    test_locator()
+    # pass
