@@ -37,8 +37,8 @@ dependencies = [
     'xarray',
     'pyproj',
     'betterosi>=0.3.4',
-    'lxd-io>=0.4.6'
-    
+    'lxd-io>=0.4.6',
+    'pyxodr'
 ]
 version = "0.1.10"
 

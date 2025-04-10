@@ -21,9 +21,8 @@ def from_osi(
         Path | None, typer.Option(exists=True, dir_okay=False, help="Path to ASAM OpenDRIVE xml to use as map")
     ] = None,
     validate: bool = True,
-    skip_odr_parse: bool = False,
 ):
-    r = omega_prime.Recording.from_file(input, xodr_path=odr, validate=validate, skip_odr_parse=skip_odr_parse)
+    r = omega_prime.Recording.from_file(input, xodr_path=odr, validate=validate)
     r.to_mcap(output)
 
 
@@ -38,12 +37,11 @@ def from_csv(
         Path | None, typer.Option(exists=True, dir_okay=False, help="Path to ASAM OpenDRIVE xml to use as map")
     ] = None,
     validate: bool = True,
-    skip_odr_parse: bool = False,
 ):
     df = pl.read_csv(input)
     r = omega_prime.Recording(df, validate=validate)
     if odr is not None:
-        r.map = omega_prime.asam_odr.MapOdr.from_file(odr, skip_parse=skip_odr_parse)
+        r.map = omega_prime.MapOdr.from_file(odr)
     r.to_mcap(output)
 
 
@@ -65,8 +63,8 @@ def to_odr(
         ),
     ] = None,
 ):
-    r = omega_prime.Recording.from_file(input, validate=False, skip_odr_parse=False)
-    if isinstance(r.map, omega_prime.MapOdr):
+    r = omega_prime.Recording.from_file(input, validate=False)
+    if isinstance(r.map, omega_prime.MapXodr):
         r.map.to_file(output)
     else:
         raise ValueError("The provided omega-prime file does not contain a map in ASAM OpenDRIVE format.")
