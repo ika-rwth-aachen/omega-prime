@@ -350,7 +350,7 @@ class Locator:
                     intersection_lane_ids = np.append(intersection_lane_ids, nearby_idx)
                     
                     
-                    
+        # Need a convertion from float values to int values. This is because the shapely STRtree query_nearest returns float values
         no_asscociation_idxs = no_asscociation_idxs.astype(int)
         intersection_lane_ids = intersection_lane_ids.astype(int)
         for l_id in set(intersection_lane_ids):
@@ -386,6 +386,7 @@ class Locator:
         # Query all centerlines within the buffer
         nearby_idxs = self.str_tree.query(buffer, predicate="intersects")
         
+        # If there was no intersection, return the nearest centerline
         if nearby_idxs.size == 0:
             return nearest_idx
 
