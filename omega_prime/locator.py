@@ -346,12 +346,13 @@ class Locator:
                     #Returns the indxes of all centerlines that are in range
                     nearby_idx = self.query_centerlines(poly, range_percentage=0.1)
                     # Connect the no_assosciation_idxs with the intersection_lane_ids
-                    no_asscociation_idxs = np.append(no_asscociation_idxs, no_associations[idx] * len(nearby_idx))
+                    no_asscociation_idxs = np.append(no_asscociation_idxs, [no_associations[idx]] * len(nearby_idx))
                     intersection_lane_ids = np.append(intersection_lane_ids, nearby_idx)
                     
                     
                     
-        
+        no_asscociation_idxs = no_asscociation_idxs.astype(int)
+        intersection_lane_ids = intersection_lane_ids.astype(int)
         for l_id in set(intersection_lane_ids):
             lps = no_associations[no_asscociation_idxs[intersection_lane_ids == l_id]]
             (
@@ -384,6 +385,9 @@ class Locator:
 
         # Query all centerlines within the buffer
         nearby_idxs = self.str_tree.query(buffer, predicate="intersects")
+        
+        if nearby_idxs.size == 0:
+            return nearest_idx
 
         return nearby_idxs
 
