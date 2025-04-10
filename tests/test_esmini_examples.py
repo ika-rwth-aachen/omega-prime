@@ -68,6 +68,33 @@ def test_centerline():
     stats.dump_stats("test_centerline.prof")
     
 
+def test_locator():
+    with cProfile.Profile() as pr:
+        # Load the recording
+        # rec = omega_prime.Recording.from_file(p / mapping[3][0], p / mapping[3][1], validate=False)
+        rec = omega_prime.Recording.from_file("example_files/01_tracks.mcap")
+        # Create a locator and remove all polygons from the lanes
+        locator = omega_prime.Locator.from_mapodr(rec.map)
+
+        
+        # Prepare input coordinates for xys2sts
+        xys = np.stack([rec.moving_objects[0].x, rec.moving_objects[0].y]).T
+        
+        # Run xys2sts and ensure it executes without errors
+        sts_cl = locator.xys2sts(xys)
+        
+        # Check that str_tree.geometries only contains LineString objects
+        assert all(isinstance(geom, shapely.LineString) for geom in locator.str_tree.geometries), \
+            "str_tree contains non-LineString geometries"
+        
+        #check that sts_cl is not empty or has expected properties
+        assert len(sts_cl["s"]) > 0, "sts_cl output is empty"
+        assert len(sts_cl["t"]) > 0, "sts_cl output is empty"
+    
+    # Save profiling results to a file
+    stats = Stats(pr)
+    stats.dump_stats("test_centerline.prof")
+    
 def test_parquet():
     rec = omega_prime.Recording.from_file(p / mapping[3][0], p / mapping[3][1])
     rec.to_parquet("test.parquet")
