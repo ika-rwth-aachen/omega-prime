@@ -521,7 +521,10 @@ class Recording:
                 b'proj_string': self.projections[0]['proj_string'],
             }
             if self.projections[0]['offset'] is not None:
-                proj_dict[b'proj_frame_offset'] = self.projections[0]['offset'].to_bytes()
+                proj_dict[b'offset_x'] = str(self.projections[0]['offset'].x).encode()
+                proj_dict[b'offset_y'] = str(self.projections[0]['offset'].y).encode()
+                proj_dict[b'offset_z'] = str(self.projections[0]['offset'].z).encode()
+                proj_dict[b'offset_yaw'] = str(self.projections[0]['offset'].yaw).encode()
 
         else:
             proj_dict = {}

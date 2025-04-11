@@ -3,7 +3,9 @@ from typing import Annotated
 
 import polars as pl
 import typer
-
+from pathlib import Path
+from mcap_protobuf.decoder import DecoderFactory
+from mcap.reader import make_reader
 import omega_prime
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
@@ -63,6 +65,14 @@ def to_odr(
         ),
     ] = None,
 ):
+    if Path(input).suffix == '.mcap':
+        with Path(input).open("rb") as f:
+            reader = make_reader(f, decoder_factories=[DecoderFactory()])
+            gm = next(reader.iter_decoded_messages(topics="/ground_truth_map"))
+        map = omega_prime.MapOdr.create(odr_xml=gm[3].open_drive_xml, name='', step_size=.01)
+        map.to_file(output)
+        return None
+    
     r = omega_prime.Recording.from_file(input, validate=False)
     if isinstance(r.map, omega_prime.MapXodr):
         r.map.to_file(output)
