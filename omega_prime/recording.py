@@ -146,12 +146,6 @@ recording_moving_object_schema = pa.DataFrameSchema(
 )
 
 
-# recording_internal_mv_schema = recording_moving_object_schema.add_columns({
-#    'polygon': pa.Column(shapely.Polygon),
-#    'frame': pa.Column(int, pa.Check.ge(0))
-# })
-
-
 def timestamp2ts(timestamp: betterosi.Timestamp):
     return timestamp.seconds * 1_000_000_000 + timestamp.nanos
 
@@ -223,6 +217,8 @@ class MovingObject:
         pass
 
     def plot_mv_frame(self, ax: plt.Axes, frame: int):
+        if 'polygon' not in self._df.columns:
+            self._recording._add_polygons_to_df()
         polys = self._df.filter(pl.col("frame") == frame)["polygon"]
         for p in polys:
             ax.add_patch(PltPolygon(p.exterior.coords, fc="red", alpha=0.2))
@@ -385,7 +381,7 @@ class Recording:
         return cls(df_mv, projections=projs, **kwargs)
 
     @classmethod
-    def from_file(cls, filepath, xodr_path: str | None = None, validate: bool = False, skip_odr_parse: bool = False, compute_polygons: bool = False):
+    def from_file(cls, filepath, xodr_path: str | None = None, validate: bool = False, parse_map: bool = False, compute_polygons: bool = False):
         if Path(filepath).suffix == ".parquet":
             return cls.from_parquet(filepath)
 
@@ -398,10 +394,10 @@ class Recording:
         first_gt = next(tmp_gts)
         r = cls.from_osi_gts(gts, validate=validate)
         if xodr_path is not None:
-            r.map = MapOdr.from_file(xodr_path)
+            r.map = MapOdr.from_file(xodr_path, parse=parse_map)
         elif Path(filepath).suffix == ".mcap":
             try:
-                r.map = MapOdr.from_file(filepath)
+                r.map = MapOdr.from_file(filepath, parse=parse_map)
             except StopIteration:
                 pass
         if r.map is None:
@@ -430,7 +426,9 @@ class Recording:
 
     def to_hdf(self, filename, key="moving_object"):
         #!pip install tables
-        self._df.drop(columns=["polygon", "frame"]).to_pandas().to_hdf(filename, key=key)
+        to_drop = [] if 'polygon' not in self._df.columns else ['polygon']
+        to_drop += ['frame']
+        self._df.drop(columns=to_drop).to_pandas().to_hdf(filename, key=key)
 
     @classmethod
     def from_hdf(cls, filename, key="moving_object"):
@@ -478,18 +476,28 @@ class Recording:
             fig, ax = plt.subplots(1, 1)
         if self.map:
             self.map.plot(ax)
-        for ru in self.moving_objects.values():
-            ru.plot(ax)
+        self.plot_mvs(ax=ax)
         if legend:
             ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         return ax
 
+    def plot_mvs(self, ax=None, legend=False):
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+        for [idx], mv in self._df['idx','x','y'].group_by('idx'):
+            ax.plot(mv['x'], mv['y'], c='red', alpha=.5, label=str(idx))
+        if legend:
+            ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+        return ax
+            
     def plot_frame(self, frame: int, ax=None):
         ax = self.plot(ax=ax)
         self.plot_mv_frame(ax, frame=frame)
         return ax
 
     def plot_mv_frame(self, ax: plt.Axes, frame: int):
+        if 'polygon' not in self._df.columns:
+            self._add_polygons_to_df()
         polys = self._df.filter(pl.col("frame") == frame)["polygon"]
         for p in polys:
             ax.add_patch(PltPolygon(p.exterior.coords, fc="red"))

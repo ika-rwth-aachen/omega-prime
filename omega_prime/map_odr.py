@@ -97,28 +97,44 @@ def make_xodr_idx(road_id, lane_id, section_idx, side=None):
 
 @dataclass(repr=False)
 class MapOdr(Map):
-    _xodr_map: PyxodrRoadNetwork
     odr_xml: str
     name: str
+    step_size: float = 0.1
+    _xodr_map: PyxodrRoadNetwork|None = None
     proj_string: str | None = None
     proj_offset: ProjectionOffset | None = None
     projection: pyproj.CRS | None = None
 
+
+    @property
+    def xodr_map(self):
+        if self._xodr_map is None:
+            self.parse()
+        return self._xodr_map
+        
     @classmethod
     def from_file(
-        cls, filename, topic="ground_truth_map", is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.1
+        cls, filename, topic="ground_truth_map", parse:bool=False, is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.1
     ):
         if Path(filename).suffix in [".xodr", ".odr"] or is_odr_xml:
             with open(filename) as f:
-                self = cls.create(odr_xml=f.read(), name=Path(filename).stem, step_size=step_size)
-            return self
+                self = cls(odr_xml=f.read(), name=Path(filename).stem, step_size=step_size, lanes={}, lane_boundaries={})
+
         elif Path(filename).suffix in [".mcap"] or is_mcap:
             map = next(iter(betterosi.read(filename, mcap_topics=[topic], osi_message_type=betterosi.MapAsamOpenDrive)))
-            return cls.create(odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size)
-
+            self = cls(odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, lanes={}, lane_boundaries={})
+        
+        if parse:
+            self.parse()
+        return self
+    
+    
     @classmethod
-    def create(cls, odr_xml: str, name: str = "UnnamedMap", step_size=0.1):
-        rn = RoadNetwork(odr_xml, resolution=step_size)
+    def create(cls, odr_xml, name, step_size=0.1):
+        return cls(odr_xml=odr_xml, name=name, step_size=step_size, lanes={}, lane_boundaries={})
+        
+    def parse(self):
+        rn = RoadNetwork(self.odr_xml, resolution=self.step_size)
 
         lane_boundaries = {}
         lanes = {}
@@ -190,23 +206,18 @@ class MapOdr(Map):
 
                     lane_idx += 1
 
-        map_instance = cls(
-            _xodr_map=rn,
-            odr_xml=odr_xml,
-            lane_boundaries=lane_boundaries,
-            lanes=lanes,
-            name=name,
-            proj_string=proj_string,
-            proj_offset=proj_offset,
-            projection=projection,
-        )
-
-        for lane in map_instance.lanes.values():
-            lane._map = map_instance
+        
+        self._xodr_map=rn
+        self.lane_boundaries=lane_boundaries
+        self.lanes=lanes
+        self.proj_string=proj_string
+        self.proj_offset=proj_offset
+        self.projection=projection
+        for lane in self.lanes.values():
+            lane._map = self
             lane.set_boundaries()
             lane.set_polygon()
-
-        return map_instance
+        return self
 
     def setup_lanes_and_boundaries(self):
         for b in self.lane_boundaries.values():

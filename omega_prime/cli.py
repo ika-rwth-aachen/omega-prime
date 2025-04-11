@@ -49,7 +49,7 @@ def from_csv(
 def validate(
     input: Annotated[Path, typer.Argument(help="Path to omega file to validate", exists=True, dir_okay=False)],
 ):
-    omega_prime.Recording.from_file(input, validate=True)
+    omega_prime.Recording.from_file(input, validate=True, parse_map=True)
     print(f"File {input} is valid.")
 
 
@@ -69,6 +69,20 @@ def to_odr(
     else:
         raise ValueError("The provided omega-prime file does not contain a map in ASAM OpenDRIVE format.")
 
+@app.command(help="Converts MCAP or OSI omega-prime into a parquet file (beneficial for faster loading of large data).")
+def to_parquet(
+    input: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Path to the omega-prime mcap file.")],
+    output: Annotated[
+        Path | None,
+        typer.Argument(
+            help="Where to store the parquet file. If None or directory, stored filename will be used."
+        ),
+    ] = None,
+):
+    r = omega_prime.Recording.from_file(input, validate=False, parse_map=False)
+    if output is None:
+        output = Path(input).parent/f'{Path(input).stem}.parquet'
+    r.to_parquet(output)
 
 if __name__ == "__main__":
     app()
