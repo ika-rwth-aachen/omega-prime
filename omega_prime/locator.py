@@ -244,7 +244,7 @@ class Locator:
     def __post_init__(self):
         self.external2internal_laneid = {l.idx: i for i, l in enumerate(self.all_lanes)}
         self.extended_centerlines = [ShapelyTrajectoryTools.extend_linestring(l.centerline) for l in self.all_lanes]
-        if hasattr(self.all_lanes[0], 'polygon') and self.all_lanes[0].polygon is not None:
+        if hasattr(self.all_lanes[0], "polygon") and self.all_lanes[0].polygon is not None:
             self.str_tree = shapely.STRtree([l.polygon for l in self.all_lanes])
         else:
             self.str_tree = shapely.STRtree([l.centerline for l in self.all_lanes])
@@ -280,11 +280,11 @@ class Locator:
             )
         return xys
 
-    def xys2sts(self, xys, poly = None):
+    def xys2sts(self, xys, poly=None):
         if isinstance(xys, np.ndarray) and xys.ndim == 2:
             assert xys.shape[1] == 2
             xys = shapely.points(xys)
-        lat_distances, lon_distances = self._xys2sts(xys , poly)
+        lat_distances, lon_distances = self._xys2sts(xys, poly)
         single_lane_association = self.get_single_lane_association(lat_distances)
         sla = np.zeros(len(single_lane_association), dtype=tuple)
         for i, v in enumerate(single_lane_association):
@@ -335,7 +335,7 @@ class Locator:
         except ValueError:
             # no arrays to stack
             no_associations = np.array(list(range(len(xys))))
-        if hasattr(self.all_lanes[0], 'polygon') and self.all_lanes[0].polygon is not None:
+        if hasattr(self.all_lanes[0], "polygon") and self.all_lanes[0].polygon is not None:
             no_asscociation_idxs, intersection_lane_ids = self.str_tree.query_nearest(polys[no_associations])
         else:
             # Create an empty numpy array for no_asscociation_idxs
@@ -343,13 +343,12 @@ class Locator:
             intersection_lane_ids = np.array([])
             if len(no_associations) > 0:
                 for idx, poly in enumerate(polys[no_associations]):
-                    #Returns the indxes of all centerlines that are in range
+                    # Returns the indxes of all centerlines that are in range
                     nearby_idx = self.query_centerlines(poly, range_percentage=0.1)
                     # Connect the no_assosciation_idxs with the intersection_lane_ids
                     no_asscociation_idxs = np.append(no_asscociation_idxs, [no_associations[idx]] * len(nearby_idx))
                     intersection_lane_ids = np.append(intersection_lane_ids, nearby_idx)
-                    
-                    
+
         # Need a convertion from float values to int values. This is because the shapely STRtree query_nearest returns float values
         no_asscociation_idxs = no_asscociation_idxs.astype(int)
         intersection_lane_ids = intersection_lane_ids.astype(int)
@@ -368,7 +367,7 @@ class Locator:
     def query_centerlines(self, point, range_percentage=0.1):
         """
         Query the nearest centerline and all centerlines within a range percentage.
-        
+
         :param point: A shapely Point object representing the query location.
         :param range_percentage: The range as a percentage of the total length of the nearest centerline. Default is 0.1 (10%).
         :return: A NDArray with all the Lane Idx in the Range.
@@ -378,14 +377,14 @@ class Locator:
         nearest_centerline = self.extended_centerlines[nearest_idx[0]]
 
         # Calculate the range based on the nearest centerline's length
-        range_distance = nearest_centerline.distance(point) * (1+range_percentage)
+        range_distance = nearest_centerline.distance(point) * (1 + range_percentage)
 
         # Create a buffer around the point
         buffer = point.buffer(range_distance)
 
         # Query all centerlines within the buffer
         nearby_idxs = self.str_tree.query(buffer, predicate="intersects")
-        
+
         # If there was no intersection, return the nearest centerline
         if nearby_idxs.size == 0:
             return nearest_idx
