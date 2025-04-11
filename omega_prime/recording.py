@@ -4,7 +4,6 @@ from warnings import warn
 
 import betterosi
 import numpy as np
-import pyproj
 import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
@@ -184,7 +183,6 @@ class MovingObject:
             "yaw",
             "roll",
             "pitch",
-            "polygon",
             "vel",
             "acc",
         ]:
@@ -206,6 +204,17 @@ class MovingObject:
     #    self._recording._df.loc[self._recording._df["idx"] == self.idx, k] = val
 
     @property
+    def polygon(self):
+        if 'polygon' not in self._df.columns:
+            self._recording._add_polygons_to_df()
+        return self._df["polygon"]
+    
+    @property
+    def polygons(self):
+        return self.polygon
+        
+
+    @property
     def nanos(self):
         return self.timestamps * 1e9
 
@@ -223,26 +232,24 @@ class Recording:
     _MovingObjectClass: typing.ClassVar = MovingObject
 
     @staticmethod
-    def _get_polygons(df):
-        c2f = df["length"] / 2
-        c2l = df["width"] / 2
-        x = df["x"]
-        y = df["y"]
-        cosyaw = np.cos(df["yaw"])
-        sinyaw = np.sin(df["yaw"])
-        polys = (
-            np.array(
-                [
-                    ((x + (+c2f) * cosyaw - (+c2l) * sinyaw), (y + (+c2f) * sinyaw + (+c2l) * cosyaw)),
-                    ((x + (+c2f) * cosyaw - (-c2l) * sinyaw), (y + (+c2f) * sinyaw + (-c2l) * cosyaw)),
-                    ((x + (-c2f) * cosyaw - (-c2l) * sinyaw), (y + (-c2f) * sinyaw + (-c2l) * cosyaw)),
-                    ((x + (-c2f) * cosyaw - (+c2l) * sinyaw), (y + (-c2f) * sinyaw + (+c2l) * cosyaw)),
-                ]
-            )
-            .swapaxes(0, 2)
-            .swapaxes(1, 2)
-        )
-        return shapely.polygons(polys)
+    def _add_polygons(df):
+        ar = df[:].select(
+            (pl.col('x')+ (+pl.col('length')/2)*pl.col('yaw').cos() - (+pl.col('width')/2)*pl.col('yaw').sin()).alias('x1'),
+            (pl.col('x')+ (+pl.col('length')/2)*pl.col('yaw').cos() - (-pl.col('width')/2)*pl.col('yaw').sin()).alias('x2'),
+            (pl.col('x')+ (-pl.col('length')/2)*pl.col('yaw').cos() - (-pl.col('width')/2)*pl.col('yaw').sin()).alias('x3'),
+            (pl.col('x')+ (-pl.col('length')/2)*pl.col('yaw').cos() - (+pl.col('width')/2)*pl.col('yaw').sin()).alias('x4'),
+            (pl.col('y')+ (+pl.col('length')/2)*pl.col('yaw').sin() - (+pl.col('width')/2)*pl.col('yaw').cos()).alias('y1'),
+            (pl.col('y')+ (+pl.col('length')/2)*pl.col('yaw').sin() - (-pl.col('width')/2)*pl.col('yaw').cos()).alias('y2'),
+            (pl.col('y')+ (-pl.col('length')/2)*pl.col('yaw').sin() - (-pl.col('width')/2)*pl.col('yaw').cos()).alias('y3'),
+            (pl.col('y')+ (-pl.col('length')/2)*pl.col('yaw').sin() - (+pl.col('width')/2)*pl.col('yaw').cos()).alias('y4')
+        ).to_numpy()
+        polys = shapely.polygons(np.stack([ar[:,:4],ar[:,4:]],axis=2))
+        df = df.with_columns(pl.Series(name='polygon', values=polys))
+        return df
+
+    def _add_polygons_to_df(self):
+        self._df = self._add_polygons(self._df)
+        
 
     @staticmethod
     def get_moving_object_ground_truth(
@@ -278,17 +285,19 @@ class Recording:
         )
         return gt
 
-    def __init__(self, df, map=None, projections=None, host_vehicle=None, validate=False):
+    def __init__(self, df, map=None, projections=None, host_vehicle=None, validate=False, compute_polygons=False):
         if validate:
-            recording_moving_object_schema.validate(df.to_pandas(), lazy=True)
+            recording_moving_object_schema.validate(df.to_pandas() if isinstance(df, pl.DataFrame) else df, lazy=True)
+        if not isinstance(df, pl.DataFrame):
+            df = pl.DataFrame(df)
         super().__init__()
         self.nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
         mapping = pl.DataFrame({"total_nanos": list(self.nanos2frame.keys()), "frame": list(self.nanos2frame.values())})
         if "frame" in df.columns:
             df = df.drop("frame")
         df = df.join(mapping, on="total_nanos", how="left")
-        if "polygon" not in df.columns:
-            df = df.with_columns([pl.Series(name="polygon", values=self._get_polygons(df))])
+        if "polygon" not in df.columns and compute_polygons:
+            df = self._add_polygons(df)
         if "vel" not in df.columns:
             df = df.with_columns(
                 pl.struct(["vel_x", "vel_y"])
@@ -301,87 +310,89 @@ class Recording:
                 .map_batches(partial(np.linalg.norm, axis=1), is_elementwise=True)
                 .alias("acc")
             )
-        self.projections = projections
+        self.projections = projections if projections is not None else []
         self._df = df
         self.map = map
-        self.moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
+        self._moving_objects = None #= {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
         self.host_vehicle = host_vehicle
 
+    @property
+    def moving_objects(self):
+        if self._moving_objects is None:
+            self._moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
+        return self._moving_objects
+        
     def to_osi_gts(self) -> list[betterosi.GroundTruth]:
-        gts = [
-            self.get_moving_object_ground_truth(nanos, group_df, host_vehicle=self.host_vehicle, validate=False)
-            for [nanos], group_df in self._df.group_by("total_nanos")
-        ]
-
-        if self.map is not None and isinstance(self.map, MapOsi | MapOsiCenterline):
-            gts[0].lane_boundary = [b._osi for b in self.map.lane_boundaries.values()]
-            gts[0].lane = [l._osi for l in self.map.lanes.values()]
-        return gts
+        first_iteration = True
+        for [nanos], group_df in self._df.group_by("total_nanos"):
+            gt = self.get_moving_object_ground_truth(nanos, group_df, host_vehicle=self.host_vehicle, validate=False)
+            if first_iteration:
+                first_iteration = False
+                if self.map is not None and isinstance(self.map, MapOsi | MapOsiCenterline):
+                    gt.lane_boundary = [b._osi for b in self.map.lane_boundaries.values()]
+                    gt.lane = [l._osi for l in self.map.lanes.values()]
+            yield gt
 
     @classmethod
-    def from_osi_gts(cls, gts: list[betterosi.GroundTruth], validate: bool = True):
-        mvs = []
+    def from_osi_gts(cls, gts: list[betterosi.GroundTruth], **kwargs):
         projs = []
-        for i, gt in enumerate(gts):
-            total_nanos = gt.timestamp.seconds * 1_000_000_000 + gt.timestamp.nanos
-            if gt.proj_frame_offset is not None and gt.proj_frame_offset.position is None:
-                raise ValueError(
-                    f"Offset of {i}th ground truth message (total_nanos={total_nanos}) is set without position."
-                )
-            projs.append(
-                dict(
-                    proj_string=gt.proj_string,
-                    projection=pyproj.CRS.from_proj4(gt.proj_string)
-                    if gt.proj_string is not None and gt.proj_string != ""
-                    else None,
-                    offset=ProjectionOffset(
-                        x=gt.proj_frame_offset.position.x,
-                        y=gt.proj_frame_offset.position.y,
-                        z=gt.proj_frame_offset.position.z,
-                        yaw=gt.proj_frame_offset.yaw,
+        def get_gts():
+            for i, gt in enumerate(gts):
+                total_nanos = gt.timestamp.seconds * 1_000_000_000 + gt.timestamp.nanos
+                if gt.proj_frame_offset is not None and gt.proj_frame_offset.position is None:
+                    raise ValueError(
+                        f"Offset of {i}th ground truth message (total_nanos={total_nanos}) is set without position."
                     )
-                    if gt.proj_frame_offset is not None
-                    else None,
+                projs.append(
+                    dict(
+                        proj_string=gt.proj_string,
+                        offset=ProjectionOffset(
+                            x=gt.proj_frame_offset.position.x,
+                            y=gt.proj_frame_offset.position.y,
+                            z=gt.proj_frame_offset.position.z,
+                            yaw=gt.proj_frame_offset.yaw,
+                        )
+                        if gt.proj_frame_offset is not None
+                        else None,
+                    )
                 )
-            )
-            mvs += [
-                dict(
-                    total_nanos=total_nanos,
-                    idx=mv.id.value,
-                    x=mv.base.position.x,
-                    y=mv.base.position.y,
-                    z=mv.base.position.z,
-                    vel_x=mv.base.velocity.x,
-                    vel_y=mv.base.velocity.y,
-                    vel_z=mv.base.velocity.z,
-                    acc_x=mv.base.acceleration.x,
-                    acc_y=mv.base.acceleration.y,
-                    acc_z=mv.base.acceleration.z,
-                    length=mv.base.dimension.length,
-                    width=mv.base.dimension.width,
-                    height=mv.base.dimension.height,
-                    roll=mv.base.orientation.roll,
-                    pitch=mv.base.orientation.pitch,
-                    yaw=mv.base.orientation.yaw,
-                    type=mv.type,
-                    role=mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1,
-                    subtype=mv.vehicle_classification.type
-                    if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE
-                    else -1,
-                )
-                for mv in gt.moving_object
-            ]
-        df_mv = pl.DataFrame(mvs).sort(["total_nanos", "idx"])
-        return cls(df_mv, projections=projs, validate=validate)
+                for mv in gt.moving_object:
+                    yield dict(
+                        total_nanos=total_nanos,
+                        idx=mv.id.value,
+                        x=mv.base.position.x,
+                        y=mv.base.position.y,
+                        z=mv.base.position.z,
+                        vel_x=mv.base.velocity.x,
+                        vel_y=mv.base.velocity.y,
+                        vel_z=mv.base.velocity.z,
+                        acc_x=mv.base.acceleration.x,
+                        acc_y=mv.base.acceleration.y,
+                        acc_z=mv.base.acceleration.z,
+                        length=mv.base.dimension.length,
+                        width=mv.base.dimension.width,
+                        height=mv.base.dimension.height,
+                        roll=mv.base.orientation.roll,
+                        pitch=mv.base.orientation.pitch,
+                        yaw=mv.base.orientation.yaw,
+                        type=mv.type,
+                        role=mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1,
+                        subtype=mv.vehicle_classification.type
+                        if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE
+                        else -1,
+                    )
+        df_mv = pl.DataFrame(get_gts()).sort(["total_nanos", "idx"])
+        return cls(df_mv, projections=projs, **kwargs)
 
     @classmethod
-    def from_file(cls, filepath, xodr_path: str | None = None, validate: bool = False, skip_odr_parse: bool = False):
+    def from_file(cls, filepath, xodr_path: str | None = None, validate: bool = False, skip_odr_parse: bool = False, compute_polygons: bool = False):
         if Path(filepath).suffix == ".parquet":
             return cls.from_parquet(filepath)
 
         gts = betterosi.read(
             filepath,
             return_ground_truth=True,
+            mcap_return_betterosi=False
         )
         gts, tmp_gts = itertools.tee(gts, 2)
         first_gt = next(tmp_gts)
@@ -487,7 +498,7 @@ class Recording:
     def from_parquet(cls, filename):
         t = pq.read_table(filename)
         df = pl.DataFrame(t)
-        if b"xodr" in t.schema.metadata:
+        if t.schema.metadata is not None and b"xodr" in t.schema.metadata:
             m = MapOdr.create(
                 odr_xml=t.schema.metadata[b"xodr"].decode(), name=t.schema.metadata[b"xodr_name"].decode()
             )
@@ -496,9 +507,25 @@ class Recording:
         return cls(df, map=m)
 
     def to_parquet(self, filename):
-        t = pyarrow.table(self._df.drop("polygon", "frame"))
+        if len(self.projections)>0:
+            proj_dict = {
+                b'proj_string': self.projections[0]['proj_string'],
+            }
+            if self.projections[0]['offset'] is not None:
+                proj_dict[b'proj_frame_offset'] = self.projections[0]['offset'].to_bytes()
+
+        else:
+            proj_dict = {}
+        to_drop = ['frame']
+        if 'polygon' in self._df.columns:
+            to_drop.append('polygon')
+        t = pyarrow.table(self._df.drop(*to_drop))
         if hasattr(self.map, "odr_xml"):
             t = t.cast(
-                t.schema.with_metadata({b"xodr": self.map.odr_xml.encode(), b"xodr_name": self.map.name.encode()})
+                t.schema.with_metadata(proj_dict|{b"xodr": self.map.odr_xml.encode(), b"xodr_name": self.map.name.encode()})
+            )
+        else:
+            t = t.cast(
+                t.schema.with_metadata(proj_dict|{})
             )
         pq.write_table(t, filename)

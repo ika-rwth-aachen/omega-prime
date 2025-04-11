@@ -14,6 +14,17 @@ class ProjectionOffset:
     y: float
     z: float = 0.0
     yaw: float = 0.0
+    
+    def to_bytes(self):
+        return bytes(betterosi.GroundTruthProjFrameOffset(
+                position=betterosi.Vector3D(x=self.x,y=self.y,z=self.z),
+                yaw=self.yaw
+            ))
+    
+    @classmethod
+    def parse(cls, b):
+        o = betterosi.GroundTruthProjFrameOffset.FromString(b)
+        return cls(x=o.position.x, y=o.position.y, z=o.position.z, yaw=o.yaw)
 
 
 @dataclass(repr=False)
