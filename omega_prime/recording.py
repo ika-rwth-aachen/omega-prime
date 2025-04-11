@@ -161,7 +161,6 @@ class MovingObject:
         super().__init__()
         self.idx = int(idx)
         self._recording = recording
-
         self._df = self._recording._df.filter(pl.col("idx") == self.idx)
 
         for k in [
@@ -201,6 +200,7 @@ class MovingObject:
     def polygon(self):
         if "polygon" not in self._df.columns:
             self._recording._add_polygons_to_df()
+            self._df = self._recording._df.filter(pl.col("idx") == self.idx)
         return self._df["polygon"]
 
     @property
@@ -228,54 +228,55 @@ class Recording:
 
     @staticmethod
     def _add_polygons(df):
-        ar = (
-            df[:]
-            .select(
-                (
-                    pl.col("x")
-                    + (+pl.col("length") / 2) * pl.col("yaw").cos()
-                    - (+pl.col("width") / 2) * pl.col("yaw").sin()
-                ).alias("x1"),
-                (
-                    pl.col("x")
-                    + (+pl.col("length") / 2) * pl.col("yaw").cos()
-                    - (-pl.col("width") / 2) * pl.col("yaw").sin()
-                ).alias("x2"),
-                (
-                    pl.col("x")
-                    + (-pl.col("length") / 2) * pl.col("yaw").cos()
-                    - (-pl.col("width") / 2) * pl.col("yaw").sin()
-                ).alias("x3"),
-                (
-                    pl.col("x")
-                    + (-pl.col("length") / 2) * pl.col("yaw").cos()
-                    - (+pl.col("width") / 2) * pl.col("yaw").sin()
-                ).alias("x4"),
-                (
-                    pl.col("y")
-                    + (+pl.col("length") / 2) * pl.col("yaw").sin()
-                    - (+pl.col("width") / 2) * pl.col("yaw").cos()
-                ).alias("y1"),
-                (
-                    pl.col("y")
-                    + (+pl.col("length") / 2) * pl.col("yaw").sin()
-                    - (-pl.col("width") / 2) * pl.col("yaw").cos()
-                ).alias("y2"),
-                (
-                    pl.col("y")
-                    + (-pl.col("length") / 2) * pl.col("yaw").sin()
-                    - (-pl.col("width") / 2) * pl.col("yaw").cos()
-                ).alias("y3"),
-                (
-                    pl.col("y")
-                    + (-pl.col("length") / 2) * pl.col("yaw").sin()
-                    - (+pl.col("width") / 2) * pl.col("yaw").cos()
-                ).alias("y4"),
+        if 'polygon' not in df.columns:
+            ar = (
+                df[:]
+                .select(
+                    (
+                        pl.col("x")
+                        + (+pl.col("length") / 2) * pl.col("yaw").cos()
+                        - (+pl.col("width") / 2) * pl.col("yaw").sin()
+                    ).alias("x1"),
+                    (
+                        pl.col("x")
+                        + (+pl.col("length") / 2) * pl.col("yaw").cos()
+                        - (-pl.col("width") / 2) * pl.col("yaw").sin()
+                    ).alias("x2"),
+                    (
+                        pl.col("x")
+                        + (-pl.col("length") / 2) * pl.col("yaw").cos()
+                        - (-pl.col("width") / 2) * pl.col("yaw").sin()
+                    ).alias("x3"),
+                    (
+                        pl.col("x")
+                        + (-pl.col("length") / 2) * pl.col("yaw").cos()
+                        - (+pl.col("width") / 2) * pl.col("yaw").sin()
+                    ).alias("x4"),
+                    (
+                        pl.col("y")
+                        + (+pl.col("length") / 2) * pl.col("yaw").sin()
+                        - (+pl.col("width") / 2) * pl.col("yaw").cos()
+                    ).alias("y1"),
+                    (
+                        pl.col("y")
+                        + (+pl.col("length") / 2) * pl.col("yaw").sin()
+                        - (-pl.col("width") / 2) * pl.col("yaw").cos()
+                    ).alias("y2"),
+                    (
+                        pl.col("y")
+                        + (-pl.col("length") / 2) * pl.col("yaw").sin()
+                        - (-pl.col("width") / 2) * pl.col("yaw").cos()
+                    ).alias("y3"),
+                    (
+                        pl.col("y")
+                        + (-pl.col("length") / 2) * pl.col("yaw").sin()
+                        - (+pl.col("width") / 2) * pl.col("yaw").cos()
+                    ).alias("y4"),
+                )
+                .to_numpy()
             )
-            .to_numpy()
-        )
-        polys = shapely.polygons(np.stack([ar[:, :4], ar[:, 4:]], axis=2))
-        df = df.with_columns(pl.Series(name="polygon", values=polys))
+            polys = shapely.polygons(np.stack([ar[:, :4], ar[:, 4:]], axis=2))
+            df = df.with_columns(pl.Series(name="polygon", values=polys))
         return df
 
     def _add_polygons_to_df(self):
@@ -435,7 +436,7 @@ class Recording:
         gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=False)
         gts, tmp_gts = itertools.tee(gts, 2)
         first_gt = next(tmp_gts)
-        r = cls.from_osi_gts(gts, validate=validate)
+        r = cls.from_osi_gts(gts, validate=validate, compute_polygons=compute_polygons)
         if xodr_path is not None:
             r.map = MapOdr.from_file(xodr_path, parse=parse_map)
         elif Path(filepath).suffix == ".mcap":
