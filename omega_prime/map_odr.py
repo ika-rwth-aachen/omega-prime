@@ -99,7 +99,7 @@ def make_xodr_idx(road_id, lane_id, section_idx, side=None):
 class MapOdr(Map):
     odr_xml: str
     name: str
-    step_size: float = 0.1
+    step_size: float = 0.01
     _xodr_map: PyxodrRoadNetwork|None = None
     proj_string: str | None = None
     proj_offset: ProjectionOffset | None = None
@@ -114,24 +114,24 @@ class MapOdr(Map):
         
     @classmethod
     def from_file(
-        cls, filename, topic="ground_truth_map", parse:bool=False, is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.1
+        cls, filename, topic="ground_truth_map", parse:bool=False, is_odr_xml: bool = False, is_mcap: bool = False, step_size=0.01
     ):
         if Path(filename).suffix in [".xodr", ".odr"] or is_odr_xml:
             with open(filename) as f:
-                self = cls(odr_xml=f.read(), name=Path(filename).stem, step_size=step_size, lanes={}, lane_boundaries={})
-
-        elif Path(filename).suffix in [".mcap"] or is_mcap:
+                odr_xml = f.read()
+            return cls.create(odr_xml=odr_xml, name=Path(filename).stem, step_size=step_size, parse=parse)
+        if Path(filename).suffix in [".mcap"] or is_mcap:
             map = next(iter(betterosi.read(filename, mcap_topics=[topic], osi_message_type=betterosi.MapAsamOpenDrive)))
-            self = cls(odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, lanes={}, lane_boundaries={})
-        
-        if parse:
-            self.parse()
-        return self
+            return cls.create(odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, parse=parse)
+
     
     
     @classmethod
-    def create(cls, odr_xml, name, step_size=0.1):
-        return cls(odr_xml=odr_xml, name=name, step_size=step_size, lanes={}, lane_boundaries={})
+    def create(cls, odr_xml, name, step_size=0.1, parse:bool=False):
+        self = cls(odr_xml=odr_xml, name=name, step_size=step_size, lanes={}, lane_boundaries={})
+        if parse:
+            self.parse()
+        return self
         
     def parse(self):
         rn = RoadNetwork(self.odr_xml, resolution=self.step_size)
@@ -164,7 +164,7 @@ class MapOdr(Map):
                         x=float(offset.get("x", "0")),
                         y=float(offset.get("y", "0")),
                         z=float(offset.get("z", "0")),
-                        hdg=float(offset.get("hdg", "0")),
+                        yaw=float(offset.get("hdg", "0")),
                     )
                 except (ValueError, TypeError) as e:
                     logger.warning(f"Failed to parse offset: {e}")
@@ -301,6 +301,8 @@ class LaneBoundaryXodr(LaneBoundary):
 
     def plot(self, ax: plt.Axes):
         ax.plot(*np.array(self.polyline[:, :2]).T, color="gray", alpha=0.1)
+        ax.set_aspect(1)
+
 
     @staticmethod
     def _extract_lane_boundary_type_from_xml(lane, side: str) -> str:
@@ -392,5 +394,10 @@ class LaneXodr(Lane):
     def plot(self, ax: plt.Axes):
         c = "green" if self.type != LaneClassificationType.TYPE_INTERSECTION else "black"
         ax.plot(*np.array(self.centerline).T, color=c, alpha=0.5)
-        ax.add_patch(PltPolygon(self.polygon.exterior.coords, fc="blue", alpha=0.2, ec="black"))
-        ax.set_aspect(1)
+        #try:
+        if isinstance(self.polygon, shapely.geometry.MultiPolygon):
+            ps = self.polygon.geoms
+        else:
+            ps = [self.polygon]
+        for p in ps:
+            ax.add_patch(PltPolygon(p.exterior.coords, fc="blue", alpha=0.2, ec="black"))
