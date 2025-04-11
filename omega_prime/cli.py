@@ -65,34 +65,34 @@ def to_odr(
         ),
     ] = None,
 ):
-    if Path(input).suffix == '.mcap':
+    if Path(input).suffix == ".mcap":
         with Path(input).open("rb") as f:
             reader = make_reader(f, decoder_factories=[DecoderFactory()])
             gm = next(reader.iter_decoded_messages(topics="/ground_truth_map"))
-        map = omega_prime.MapOdr.create(odr_xml=gm[3].open_drive_xml, name='', step_size=.01)
+        map = omega_prime.MapOdr.create(odr_xml=gm[3].open_drive_xml, name="", step_size=0.01)
         map.to_file(output)
         return None
-    
+
     r = omega_prime.Recording.from_file(input, validate=False)
-    if isinstance(r.map, omega_prime.MapXodr):
+    if isinstance(r.map, omega_prime.MapOdr):
         r.map.to_file(output)
     else:
         raise ValueError("The provided omega-prime file does not contain a map in ASAM OpenDRIVE format.")
+
 
 @app.command(help="Converts MCAP or OSI omega-prime into a parquet file (beneficial for faster loading of large data).")
 def to_parquet(
     input: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Path to the omega-prime mcap file.")],
     output: Annotated[
         Path | None,
-        typer.Argument(
-            help="Where to store the parquet file. If None or directory, stored filename will be used."
-        ),
+        typer.Argument(help="Where to store the parquet file. If None or directory, stored filename will be used."),
     ] = None,
 ):
     r = omega_prime.Recording.from_file(input, validate=False, parse_map=False)
     if output is None:
-        output = Path(input).parent/f'{Path(input).stem}.parquet'
+        output = Path(input).parent / f"{Path(input).stem}.parquet"
     r.to_parquet(output)
+
 
 if __name__ == "__main__":
     app()

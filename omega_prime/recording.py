@@ -199,14 +199,13 @@ class MovingObject:
 
     @property
     def polygon(self):
-        if 'polygon' not in self._df.columns:
+        if "polygon" not in self._df.columns:
             self._recording._add_polygons_to_df()
         return self._df["polygon"]
-    
+
     @property
     def polygons(self):
         return self.polygon
-        
 
     @property
     def nanos(self):
@@ -217,7 +216,7 @@ class MovingObject:
         pass
 
     def plot_mv_frame(self, ax: plt.Axes, frame: int):
-        if 'polygon' not in self._df.columns:
+        if "polygon" not in self._df.columns:
             self._recording._add_polygons_to_df()
         polys = self._df.filter(pl.col("frame") == frame)["polygon"]
         for p in polys:
@@ -229,23 +228,58 @@ class Recording:
 
     @staticmethod
     def _add_polygons(df):
-        ar = df[:].select(
-            (pl.col('x')+ (+pl.col('length')/2)*pl.col('yaw').cos() - (+pl.col('width')/2)*pl.col('yaw').sin()).alias('x1'),
-            (pl.col('x')+ (+pl.col('length')/2)*pl.col('yaw').cos() - (-pl.col('width')/2)*pl.col('yaw').sin()).alias('x2'),
-            (pl.col('x')+ (-pl.col('length')/2)*pl.col('yaw').cos() - (-pl.col('width')/2)*pl.col('yaw').sin()).alias('x3'),
-            (pl.col('x')+ (-pl.col('length')/2)*pl.col('yaw').cos() - (+pl.col('width')/2)*pl.col('yaw').sin()).alias('x4'),
-            (pl.col('y')+ (+pl.col('length')/2)*pl.col('yaw').sin() - (+pl.col('width')/2)*pl.col('yaw').cos()).alias('y1'),
-            (pl.col('y')+ (+pl.col('length')/2)*pl.col('yaw').sin() - (-pl.col('width')/2)*pl.col('yaw').cos()).alias('y2'),
-            (pl.col('y')+ (-pl.col('length')/2)*pl.col('yaw').sin() - (-pl.col('width')/2)*pl.col('yaw').cos()).alias('y3'),
-            (pl.col('y')+ (-pl.col('length')/2)*pl.col('yaw').sin() - (+pl.col('width')/2)*pl.col('yaw').cos()).alias('y4')
-        ).to_numpy()
-        polys = shapely.polygons(np.stack([ar[:,:4],ar[:,4:]],axis=2))
-        df = df.with_columns(pl.Series(name='polygon', values=polys))
+        ar = (
+            df[:]
+            .select(
+                (
+                    pl.col("x")
+                    + (+pl.col("length") / 2) * pl.col("yaw").cos()
+                    - (+pl.col("width") / 2) * pl.col("yaw").sin()
+                ).alias("x1"),
+                (
+                    pl.col("x")
+                    + (+pl.col("length") / 2) * pl.col("yaw").cos()
+                    - (-pl.col("width") / 2) * pl.col("yaw").sin()
+                ).alias("x2"),
+                (
+                    pl.col("x")
+                    + (-pl.col("length") / 2) * pl.col("yaw").cos()
+                    - (-pl.col("width") / 2) * pl.col("yaw").sin()
+                ).alias("x3"),
+                (
+                    pl.col("x")
+                    + (-pl.col("length") / 2) * pl.col("yaw").cos()
+                    - (+pl.col("width") / 2) * pl.col("yaw").sin()
+                ).alias("x4"),
+                (
+                    pl.col("y")
+                    + (+pl.col("length") / 2) * pl.col("yaw").sin()
+                    - (+pl.col("width") / 2) * pl.col("yaw").cos()
+                ).alias("y1"),
+                (
+                    pl.col("y")
+                    + (+pl.col("length") / 2) * pl.col("yaw").sin()
+                    - (-pl.col("width") / 2) * pl.col("yaw").cos()
+                ).alias("y2"),
+                (
+                    pl.col("y")
+                    + (-pl.col("length") / 2) * pl.col("yaw").sin()
+                    - (-pl.col("width") / 2) * pl.col("yaw").cos()
+                ).alias("y3"),
+                (
+                    pl.col("y")
+                    + (-pl.col("length") / 2) * pl.col("yaw").sin()
+                    - (+pl.col("width") / 2) * pl.col("yaw").cos()
+                ).alias("y4"),
+            )
+            .to_numpy()
+        )
+        polys = shapely.polygons(np.stack([ar[:, :4], ar[:, 4:]], axis=2))
+        df = df.with_columns(pl.Series(name="polygon", values=polys))
         return df
 
     def _add_polygons_to_df(self):
         self._df = self._add_polygons(self._df)
-        
 
     @staticmethod
     def get_moving_object_ground_truth(
@@ -309,7 +343,9 @@ class Recording:
         self.projections = projections if projections is not None else []
         self._df = df
         self.map = map
-        self._moving_objects = None #= {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
+        self._moving_objects = (
+            None  # = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
+        )
         self.host_vehicle = host_vehicle
 
     @property
@@ -317,7 +353,7 @@ class Recording:
         if self._moving_objects is None:
             self._moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
         return self._moving_objects
-        
+
     def to_osi_gts(self) -> list[betterosi.GroundTruth]:
         first_iteration = True
         for [nanos], group_df in self._df.group_by("total_nanos"):
@@ -332,6 +368,7 @@ class Recording:
     @classmethod
     def from_osi_gts(cls, gts: list[betterosi.GroundTruth], **kwargs):
         projs = []
+
         def get_gts():
             for i, gt in enumerate(gts):
                 total_nanos = gt.timestamp.seconds * 1_000_000_000 + gt.timestamp.nanos
@@ -372,24 +409,30 @@ class Recording:
                         pitch=mv.base.orientation.pitch,
                         yaw=mv.base.orientation.yaw,
                         type=mv.type,
-                        role=mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1,
+                        role=mv.vehicle_classification.role
+                        if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE
+                        else -1,
                         subtype=mv.vehicle_classification.type
                         if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE
                         else -1,
                     )
+
         df_mv = pl.DataFrame(get_gts()).sort(["total_nanos", "idx"])
         return cls(df_mv, projections=projs, **kwargs)
 
     @classmethod
-    def from_file(cls, filepath, xodr_path: str | None = None, validate: bool = False, parse_map: bool = False, compute_polygons: bool = False):
+    def from_file(
+        cls,
+        filepath,
+        xodr_path: str | None = None,
+        validate: bool = False,
+        parse_map: bool = False,
+        compute_polygons: bool = False,
+    ):
         if Path(filepath).suffix == ".parquet":
             return cls.from_parquet(filepath, parse_map=parse_map, validate=validate, compute_polygons=compute_polygons)
 
-        gts = betterosi.read(
-            filepath,
-            return_ground_truth=True,
-            mcap_return_betterosi=False
-        )
+        gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=False)
         gts, tmp_gts = itertools.tee(gts, 2)
         first_gt = next(tmp_gts)
         r = cls.from_osi_gts(gts, validate=validate)
@@ -426,8 +469,8 @@ class Recording:
 
     def to_hdf(self, filename, key="moving_object"):
         #!pip install tables
-        to_drop = [] if 'polygon' not in self._df.columns else ['polygon']
-        to_drop += ['frame']
+        to_drop = [] if "polygon" not in self._df.columns else ["polygon"]
+        to_drop += ["frame"]
         self._df.drop(columns=to_drop).to_pandas().to_hdf(filename, key=key)
 
     @classmethod
@@ -484,19 +527,19 @@ class Recording:
     def plot_mvs(self, ax=None, legend=False):
         if ax is None:
             fig, ax = plt.subplots(1, 1)
-        for [idx], mv in self._df['idx','x','y'].group_by('idx'):
-            ax.plot(mv['x'], mv['y'], c='red', alpha=.5, label=str(idx))
+        for [idx], mv in self._df["idx", "x", "y"].group_by("idx"):
+            ax.plot(mv["x"], mv["y"], c="red", alpha=0.5, label=str(idx))
         if legend:
             ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         return ax
-            
+
     def plot_frame(self, frame: int, ax=None):
         ax = self.plot(ax=ax)
         self.plot_mv_frame(ax, frame=frame)
         return ax
 
     def plot_mv_frame(self, ax: plt.Axes, frame: int):
-        if 'polygon' not in self._df.columns:
+        if "polygon" not in self._df.columns:
             self._add_polygons_to_df()
         polys = self._df.filter(pl.col("frame") == frame)["polygon"]
         for p in polys:
@@ -508,36 +551,37 @@ class Recording:
         df = pl.DataFrame(t)
         if t.schema.metadata is not None and b"xodr" in t.schema.metadata:
             m = MapOdr.create(
-                odr_xml=t.schema.metadata[b"xodr"].decode(), name=t.schema.metadata[b"xodr_name"].decode(), 
-                parse=parse_map
+                odr_xml=t.schema.metadata[b"xodr"].decode(),
+                name=t.schema.metadata[b"xodr_name"].decode(),
+                parse=parse_map,
             )
         else:
             m = None
         return cls(df, map=m, **kwargs)
 
     def to_parquet(self, filename):
-        if len(self.projections)>0:
+        if len(self.projections) > 0:
             proj_dict = {
-                b'proj_string': self.projections[0]['proj_string'],
+                b"proj_string": self.projections[0]["proj_string"],
             }
-            if self.projections[0]['offset'] is not None:
-                proj_dict[b'offset_x'] = str(self.projections[0]['offset'].x).encode()
-                proj_dict[b'offset_y'] = str(self.projections[0]['offset'].y).encode()
-                proj_dict[b'offset_z'] = str(self.projections[0]['offset'].z).encode()
-                proj_dict[b'offset_yaw'] = str(self.projections[0]['offset'].yaw).encode()
+            if self.projections[0]["offset"] is not None:
+                proj_dict[b"offset_x"] = str(self.projections[0]["offset"].x).encode()
+                proj_dict[b"offset_y"] = str(self.projections[0]["offset"].y).encode()
+                proj_dict[b"offset_z"] = str(self.projections[0]["offset"].z).encode()
+                proj_dict[b"offset_yaw"] = str(self.projections[0]["offset"].yaw).encode()
 
         else:
             proj_dict = {}
-        to_drop = ['frame']
-        if 'polygon' in self._df.columns:
-            to_drop.append('polygon')
+        to_drop = ["frame"]
+        if "polygon" in self._df.columns:
+            to_drop.append("polygon")
         t = pyarrow.table(self._df.drop(*to_drop))
         if hasattr(self.map, "odr_xml"):
             t = t.cast(
-                t.schema.with_metadata(proj_dict|{b"xodr": self.map.odr_xml.encode(), b"xodr_name": self.map.name.encode()})
+                t.schema.with_metadata(
+                    proj_dict | {b"xodr": self.map.odr_xml.encode(), b"xodr_name": self.map.name.encode()}
+                )
             )
         else:
-            t = t.cast(
-                t.schema.with_metadata(proj_dict|{})
-            )
+            t = t.cast(t.schema.with_metadata(proj_dict | {}))
         pq.write_table(t, filename)
