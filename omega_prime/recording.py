@@ -255,22 +255,22 @@ class Recording:
                     (
                         pl.col("y")
                         + (+pl.col("length") / 2) * pl.col("yaw").sin()
-                        - (+pl.col("width") / 2) * pl.col("yaw").cos()
+                        + (+pl.col("width") / 2) * pl.col("yaw").cos()
                     ).alias("y1"),
                     (
                         pl.col("y")
                         + (+pl.col("length") / 2) * pl.col("yaw").sin()
-                        - (-pl.col("width") / 2) * pl.col("yaw").cos()
+                        + (-pl.col("width") / 2) * pl.col("yaw").cos()
                     ).alias("y2"),
                     (
                         pl.col("y")
                         + (-pl.col("length") / 2) * pl.col("yaw").sin()
-                        - (-pl.col("width") / 2) * pl.col("yaw").cos()
+                        + (-pl.col("width") / 2) * pl.col("yaw").cos()
                     ).alias("y3"),
                     (
                         pl.col("y")
                         + (-pl.col("length") / 2) * pl.col("yaw").sin()
-                        - (+pl.col("width") / 2) * pl.col("yaw").cos()
+                        + (+pl.col("width") / 2) * pl.col("yaw").cos()
                     ).alias("y4"),
                 )
                 .to_numpy()

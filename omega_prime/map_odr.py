@@ -130,10 +130,31 @@ class MapOdr(Map):
             return cls.create(
                 odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, parse=parse
             )
+    @property
+    def lanes(self):
+        if self._lanes is None:
+            self.parse()
+        return self._lanes
+    
+    @lanes.setter
+    def lanes(self, val):
+        self._lanes = val
+        
+    @property
+    def lane_boundaries(self):
+        if self._lane_boundaries is None:
+            self.parse()
+        return self._lane_boundaries
 
+    @lane_boundaries.setter
+    def lane_boundaries(self, val):
+        self._lane_boundaries = val
+        
     @classmethod
-    def create(cls, odr_xml, name, step_size=0.1, parse: bool = False):
+    def create(cls, odr_xml, name, step_size=0.01, parse: bool = False):
         self = cls(odr_xml=odr_xml, name=name, step_size=step_size, lanes={}, lane_boundaries={})
+        self._lane_boundaries = None
+        self._lanes = None
         if parse:
             self.parse()
         return self
