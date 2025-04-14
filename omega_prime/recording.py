@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
 import pandas as pd
 import polars as pl
+import altair as alt
 
 import pandera as pa
 import pandera.extensions as extensions
@@ -19,6 +20,9 @@ from .map_odr import MapOdr
 from .map import MapOsi, ProjectionOffset, MapOsiCenterline
 import itertools
 from functools import partial
+import altair as alt
+import polars as pl
+import polars_st as st
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
 
@@ -228,7 +232,7 @@ class Recording:
 
     @staticmethod
     def _add_polygons(df):
-        if 'polygon' not in df.columns:
+        if "polygon" not in df.columns:
             ar = (
                 df[:]
                 .select(
@@ -586,3 +590,84 @@ class Recording:
         else:
             t = t.cast(t.schema.with_metadata(proj_dict | {}))
         pq.write_table(t, filename)
+
+    def plot_altair(self, start_frame=0, end_frame=-1, plot_map=True, metric_column=None, idx=None):
+        if "polygon" not in self._df.columns:
+            self._df = self._add_polygons(self._df)
+        if "geometry" not in self._df.columns:
+            self._df = self._df.with_columns(geometry=st.from_shapely("polygon"))
+        if not hasattr(self, "_map_df") and plot_map:
+            self._map_df = pl.DataFrame(
+                [
+                    pl.Series(name="polygon", values=[l.polygon for l in self.map.lanes.values()]),
+                    pl.Series(name="idx", values=[i for i, _ in enumerate(self.map.lanes.keys())]),
+                    pl.Series(name="type", values=[o.type.name for o in self.map.lanes.values()]),
+                ]
+            )
+            self._map_df = self._map_df.with_columns(geometry=st.from_shapely("polygon"))
+
+        if end_frame != -1:
+            df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)
+        else:
+            df = self._df.filter(pl.col("frame") >= start_frame)
+
+        [frame_min], [frame_max] = df.select(
+            pl.col("frame").min().alias("min"),
+            pl.col("frame").max().alias("max"),
+        )[0]
+        slider = alt.binding_range(min=frame_min, max=frame_max, step=1, name="frame")
+        op_var = alt.param(value=0, bind=slider)
+
+        [xmin], [xmax], [ymin], [ymax] = df.select(
+            pl.col("x").min().alias("xmin"),
+            pl.col("x").max().alias("xmax"),
+            pl.col("y").min().alias("ymin"),
+            pl.col("y").max().alias("ymax"),
+        )[0]
+        pov = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[xmax, ymax], [xmax, ymin], [xmin, ymin], [xmin, ymax], [xmax, ymax]]],
+            },
+            "properties": {},
+        }
+        map = (
+            self._map_df["geometry", "idx", "type"]
+            .st.plot(color="green", fillOpacity=0.4)
+            .encode(tooltip=["properties.idx:N", "properties.type:O"])
+        )
+        mvs = (
+            df["geometry", "idx", "frame", "type"]
+            .st.plot()
+            .encode(
+                tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
+                color=alt.value("blue")
+                if idx is None
+                else alt.when(alt.FieldEqualPredicate(equal=idx, field="properties.idx"))
+                .then(alt.value("red"))
+                .otherwise(alt.value("blue")),
+            )
+            .transform_filter(alt.FieldEqualPredicate(field="properties.frame", equal=op_var))
+        )
+
+        map_view = (
+            (map + mvs)
+            .project("identity", reflectY=True, fit=pov)
+            .properties(height=int(ymax - ymin) * 3, width=int(xmax - xmin) * 3, title="Map")
+        )
+        view = map_view
+        if metric_column is not None and idx is not None:
+            metric = (
+                df["idx", metric_column, "frame"]
+                .filter(idx=idx)
+                .plot.line(x="frame", y=metric_column, color=alt.value("red"))
+                .properties(title=f"{metric_column} of object {idx}")
+            )
+            vertline = (
+                alt.Chart()
+                .mark_rule()
+                .encode(x=alt.datum(op_var, type="quantitative", scale=alt.Scale(domain=[frame_min, frame_max])))
+            )
+            view = view | (metric + vertline)
+        return view.add_params(op_var)
