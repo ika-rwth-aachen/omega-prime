@@ -9,14 +9,11 @@
 [![](https://img.shields.io/pypi/pyversions/omega-prime.svg)](https://pypi.python.org/pypi/omega-prime/)
 [![](https://img.shields.io/github/issues-raw/ika-rwth-aachen/omega-prime.svg)](https://github.com/ika-rwth-aachen/omega-prime/issues)
 
-> [!IMPORTANT]  
-> The data model and specification are not finalized and are still under discussion. See this repository as a proof of concept.
-
 
 # Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data 
 
 Data Model, Format and Python Library for ground truth data containing information on dynamic objects, map and environmental factors optimized for representing urban traffic. The repository contains:
-- **Sepcification Document:** to be released
+- **Sepcification Document:** [./docs/omega_prime_specification.md](https://github.com/ika-rwth-aachen/omega-prime/tree/main/docs/omega_prime_specification.md)
     - **Data Model**: What signals exists and how these are defined.
     - **Data Format Specification**: How to exchange and store those signals.
 - **Python Library**: 
@@ -29,7 +26,7 @@ Data Model, Format and Python Library for ground truth data containing informati
     - **Validation** of data
     - **Interpolation** of data
 
-The data model and format heavily utilze [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) and [ASAM Open-Simulation-Interface GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html). omega-prime sets requirements on presence and quality of ASAM OSI GroundTruth messages and ASAM OpenDRIVE files and defines a file format the exchange and storage of such data.
+The data model and format utilze [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) and [ASAM Open-Simulation-Interface GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html). omega-prime sets requirements on presence and quality of ASAM OSI GroundTruth messages and ASAM OpenDRIVE files and defines a file format for the exchange and storage of these.
 
 Omega-Prime is the successor of the [OMEGAFormat](https://github.com/ika-rwth-aachen/omega_format). It has the benefit that its definition is directly based on the established standards ASAM OSI and ASAM OpenDRIVE and carries over the data quality requirements and the data tooling from OMEGAFormat. Therefore, it should be easier to incorporate omega-prime into existing workflows and tooling. 
 
@@ -75,3 +72,18 @@ Tested with exiD-v2.0 and inD-v1.1
 ## File Format
 Based on [MCAP](https://mcap.dev/), [ASAM OSI](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/specification/index.html) and [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) the ASAM OSI GroundTruth messages and ASAM OpenDRIVE map are packaged as shown in the following figure.
 ![](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_specification.svg)
+
+
+# Acknowledgements
+
+This package is developed as part of the [SYNERGIES project](https://synergies-ccam.eu).
+
+<img src="https://raw.githubusercontent.com/ika-rwth-aachen/omega-prime/refs/heads/main/docs/synergies.svg"
+style="width:2in" />
+
+
+
+Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or European Climate, Infrastructure and Environment Executive Agency (CINEA). Neither the European Union nor the granting authority can be held responsible for them. 
+
+<img src="https://raw.githubusercontent.com/ika-rwth-aachen/omega-prime/refs/heads/main/docs/funded_by_eu.svg"
+style="width:4in" />
