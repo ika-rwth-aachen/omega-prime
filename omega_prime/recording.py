@@ -361,7 +361,7 @@ class Recording:
 
     def to_osi_gts(self) -> list[betterosi.GroundTruth]:
         first_iteration = True
-        for [nanos], group_df in self._df.group_by("total_nanos"):
+        for [nanos], group_df in self._df.sort(["total_nanos"]).group_by("total_nanos", maintain_order=True):
             gt = self.get_moving_object_ground_truth(nanos, group_df, host_vehicle=self.host_vehicle, validate=False)
             if first_iteration:
                 first_iteration = False
@@ -455,7 +455,7 @@ class Recording:
             except RuntimeError:
                 try:
                     r.map = MapOsiCenterline.create(first_gt)
-                    warn("No map provided in mcap. OSI GroundTruth map is used!")
+                    warn("No map provided in mcap. OSI GroundTruth (Centerline) map is used!")
                 except RuntimeError:
                     pass
         if r.map is None:
@@ -465,9 +465,8 @@ class Recording:
     def to_mcap(self, filepath):
         if Path(filepath).suffix != ".mcap":
             raise ValueError()
-        gts = self.to_osi_gts()
         with betterosi.Writer(filepath) as w:
-            for gt in gts:
+            for gt in self.to_osi_gts():
                 w.add(gt)
             if isinstance(self.map, MapOdr):
                 w.add(self.map.to_osi(), topic="ground_truth_map", log_time=0)
