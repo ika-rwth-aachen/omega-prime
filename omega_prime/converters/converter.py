@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from loguru import logger
 from tqdm.auto import tqdm
 import multiprocessing as mp
-from ..asam_odr import MapOdr
+from ..map_odr import MapOdr
 from ..recording import Recording
 import polars as pl
 

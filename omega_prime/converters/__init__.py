@@ -1,11 +1,11 @@
-from .lxd import convert_lxd
+from .lxd import lxdConverter
 
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-__all__ = ["app", "convert_lxd"]
+__all__ = ["app"]
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -25,4 +25,4 @@ def convert_lxd_cli(
     n_workers: Annotated[int, typer.Option(help="Set to -1 for n_cpus-1 workers.")] = 1,
 ):
     Path(output_path).mkdir(exist_ok=True)
-    convert_lxd(dataset_dir=dataset_path, outpath=output_path, n_workers=n_workers)
+    lxdConverter(dataset_path=dataset_path, out_path=output_path, n_workers=n_workers)
