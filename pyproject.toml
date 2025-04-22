@@ -43,7 +43,7 @@ dependencies = [
     'lxd-io>=0.4.6',
     'pyxodr'
 ]
-version = "0.1.11"
+version = "0.1.12"
 
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
