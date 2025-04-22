@@ -20,19 +20,31 @@ class DatasetConverter(ABC):
         self.convert(n_workers = n_workers)
 
     @abstractmethod
-    def get_recordings(self):
+    def get_source_recordings(self):
         """
-        Abstract method to get all recording paths in the dataset.
+        Abstract method to get a list of the source recordings.
         The method should be implemented in subclasses to handle specific dataset formats.
         Returns:
-            List of recordings. Could be of any type as further processed in rec2df, get_recording_opendrive_path and get_recording_id.
+            source_recordings: List of the source recordings. Could be of any type as further processed in get_recordings.
+        """
+        pass
+
+    @abstractmethod
+    def get_recordings(self, source_recording):
+        """
+        Abstract method to get all recordings in a source-recording-instance of the specific dataset.
+        The method should be implemented in subclasses to handle specific dataset formats.
+        Args:
+            source_recordings: List of the source recordings. Could be of any type as returned by get_source_recordings.
+        Yields:
+            recording: Each recording in the dataset, one at a time. Could be of any type as further processed in rec2df, get_recording_opendrive_path and get_recording_id.
         """
         pass
 
     @abstractmethod
     def rec2df(self, recording) -> pl.DataFrame:
         """
-        Abstract method to load raw data from the recording path.
+        Abstract method to load raw data from the recording.
         The method should be implemented in subclasses to handle specific dataset formats.
         Args:
             recording: Recording of any type as returned by get_recordings.
@@ -65,18 +77,19 @@ class DatasetConverter(ABC):
         """
         pass
 
-    def convert_source_recording(self, recording) -> None:
-        out_filename = self._out_path / f"{str(self.get_recording_id(recording)).zfill(2)}_tracks.mcap"
-        tracks = self.rec2df(recording)
-        xodr_path = self.get_recording_opendrive_path(recording)
-        rec = Recording(df=tracks, map=MapOdr.from_file(xodr_path), validate=False)
-        rec.to_mcap(out_filename)
+    def convert_source_recording(self, source_recording) -> None:
+        for recording in self.get_recordings(source_recording):
+            out_filename = self._out_path / f"{str(self.get_recording_id(recording)).zfill(2)}_tracks.mcap"
+            tracks = self.rec2df(recording)
+            xodr_path = self.get_recording_opendrive_path(recording)
+            rec = Recording(df=tracks, map=MapOdr.from_file(xodr_path), validate=False)
+            rec.to_mcap(out_filename)
 
     def convert(self, n_workers=1):
         if n_workers == -1:
             n_workers = mp.cpu_count() - 1
         self._out_path.mkdir(exist_ok=True)
-        recordings = self.get_recordings()
+        recordings = self.get_source_recordings()
         if n_workers > 1:
             with mp.Pool(n_workers, maxtasksperchild=1) as pool:
                 work_iterator = pool.imap(self.convert_source_recording, recordings, chunksize=1)

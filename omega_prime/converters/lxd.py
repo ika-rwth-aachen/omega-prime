@@ -27,8 +27,11 @@ class lxdConverter(DatasetConverter):
     def get_recording_ids(self) -> list[int]:
         return self._dataset.recording_ids
 
-    def get_recordings(self) -> list:
+    def get_source_recordings(self):
         return [self._dataset.get_recording(recording_id) for recording_id in self.get_recording_ids()]
+
+    def get_recordings(self, source_recording):
+        yield source_recording
 
     def get_recording_opendrive_path(self, recording) -> Path:
         return recording.opendrive_map_file
