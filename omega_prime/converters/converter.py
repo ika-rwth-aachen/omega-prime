@@ -65,7 +65,7 @@ class DatasetConverter(ABC):
         """
         pass
 
-    def convert_recording(self, recording) -> None:
+    def convert_source_recording(self, recording) -> None:
         out_filename = self._out_path / f"{str(self.get_recording_id(recording)).zfill(2)}_tracks.mcap"
         tracks = self.rec2df(recording)
         xodr_path = self.get_recording_opendrive_path(recording)
@@ -79,8 +79,8 @@ class DatasetConverter(ABC):
         recordings = self.get_recordings()
         if n_workers > 1:
             with mp.Pool(n_workers, maxtasksperchild=1) as pool:
-                work_iterator = pool.imap(self.convert_recording, recordings, chunksize=1)
+                work_iterator = pool.imap(self.convert_source_recording, recordings, chunksize=1)
                 list(tqdm(work_iterator, total=len(recordings)))
         else:
             for rec in tqdm(recordings):
-                self.convert_recording(rec)
+                self.convert_source_recording(rec)
