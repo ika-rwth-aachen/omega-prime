@@ -2,8 +2,6 @@ from .converter import DatasetConverter, NANOS_PER_SEC
 from ..recording import Recording
 from ..map_odr import MapOdr
 
-from pathlib import Path
-
 import betterosi
 import numpy as np
 from lxd_io import Dataset
