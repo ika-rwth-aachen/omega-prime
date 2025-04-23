@@ -35,7 +35,7 @@ class DatasetConverter(ABC):
         Args:
             source_recordings: List of the source recordings. Could be of any type as returned by get_source_recordings.
         Yields:
-            recording: Each recording in the dataset, one at a time. Could be of any type as further processed in to_omega_prime_recording and get_recording_id.
+            recording: Each recording in the source-recording-instance, one at a time. Could be of any type as further processed in to_omega_prime_recording and get_recording_id.
         """
         pass
 
