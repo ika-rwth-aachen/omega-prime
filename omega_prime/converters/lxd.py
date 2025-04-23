@@ -19,7 +19,7 @@ vehicles = {
 }
 pedestrians = {"pedestrian": betterosi.MovingObjectType.TYPE_PEDESTRIAN}
 
-class lxdConverter(DatasetConverter):
+class LxdConverter(DatasetConverter):
     def __init__(self, dataset_path: str, out_path: str, n_workers=1) -> None:
         self._dataset = Dataset(dataset_path)
         super().__init__(dataset_path, out_path, n_workers=n_workers)
@@ -30,8 +30,8 @@ class lxdConverter(DatasetConverter):
     def get_recordings(self, source_recording):
         yield source_recording
 
-    def get_recording_id(self, recording) -> int:
-        return recording.id
+    def get_recording_name(self, recording) -> str:
+        return f"{str(recording.id).zfill(2)}_tracks"
 
     def to_omega_prime_recording(self, recording) -> Recording:
         dt = 1 / recording.get_meta_data("frameRate")
@@ -70,8 +70,6 @@ class lxdConverter(DatasetConverter):
                 "xAcceleration": "acc_x",
                 "yAcceleration": "acc_y",
                 "trackId": "idx",
-                # "width": "width",
-                # "length": "length",
             }
         )
         tracks = tracks.join(meta.select(["idx", "role", "type", "subtype"]), on="idx", how="left")

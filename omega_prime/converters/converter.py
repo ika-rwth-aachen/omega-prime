@@ -6,6 +6,8 @@ from loguru import logger
 from tqdm.auto import tqdm
 import multiprocessing as mp
 from ..recording import Recording
+from collections.abc import Iterator
+
 
 logger.configure(handlers=[{"sink": sys.stdout, "level": "WARNING"}])
 
@@ -15,10 +17,10 @@ class DatasetConverter(ABC):
     def __init__(self, dataset_path: str, out_path: str, n_workers=1) -> None:
         self._dataset_path = Path(dataset_path)
         self._out_path = Path(out_path)
-        self.convert(n_workers = n_workers)
+        self.n_workers=n_workers
 
     @abstractmethod
-    def get_source_recordings(self):
+    def get_source_recordings(self) -> list:
         """
         Abstract method to get a list of the source recordings.
         The method should be implemented in subclasses to handle specific dataset formats.
@@ -28,7 +30,7 @@ class DatasetConverter(ABC):
         pass
 
     @abstractmethod
-    def get_recordings(self, source_recording):
+    def get_recordings(self, source_recording) -> Iterator:
         """
         Abstract method to get all recordings in a source-recording-instance of the specific dataset.
         The method should be implemented in subclasses to handle specific dataset formats.
@@ -52,32 +54,42 @@ class DatasetConverter(ABC):
         pass
 
     @abstractmethod
-    def get_recording_id(self, recording) -> int:
+    def get_recording_name(self, recording) -> str:
         """
-        Abstract method to get the recording ID for a given recording.
+        Abstract method to get the name for a given recording.
         The method should be implemented in subclasses to handle specific dataset formats.
         Args:
             recording: Recording of any type as returned by get_recordings.
         Returns:
-            int: Recording ID.
+            str: unique name of recording.
         """
         pass
 
-    def convert_source_recording(self, source_recording) -> None:
+    def convert_source_recording(self, source_recording, save_as_parquet: bool = False) -> None:
         for recording in self.get_recordings(source_recording):
-            out_filename = self._out_path / f"{str(self.get_recording_id(recording)).zfill(2)}_tracks.mcap"
+            out_filename = self._out_path / f"{self.get_recording_name(recording)}.{'parquet' if save_as_parquet else 'mcap'}"
             rec = self.to_omega_prime_recording(recording)
-            rec.to_mcap(out_filename)
-
-    def convert(self, n_workers=1):
+            if save_as_parquet:
+                rec.to_parquet(out_filename)
+            else:
+                rec.to_mcap(out_filename)
+            
+    def convert(self, n_workers: int|None = None, save_as_parquet: bool = False) -> None:
+        if n_workers is None:
+            n_workers = self.n_workers
         if n_workers == -1:
             n_workers = mp.cpu_count() - 1
         self._out_path.mkdir(exist_ok=True)
         recordings = self.get_source_recordings()
         if n_workers > 1:
             with mp.Pool(n_workers, maxtasksperchild=1) as pool:
-                work_iterator = pool.imap(self.convert_source_recording, recordings, chunksize=1)
+                work_iterator = pool.imap(self.convert_source_recording, [recordings, save_as_parquet], chunksize=1)
                 list(tqdm(work_iterator, total=len(recordings)))
         else:
-            for rec in tqdm(recordings):
-                self.convert_source_recording(rec)
+            for rec in tqdm(recordings, len(recordings)):
+                self.convert_source_recording(rec, save_as_parquet=save_as_parquet)
+                
+                
+    def yield_recordings(self) -> Iterator[Recording]:
+        recordings = self.get_source_recordings()
+        yield from tqdm(recordings, total=len(recordings))
