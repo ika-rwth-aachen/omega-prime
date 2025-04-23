@@ -257,7 +257,7 @@ frequency of 10Hz on those messages. The following signals are required
 to be set in each of the OSI GroundTruth message. Detailed info about
 the signal content are found in the [ASAM OSI
 documentation](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html).
-Gray text indicates that the signal is optional. All other signals are
+Cursive text indicates that the signal is optional. All other signals are
 mandatory. The column minimal accuracy indicates the desired accuracy of
 the signal in relation to the real world.
 
@@ -432,9 +432,9 @@ real world data. Can be omitted for simulation data)</td>
 <td></td>
 </tr>
 <tr>
-<td>. vehicle_attributes</td>
-<td>MovingObjectVehicleAttributes # mandatory from osi but not from SSD
-perspective (description of where axles are ..., vehicle lights,)</td>
+<td><i>. vehicle_attributes</i></td>
+<td><i>MovingObjectVehicleAttributes # mandatory from osi but not from SSD
+perspective (description of where axles are ..., vehicle lights,)</i></td>
 <td></td>
 </tr>
 <tr>
@@ -458,9 +458,9 @@ construction, military)</td>
 <td></td>
 </tr>
 <tr>
-<td>. pedestrian_attributes</td>
-<td>MovingObjectPedestrianAttributes # mandatory from osi but not from
-SSD perspective (skeleton description)</td>
+<td><i>. pedestrian_attributes</i></td>
+<td><i>MovingObjectPedestrianAttributes # mandatory from osi but not from
+SSD perspective (skeleton description)</i></td>
 <td></td>
 </tr>
 <tr>
@@ -469,8 +469,8 @@ SSD perspective (skeleton description)</td>
 <td></td>
 </tr>
 <tr>
-<td>. base</td>
-<td>BaseStationary</td>
+<td><i>. base</i></td>
+<td><i>BaseStationary</i></td>
 <td></td>
 </tr>
 <tr>
@@ -508,8 +508,8 @@ counting)</td>
 <td></td>
 </tr>
 <tr>
-<td>. model_reference</td>
-<td>str</td>
+<td><i>. model_reference</i></td>
+<td><i>str</i></td>
 <td></td>
 </tr>
 <tr>
@@ -518,63 +518,63 @@ counting)</td>
 <td></td>
 </tr>
 <tr>
-<td>environmental_conditions</td>
-<td>EnvironmentalConditions</td>
+<td><i>environmental_conditions</i></td>
+<td><i>EnvironmentalConditions</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. ambient_illumination</td>
-<td>EnvironmentalConditionsAmbientIllumination</td>
+<td><i>. ambient_illumination</i></td>
+<td><i>EnvironmentalConditionsAmbientIllumination</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. time_of_day</td>
-<td>EnvironmentalConditionsTimeOfDay</td>
+<td><i>. time_of_day</i></td>
+<td><i>EnvironmentalConditionsTimeOfDay</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. unix_timestamp</td>
-<td>int</td>
+<td><i>. unix_timestamp</i></td>
+<td><i>int</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. atmospheric_pressure</td>
-<td>Float[PA]</td>
+<td><i>. atmospheric_pressure</i></td>
+<td><i>Float[PA]</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. temperature</td>
-<td>Float[K}</td>
+<td><i>. temperature</i></td>
+<td><i>Float[K]</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. relative_humidity</td>
-<td>float</td>
+<td><i>. relative_humidity</i></td>
+<td><i>float</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. precipitation</td>
-<td>EnvironmentalConditionsPrecipitation</td>
+<td><i>. precipitation</i></td>
+<td><i>EnvironmentalConditionsPrecipitation</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. fog</td>
-<td>EnvironmentalConditionsFog</td>
+<td><i>. fog</i></td>
+<td><i>EnvironmentalConditionsFog</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. clouds</td>
-<td>EnvironmentalConditionsCloudLayer</td>
+<td><i>. clouds</i></td>
+<td><i>EnvironmentalConditionsCloudLayer</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. wind</td>
-<td>EnvironmentalConditionsWind</td>
+<td><i>. wind</i></td>
+<td><i>EnvironmentalConditionsWind</i></td>
 <td></td>
 </tr>
 <tr>
-<td>. sun</td>
-<td>EnvironmentalConditionsSun</td>
+<td><i>. sun</i></td>
+<td><i>EnvironmentalConditionsSun</i></td>
 <td></td>
 </tr>
 </tbody>
