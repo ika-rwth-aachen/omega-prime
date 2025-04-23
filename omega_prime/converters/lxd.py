@@ -1,4 +1,6 @@
 from .converter import DatasetConverter, NANOS_PER_SEC
+from ..recording import Recording
+from ..map_odr import MapOdr
 
 from pathlib import Path
 
@@ -24,22 +26,16 @@ class lxdConverter(DatasetConverter):
         self._dataset = Dataset(dataset_path)
         super().__init__(dataset_path, out_path, n_workers=n_workers)
 
-    def get_recording_ids(self) -> list[int]:
-        return self._dataset.recording_ids
-
     def get_source_recordings(self):
-        return [self._dataset.get_recording(recording_id) for recording_id in self.get_recording_ids()]
+        return [self._dataset.get_recording(recording_id) for recording_id in self._dataset.recording_ids]
 
     def get_recordings(self, source_recording):
         yield source_recording
 
-    def get_recording_opendrive_path(self, recording) -> Path:
-        return recording.opendrive_map_file
-
     def get_recording_id(self, recording) -> int:
         return recording.id
 
-    def rec2df(self, recording) -> pl.DataFrame:
+    def to_omega_prime_recording(self, recording) -> Recording:
         dt = 1 / recording.get_meta_data("frameRate")
 
         meta = recording._tracks_meta_data
@@ -105,5 +101,5 @@ class lxdConverter(DatasetConverter):
             ]
         )
 
-        return tracks
-
+        xodr_path = recording.opendrive_map_file
+        return Recording(df=tracks, map=MapOdr.from_file(xodr_path), validate=False)

@@ -5,9 +5,7 @@ from abc import ABC, abstractmethod
 from loguru import logger
 from tqdm.auto import tqdm
 import multiprocessing as mp
-from ..map_odr import MapOdr
 from ..recording import Recording
-import polars as pl
 
 logger.configure(handlers=[{"sink": sys.stdout, "level": "WARNING"}])
 
@@ -37,33 +35,21 @@ class DatasetConverter(ABC):
         Args:
             source_recordings: List of the source recordings. Could be of any type as returned by get_source_recordings.
         Yields:
-            recording: Each recording in the dataset, one at a time. Could be of any type as further processed in rec2df, get_recording_opendrive_path and get_recording_id.
+            recording: Each recording in the dataset, one at a time. Could be of any type as further processed in to_omega_prime_recording and get_recording_id.
         """
         pass
 
     @abstractmethod
-    def rec2df(self, recording) -> pl.DataFrame:
+    def to_omega_prime_recording(self, recording) -> Recording:
         """
-        Abstract method to load raw data from the recording.
+        Abstract method to convert a raw recording into an omega prime recording instance.
         The method should be implemented in subclasses to handle specific dataset formats.
         Args:
-            recording: Recording of any type as returned by get_recordings.
+            recording: A recording of any type as returned by get_omega_prime_recordings.
         Returns:
-            pl.DataFrame: DataFrame containing the processed data as specified in TODO.
+            Recording: An instance of the Recording class containing the processed data.
         """
         pass
-
-    @abstractmethod
-    def get_recording_opendrive_path(self, recording) -> Path:
-        """
-        Abstract method to get the OpenDRIVE path for a given recording.
-        The method should be implemented in subclasses to handle specific dataset formats.
-        Args:
-            recording: Recording of any type as returned by get_recordings.
-        Returns:
-            Path: Path to the OpenDRIVE file associated with the recording. Returns None if not available.
-        """
-        return None
 
     @abstractmethod
     def get_recording_id(self, recording) -> int:
@@ -80,9 +66,7 @@ class DatasetConverter(ABC):
     def convert_source_recording(self, source_recording) -> None:
         for recording in self.get_recordings(source_recording):
             out_filename = self._out_path / f"{str(self.get_recording_id(recording)).zfill(2)}_tracks.mcap"
-            tracks = self.rec2df(recording)
-            xodr_path = self.get_recording_opendrive_path(recording)
-            rec = Recording(df=tracks, map=MapOdr.from_file(xodr_path), validate=False)
+            rec = self.to_omega_prime_recording(recording)
             rec.to_mcap(out_filename)
 
     def convert(self, n_workers=1):
