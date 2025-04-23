@@ -91,5 +91,7 @@ class DatasetConverter(ABC):
                 
                 
     def yield_recordings(self) -> Iterator[Recording]:
-        recordings = self.get_source_recordings()
-        yield from tqdm(recordings, total=len(recordings))
+        source_recordings = self.get_source_recordings()
+        for sr in tqdm(source_recordings, total=len(source_recordings)):
+            for recording in self.get_recordings(sr):
+                yield self.to_omega_prime_recording(recording)
