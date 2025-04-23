@@ -61,8 +61,8 @@ You can convert data from LevelXData to omega-prime. Under the hood [lxd-io](htt
 
 <!--pytest.mark.skip-->
 ```python
-from omega_prime import convert_lxd
-convert_lxd('./exiD-dataset-v2.0', './exiD-as-omega-prime', n_workers=4)
+from omega_prime.converters import lxdConverter
+lxdConverter('./exiD-dataset-v2.0', './exiD-as-omega-prime', n_workers=4)
 ```
 
 or with `omega-prime from-lxd ./exiD-dataset-v2.0 ./exiD-as-omega-prime --n-workers=4`.
