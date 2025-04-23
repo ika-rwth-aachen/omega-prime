@@ -13,11 +13,12 @@ logger.configure(handlers=[{"sink": sys.stdout, "level": "WARNING"}])
 
 NANOS_PER_SEC = 1000000000  # 1 s
 
+
 class DatasetConverter(ABC):
     def __init__(self, dataset_path: str, out_path: str, n_workers=1) -> None:
         self._dataset_path = Path(dataset_path)
         self._out_path = Path(out_path)
-        self.n_workers=n_workers
+        self.n_workers = n_workers
 
     @abstractmethod
     def get_source_recordings(self) -> list:
@@ -67,14 +68,16 @@ class DatasetConverter(ABC):
 
     def convert_source_recording(self, source_recording, save_as_parquet: bool = False) -> None:
         for recording in self.get_recordings(source_recording):
-            out_filename = self._out_path / f"{self.get_recording_name(recording)}.{'parquet' if save_as_parquet else 'mcap'}"
+            out_filename = (
+                self._out_path / f"{self.get_recording_name(recording)}.{'parquet' if save_as_parquet else 'mcap'}"
+            )
             rec = self.to_omega_prime_recording(recording)
             if save_as_parquet:
                 rec.to_parquet(out_filename)
             else:
                 rec.to_mcap(out_filename)
-            
-    def convert(self, n_workers: int|None = None, save_as_parquet: bool = False) -> None:
+
+    def convert(self, n_workers: int | None = None, save_as_parquet: bool = False) -> None:
         if n_workers is None:
             n_workers = self.n_workers
         if n_workers == -1:
@@ -88,8 +91,7 @@ class DatasetConverter(ABC):
         else:
             for rec in tqdm(recordings, len(recordings)):
                 self.convert_source_recording(rec, save_as_parquet=save_as_parquet)
-                
-                
+
     def yield_recordings(self) -> Iterator[Recording]:
         source_recordings = self.get_source_recordings()
         for sr in tqdm(source_recordings, total=len(source_recordings)):

@@ -23,7 +23,14 @@ def convert_lxd_cli(
         typer.Argument(file_okay=False, writable=True, help="In which folder to write the created omega-prime files"),
     ],
     n_workers: Annotated[int, typer.Option(help="Set to -1 for n_cpus-1 workers.")] = 1,
-    save_as_parquet: Annotated[bool, typer.Option(help="If activated, omega-prime recordings will be stored as parquet files instead of mcap (use for large recordings). Will loose information in OSI that are not mandatory in omega-prime.")] = False
+    save_as_parquet: Annotated[
+        bool,
+        typer.Option(
+            help="If activated, omega-prime recordings will be stored as parquet files instead of mcap (use for large recordings). Will loose information in OSI that are not mandatory in omega-prime."
+        ),
+    ] = False,
 ):
     Path(output_path).mkdir(exist_ok=True)
-    LxdConverter(dataset_path=dataset_path, out_path=output_path, n_workers=n_workers).convert(save_as_parquet=save_as_parquet)
+    LxdConverter(dataset_path=dataset_path, out_path=output_path, n_workers=n_workers).convert(
+        save_as_parquet=save_as_parquet
+    )

@@ -19,6 +19,7 @@ vehicles = {
 }
 pedestrians = {"pedestrian": betterosi.MovingObjectType.TYPE_PEDESTRIAN}
 
+
 class LxdConverter(DatasetConverter):
     def __init__(self, dataset_path: str, out_path: str, n_workers=1) -> None:
         self._dataset = Dataset(dataset_path)
