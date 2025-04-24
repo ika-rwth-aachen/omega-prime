@@ -1,20 +1,11 @@
-import sys
-from pathlib import Path
+from .converter import DatasetConverter, NANOS_PER_SEC
+from ..recording import Recording
+from ..map_odr import MapOdr
 
 import betterosi
 import numpy as np
-from loguru import logger
 from lxd_io import Dataset
-from tqdm.auto import tqdm
-import multiprocessing as mp
-from ..map_odr import MapOdr
-from ..recording import Recording
 import polars as pl
-
-__all__ = ["convert_lxd"]
-logger.configure(handlers=[{"sink": sys.stdout, "level": "WARNING"}])
-
-NANOS_PER_SEC = 1000000000  # 1 s
 
 vct = betterosi.MovingObjectVehicleClassificationType
 vehicles = {
@@ -29,21 +20,24 @@ vehicles = {
 pedestrians = {"pedestrian": betterosi.MovingObjectType.TYPE_PEDESTRIAN}
 
 
-class DatasetConverter:
-    def __init__(self, dataset_dir: Path) -> None:
-        self._dataset = Dataset(dataset_dir)
+class LxdConverter(DatasetConverter):
+    def __init__(self, dataset_path: str, out_path: str, n_workers=1) -> None:
+        self._dataset = Dataset(dataset_path)
+        super().__init__(dataset_path, out_path, n_workers=n_workers)
 
-    def get_recording_ids(self) -> list[int]:
-        return self._dataset.recording_ids
+    def get_source_recordings(self):
+        return [self._dataset.get_recording(recording_id) for recording_id in self._dataset.recording_ids]
 
-    def get_recording_opendrive_path(self, recording_id: int) -> Path:
-        return self._dataset.get_recording(recording_id).opendrive_map_file
+    def get_recordings(self, source_recording):
+        yield source_recording
 
-    def rec2df(self, recording_id):
-        rec = self._dataset.get_recording(recording_id)
-        dt = 1 / rec.get_meta_data("frameRate")
+    def get_recording_name(self, recording) -> str:
+        return f"{str(recording.id).zfill(2)}_tracks"
 
-        meta = rec._tracks_meta_data
+    def to_omega_prime_recording(self, recording) -> Recording:
+        dt = 1 / recording.get_meta_data("frameRate")
+
+        meta = recording._tracks_meta_data
         meta = meta.with_columns(
             pl.col("class")
             .map_elements(
@@ -67,7 +61,7 @@ class DatasetConverter:
         )
         meta = meta.rename({"trackId": "idx"})
 
-        tracks = rec._get_tracks_data()
+        tracks = recording._get_tracks_data()
         tracks = tracks.rename(
             {
                 "xCenter": "x",
@@ -77,8 +71,6 @@ class DatasetConverter:
                 "xAcceleration": "acc_x",
                 "yAcceleration": "acc_y",
                 "trackId": "idx",
-                # "width": "width",
-                # "length": "length",
             }
         )
         tracks = tracks.join(meta.select(["idx", "role", "type", "subtype"]), on="idx", how="left")
@@ -106,33 +98,5 @@ class DatasetConverter:
             ]
         )
 
-        return tracks
-
-
-def convert_recording(args):
-    converter, recording_id, out_filename = args
-    tracks = converter.rec2df(recording_id)
-    xodr_path = converter.get_recording_opendrive_path(recording_id)
-    rec = Recording(df=tracks, map=MapOdr.from_file(xodr_path), validate=False)
-    rec.to_mcap(out_filename)
-
-
-def convert_lxd(dataset_dir: Path, outpath: Path, n_workers=1):
-    if n_workers == -1:
-        n_workers = mp.cpu_count() - 1
-    outpath = Path(outpath)
-    dataset_dir = Path(dataset_dir)
-    outpath.mkdir(exist_ok=True)
-    converter = DatasetConverter(dataset_dir)
-    args_list = [
-        [converter, recording_id, outpath / f"{str(recording_id).zfill(2)}_tracks.mcap"]
-        for recording_id in converter.get_recording_ids()
-    ]
-
-    if n_workers > 1:
-        with mp.Pool(n_workers, maxtasksperchild=1) as pool:
-            work_iterator = pool.imap(convert_recording, args_list, chunksize=1)
-            list(tqdm(work_iterator, total=len(args_list)))
-    else:
-        for args in tqdm(args_list):
-            convert_recording(args)
+        xodr_path = recording.opendrive_map_file
+        return Recording(df=tracks, map=MapOdr.from_file(xodr_path), validate=False)

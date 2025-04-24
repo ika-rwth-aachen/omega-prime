@@ -1,11 +1,11 @@
-from .lxd import convert_lxd
+from .lxd import LxdConverter
 
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-__all__ = ["app", "convert_lxd"]
+__all__ = ["app"]
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -23,6 +23,14 @@ def convert_lxd_cli(
         typer.Argument(file_okay=False, writable=True, help="In which folder to write the created omega-prime files"),
     ],
     n_workers: Annotated[int, typer.Option(help="Set to -1 for n_cpus-1 workers.")] = 1,
+    save_as_parquet: Annotated[
+        bool,
+        typer.Option(
+            help="If activated, omega-prime recordings will be stored as parquet files instead of mcap (use for large recordings). Will loose information in OSI that are not mandatory in omega-prime."
+        ),
+    ] = False,
 ):
     Path(output_path).mkdir(exist_ok=True)
-    convert_lxd(dataset_dir=dataset_path, outpath=output_path, n_workers=n_workers)
+    LxdConverter(dataset_path=dataset_path, out_path=output_path, n_workers=n_workers).convert(
+        save_as_parquet=save_as_parquet
+    )

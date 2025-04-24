@@ -61,8 +61,12 @@ You can convert data from LevelXData to omega-prime. Under the hood [lxd-io](htt
 
 <!--pytest.mark.skip-->
 ```python
-from omega_prime import convert_lxd
-convert_lxd('./exiD-dataset-v2.0', './exiD-as-omega-prime', n_workers=4)
+from omega_prime.converters import LxdConverter
+converter = LxdConverter('./exiD-dataset-v2.0', './exiD-as-omega-prime', n_workers=4)
+# convert the dataset and store the omega-prime files in the new directory
+converter.convert()
+# access Recordings directly without storing them
+iterator_of_recordings = converter.yield_recordings()
 ```
 
 or with `omega-prime from-lxd ./exiD-dataset-v2.0 ./exiD-as-omega-prime --n-workers=4`.
