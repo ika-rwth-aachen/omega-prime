@@ -4,7 +4,9 @@ from abc import ABC, abstractmethod
 
 from loguru import logger
 from tqdm.auto import tqdm
-import multiprocessing as mp
+import joblib as jb
+from tqdm_joblib import tqdm_joblib
+from functools import partial
 from ..recording import Recording
 from collections.abc import Iterator
 
@@ -81,13 +83,15 @@ class DatasetConverter(ABC):
         if n_workers is None:
             n_workers = self.n_workers
         if n_workers == -1:
-            n_workers = mp.cpu_count() - 1
+            n_workers = jb.cpu_count() - 1
         self._out_path.mkdir(exist_ok=True)
         recordings = self.get_source_recordings()
         if n_workers > 1:
-            with mp.Pool(n_workers, maxtasksperchild=1) as pool:
-                work_iterator = pool.imap(self.convert_source_recording, [recordings, save_as_parquet], chunksize=1)
-                list(tqdm(work_iterator, total=len(recordings)))
+            partial_fct = partial(self.convert_source_recording, save_as_parquet=save_as_parquet)
+            with tqdm_joblib(desc='Source Recordings', total=len(recordings)) as pbar:
+                results = jb.Parallel(n_jobs=n_workers)(
+                    jb.delayed(partial_fct)(rec) for rec in recordings
+                )
         else:
             for rec in tqdm(recordings, total=len(recordings)):
                 self.convert_source_recording(rec, save_as_parquet=save_as_parquet)

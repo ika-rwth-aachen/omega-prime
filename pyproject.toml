@@ -41,7 +41,9 @@ dependencies = [
     'pyproj',
     'betterosi>=0.3.4',
     'lxd-io>=0.4.6',
-    'pyxodr'
+    'pyxodr',
+    'joblib',
+    'tqdm_joblib'
 ]
 version = "0.1.12"
 
@@ -78,7 +80,7 @@ using = "PEP631"
 ignore_licenses = ["mpl"]
 ignore_packages = [
     "tzdata", "types-python-dateutil", "xarray", "multidict" # APACHE SOFTWARE LICENSE
-]   
+]
 zero = true
 
 [tool.pytest.ini_options]
