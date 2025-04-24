@@ -88,8 +88,8 @@ class DatasetConverter(ABC):
         recordings = self.get_source_recordings()
         if n_workers > 1:
             partial_fct = partial(self.convert_source_recording, save_as_parquet=save_as_parquet)
-            with tqdm_joblib(desc='Source Recordings', total=len(recordings)) as pbar:
-                results = jb.Parallel(n_jobs=n_workers)(
+            with tqdm_joblib(desc='Source Recordings', total=len(recordings)):
+                jb.Parallel(n_jobs=n_workers)(
                     jb.delayed(partial_fct)(rec) for rec in recordings
                 )
         else:
