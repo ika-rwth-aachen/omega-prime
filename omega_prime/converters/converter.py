@@ -89,7 +89,7 @@ class DatasetConverter(ABC):
                 work_iterator = pool.imap(self.convert_source_recording, [recordings, save_as_parquet], chunksize=1)
                 list(tqdm(work_iterator, total=len(recordings)))
         else:
-            for rec in tqdm(recordings, len(recordings)):
+            for rec in tqdm(recordings, total=len(recordings)):
                 self.convert_source_recording(rec, save_as_parquet=save_as_parquet)
 
     def yield_recordings(self) -> Iterator[Recording]:
