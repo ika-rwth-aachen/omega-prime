@@ -11,7 +11,7 @@ import pandas as pd
 import polars as pl
 import altair as alt
 
-import pandera as pa
+import pandera.polars as pa
 import pandera.extensions as extensions
 import pyarrow
 import pyarrow.parquet as pq
@@ -31,22 +31,18 @@ pi_valued = pa.Check.between(-np.pi, np.pi)
     statistics=["column_name", "column_value", "other_column_name", "other_column_unset_value"]
 )
 def other_column_set_on_column_value(
-    pandas_obj, *, column_name: str, column_value, other_column_name: str, other_column_unset_value
+    polars_obj, *, column_name: str, column_value, other_column_name: str, other_column_unset_value
 ):
-    return ~np.logical_and(
-        pandas_obj[column_name] == column_value, pandas_obj[other_column_name] == other_column_unset_value
-    )
+    return polars_obj.lazyframe.select(~(pl.col(column_name)==column_value).and_(pl.col(other_column_name) == other_column_unset_value))
 
 
 @extensions.register_check_method(
     statistics=["column_name", "column_value", "other_column_name", "other_column_unset_value"]
 )
 def other_column_unset_on_column_value(
-    pandas_obj, *, column_name, column_value, other_column_name: str, other_column_unset_value: int
+    polars_obj, *, column_name, column_value, other_column_name: str, other_column_unset_value: int
 ):
-    return ~np.logical_and(
-        pandas_obj[column_name] != column_value, pandas_obj[other_column_name] != other_column_unset_value
-    )
+    return  polars_obj.lazyframe.select(~(pl.col(column_name)!=column_value).and_(pl.col(other_column_name) != other_column_unset_value))
 
 
 recording_moving_object_schema = pa.DataFrameSchema(
@@ -291,7 +287,7 @@ class Recording:
         nanos: int, df: pl.DataFrame, host_vehicle=None, validate=False
     ) -> betterosi.GroundTruth:
         if validate:
-            recording_moving_object_schema.validate(df.to_pandas(), lazy=True)
+            recording_moving_object_schema.validate(df, lazy=True)
 
         def get_object(row):
             return betterosi.MovingObject(
@@ -321,8 +317,10 @@ class Recording:
         return gt
 
     def __init__(self, df, map=None, projections=None, host_vehicle=None, validate=False, compute_polygons=False):
+        if not isinstance(df, pl.DataFrame):
+            df = pl.DataFrame(df)
         if validate:
-            recording_moving_object_schema.validate(df.to_pandas() if isinstance(df, pl.DataFrame) else df, lazy=True)
+            recording_moving_object_schema.validate(df, lazy=True)
         if not isinstance(df, pl.DataFrame):
             df = pl.DataFrame(df)
         super().__init__()
