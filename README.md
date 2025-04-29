@@ -13,18 +13,25 @@
 # Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data 
 
 Data Model, Format and Python Library for ground truth data containing information on dynamic objects, map and environmental factors optimized for representing urban traffic. The repository contains:
-- **Sepcification Document:** [./docs/omega_prime_specification.md](https://github.com/ika-rwth-aachen/omega-prime/tree/main/docs/omega_prime_specification.md)
-    - **Data Model**: What signals exists and how these are defined.
-    - **Data Format Specification**: How to exchange and store those signals.
-- **Python Library**: 
-    - **Creation** of omega-prime files from
-        - ASAM OSI GroundTruth trace (e.g., output of esmini)
-        - Table of moving object data (e.g., csv data)
-        - ASAM OpenDRIVE map
-        - [LevelXData datasets](https://levelxdata.com/) through [lxd-io](https://github.com/lenvt/lxd-io)
-    - **Plotting** of data
-    - **Validation** of data
-    - **Interpolation** of data
+### Data Model and Sepcification
+see [./docs/omega_prime_specification.md](https://github.com/ika-rwth-aachen/omega-prime/tree/main/docs/omega_prime_specification.md)
+
+- 🌍 **Data Model**: What signals exists and how these are defined.
+- 🧾 **Data Format Specification**: How to exchange and store those signals.
+
+### Python Library
+  - 🔨 **Create** omega-prime files from many sources (see [./tutorial.ipynb](https://github.com/ika-rwth-aachen/omega-prime/blob/main/tutorial.ipynb)):
+      - ASAM OSI GroundTruth trace (e.g., output of esmini)
+      - Table of moving object data (e.g., csv data)
+      - ASAM OpenDRIVE map
+      - [LevelXData datasets](https://levelxdata.com/) through [lxd-io](https://github.com/lenvt/lxd-io)
+      - extend yourself by subclassing [DatasetConverter](omega_prime/converters/converter.py)
+  - 🗺️ **Map Association**: Associate Object Location with Lanes from OpenDRIVE or OSI Maps (see [tutorial_locator.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/tutorial_locatory.ipynb))
+  - 📺 **Plotting** of data: interative top view plots using [altair](https://altair-viz.github.io/)
+  - ✅ **Validation** of data: check if your data conforms to the omega-prime specification (e.g., correct yaw) using [pandera](https://pandera.readthedocs.io/en/stable/)
+  - 📐 **Interpolation** of data: bring your data into a fixed frequency
+  - 📈 **Metrics**: compute interaction metrics like PET, TTC, THW (see [tutorial_metrics.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/tutorial_metrics.ipynb))
+  - 🚀 **Fast Processing** directly on DataFrames using [polars](https://pola.rs/), [polars-st](https://oreilles.github.io/polars-st/)
 
 The data model and format utilze [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) and [ASAM Open-Simulation-Interface GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html). omega-prime sets requirements on presence and quality of ASAM OSI GroundTruth messages and ASAM OpenDRIVE files and defines a file format for the exchange and storage of these.
 

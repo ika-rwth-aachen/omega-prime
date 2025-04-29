@@ -604,6 +604,7 @@ class Recording:
                 ]
             )
             self._map_df = self._map_df.with_columns(geometry=st.from_shapely("polygon"))
+            self._map_df.with_columns(pl.col("geometry").st.simplify(tolerance=1))
 
         if end_frame != -1:
             df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)
@@ -631,11 +632,12 @@ class Recording:
             },
             "properties": {},
         }
-        map = (
-            self._map_df["geometry", "idx", "type"]
-            .st.plot(color="green", fillOpacity=0.4)
-            .encode(tooltip=["properties.idx:N", "properties.type:O"])
-        )
+        if plot_map:
+            map = (
+                self._map_df["geometry", "idx", "type"]
+                .st.plot(color="green", fillOpacity=0.4)
+                .encode(tooltip=["properties.idx:N", "properties.type:O"])
+            )
         mvs = (
             df["geometry", "idx", "frame", "type"]
             .st.plot()
@@ -651,7 +653,7 @@ class Recording:
         )
 
         map_view = (
-            (map + mvs)
+            ((map + mvs) if plot_map else mvs)
             .project("identity", reflectY=True, fit=pov)
             .properties(height=int(ymax - ymin) * 3, width=int(xmax - xmin) * 3, title="Map")
         )
