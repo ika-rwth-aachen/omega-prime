@@ -115,7 +115,7 @@ class MapOdr(Map):
     def from_file(
         cls,
         filename,
-        topic="ground_truth_map",
+        topics: list[str] = ["/ground_truth_map","ground_truth_map"],
         parse: bool = False,
         is_odr_xml: bool = False,
         is_mcap: bool = False,
@@ -126,7 +126,7 @@ class MapOdr(Map):
                 odr_xml = f.read()
             return cls.create(odr_xml=odr_xml, name=Path(filename).stem, step_size=step_size, parse=parse)
         if Path(filename).suffix in [".mcap"] or is_mcap:
-            map = next(iter(betterosi.read(filename, mcap_topics=[topic], osi_message_type=betterosi.MapAsamOpenDrive)))
+            map = next(iter(betterosi.read(filename, mcap_topics=topics, osi_message_type=betterosi.MapAsamOpenDrive)))
             return cls.create(
                 odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, parse=parse
             )
