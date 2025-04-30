@@ -33,7 +33,9 @@ pi_valued = pa.Check.between(-np.pi, np.pi)
 def other_column_set_on_column_value(
     polars_obj, *, column_name: str, column_value, other_column_name: str, other_column_unset_value
 ):
-    return polars_obj.lazyframe.select(~(pl.col(column_name)==column_value).and_(pl.col(other_column_name) == other_column_unset_value))
+    return polars_obj.lazyframe.select(
+        ~(pl.col(column_name) == column_value).and_(pl.col(other_column_name) == other_column_unset_value)
+    )
 
 
 @extensions.register_check_method(
@@ -42,7 +44,9 @@ def other_column_set_on_column_value(
 def other_column_unset_on_column_value(
     polars_obj, *, column_name, column_value, other_column_name: str, other_column_unset_value: int
 ):
-    return  polars_obj.lazyframe.select(~(pl.col(column_name)!=column_value).and_(pl.col(other_column_name) != other_column_unset_value))
+    return polars_obj.lazyframe.select(
+        ~(pl.col(column_name) != column_value).and_(pl.col(other_column_name) != other_column_unset_value)
+    )
 
 
 recording_moving_object_schema = pa.DataFrameSchema(

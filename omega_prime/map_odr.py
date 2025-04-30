@@ -115,7 +115,7 @@ class MapOdr(Map):
     def from_file(
         cls,
         filename,
-        topics: list[str] = ["/ground_truth_map","ground_truth_map"],
+        topics: list[str] = ["/ground_truth_map", "ground_truth_map"],
         parse: bool = False,
         is_odr_xml: bool = False,
         is_mcap: bool = False,
