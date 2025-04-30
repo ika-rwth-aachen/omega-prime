@@ -45,7 +45,7 @@ dependencies = [
     'joblib',
     'tqdm_joblib'
 ]
-version = "0.1.13"
+version = "0.1.14"
 
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
