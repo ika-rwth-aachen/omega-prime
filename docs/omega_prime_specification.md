@@ -219,8 +219,8 @@ and on PROJ-string for the geo-reference.
 
 The origin and orientation of the coordinate system are defined through
 an offset (ASAM OpenDRIVE offset element and ASAM OSI GroundTruth
-*pro*j\_frame\_offset), which defines and *offset in* x, y and z
-direction and an orientation through a *heading/yaw angle in radiant.*
+`proj_frame_offset`), which defines and *offset* in x, y and z
+direction and an orientation through a *heading/yaw angle* in radiant.
 
 The origin of the coordinate system is georeferenced through a
 PROJ-string (geoReference tag in ASAM OpenDRIVE and GroundTruth
@@ -583,9 +583,9 @@ counting)</td>
 A sequence of those ground truth messages defines a traffic observation.
 For the encapsulation of serialized messages of OSI, OMEGA-PRIME uses
 MCAP. The sequence of *GroundTruth message* should be stored under the
-topic *ground\_truth* in an MCAP file. The *log\_time* and
-*publish\_time* of each message should correspond to
-*GroundTruth.seconds x 1\_000\_000\_000 + GroundTruth.nanos*. The
+topic `/ground_truth` in an MCAP file. The `log_time` and
+`publish_time` of each message should correspond to
+`GroundTruth.seconds x 1_000_000_000 + GroundTruth.nanos`. The
 frequency of *GroundTruth messages* should be at least 10 Hz.
 
 ### Map information
@@ -605,8 +605,8 @@ counterparts should not be larger than 0.2m.
 The data format of OMEGA-PRIME consists of a sequence of OSI 3.7.0
 GroundTruth messages and an OpenDRIVE 1.8.1 file. The OSI GroundTruth
 messages are stored in an MCAP file (see Figure 1) und the topic
-\`ground\_turth\`. The OpenDRIVE map is either stored inside the MCAP
-under \`ground\_truth\_map\` (see 1.2.4.1) or in the same folder as an
+`/ground_turth`. The OpenDRIVE map is either stored inside the MCAP
+under `/ground_truth_map` (see 1.2.4.1) or in the same folder as an
 OpenDRIVE XML (see 1.2.4.2).
 
 <img src="./omega_prime/omega_specification.svg"
@@ -623,31 +623,28 @@ especially relevant for the exchange of data between parties. Therefore,
 we suggest storing the map information also in the MCAP file.
 
 The OpenDRIVE map should be stored in the MCAP topic
-ground\_truth\_map* with the proto *MapASAMOpenDRIVE message*
-(specified below). In *open\_drive\_xml* store the string content of an
-OpenDRIVE XML file. *map\_reference* must match the *map\_reference* in
+`/ground_truth_map` with the proto *MapASAMOpenDRIVE message*
+(specified below). In `open_drive_xml` store the string content of an
+OpenDRIVE XML file. `map_reference` must match the `map_reference` in
 the *GroundTruth message*.
 
 
 ```proto
+package osi3;
 message MapAsamOpenDrive
-
 {
-
     required string map_reference = 1;
-
     required string open_drive_xml_content = 2;
-
 }
 ```
-#### Option B: One Map – Multiple Recordings 
+#### Option B: One Map – Multiple Recordings
 
 On the data provider side, it could be useful to just store an instance
 of the map once, when you have multiple recordings of the same map. This
 can be useful in settings where you are still iterating the map and do
 not want to update it in many places. If you use this option, the map
 file has to be in the same directory (or zip archive level) as the MCAP
-file and *map\_reference* in the Ground Truth messages must be set to
+file and `map_reference` in the Ground Truth messages must be set to
 the filename of the ASAM OpenDRIVE file.
 
 # Technical Notes

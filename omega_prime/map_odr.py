@@ -126,7 +126,7 @@ class MapOdr(Map):
                 odr_xml = f.read()
             return cls.create(odr_xml=odr_xml, name=Path(filename).stem, step_size=step_size, parse=parse)
         if Path(filename).suffix in [".mcap"] or is_mcap:
-            map = next(iter(betterosi.read(filename, mcap_topics=topics, osi_message_type=betterosi.MapAsamOpenDrive)))
+            map = next(iter(betterosi.read(filename, mcap_topics=topics, mcap_return_betterosi=False)))
             return cls.create(
                 odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, parse=parse
             )

@@ -89,7 +89,7 @@ testpaths = [
     "tests",
     "tutorial.ipynb",
     "tutorial_locator.ipynb",
-#    "tutorial_metrics.ipynb",
+    "tutorial_metrics.ipynb",
     "README.md"
 ]
 log_cli = true
