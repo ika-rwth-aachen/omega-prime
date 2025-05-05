@@ -86,13 +86,50 @@ OTHER_LANE_TYPES = {
     "special3",
 }
 
+LANE_TYPE_MAP = {
+    betterosi.LaneClassificationType.TYPE_UNKNOWN: ["unknown", "none"],
+    betterosi.LaneClassificationType.TYPE_OTHER: [
+        "special1",
+        "special2",
+        "special3",
+        "tram",
+        "rail",
+        "shoulder",
+        "median",
+    ],
+    betterosi.LaneClassificationType.TYPE_DRIVING: [
+        "driving",
+        "parking",
+        "stop",
+        "exit",
+        "mwyexit",
+        "entry",
+        "mwyentry",
+        "onramp",
+        "offramp",
+        "connectingramp",
+        "bidirectional",
+        "hov",
+        "taxi",
+        "bux",
+        "sliplane",
+        "shared",
+    ],
+    betterosi.LaneClassificationType.TYPE_NONDRIVING: [
+        "sidewalk",
+        "walking",
+        "biking",
+        "restricted",
+        "border",
+        "curb",
+        "roadworks",
+    ],
+}
 
-# Define the named tuple
-XodrIdx = namedtuple("XodrIdx", ["road_id", "lane_id", "section_idx", "side"])
+odrlanetype2osilanetype = {odrlt: osilt for osilt, ts in LANE_TYPE_MAP.items() for odrlt in ts}
 
-
-def make_xodr_idx(road_id, lane_id, section_idx, side=None):
-    return XodrIdx(road_id=road_id, lane_id=lane_id, section_idx=section_idx, side=side)
+XodrLaneId = namedtuple("XodrLaneIdx", ["road_id", "lane_id", "section_idx"])
+XodrBoundaryId = namedtuple("XodrBoundaryIdx", ["road_id", "lane_id", "section_idx", "side"])
 
 
 @dataclass(repr=False)
@@ -317,16 +354,17 @@ class LaneBoundaryXodr(LaneBoundary):
 
         lane_boundary_type = cls._determine_lane_boundary_type(type)
 
+        idx = XodrBoundaryId(road_id, lane_id, lane_section_idx, side)
         return cls(
-            idx=(int(road_id), lane_idx),
-            xodr_idx=make_xodr_idx(road_id=road_id, section_idx=lane_section_idx, lane_id=lane_id, side=side),
+            idx=idx,
+            xodr_idx=idx,
             type=lane_boundary_type,
-            polyline=np.array(polyline.coords),
+            polyline=np.asarray(polyline.coords),
             _xodr=boundary,
         )
 
     def plot(self, ax: plt.Axes):
-        ax.plot(*np.array(self.polyline[:, :2]).T, color="gray", alpha=0.1)
+        ax.plot(*np.asarray(self.polyline[:, :2]).T, color="gray", alpha=0.1)
         ax.set_aspect(1)
 
     @staticmethod
@@ -362,32 +400,35 @@ class LaneXodr(Lane):
         if centre_line is None or not len(centre_line):
             raise ValueError(f"Lane {lane.id} has no centre_line")
 
-        centerline_2d = np.array([(p[0], p[1]) for p in lane.centre_line])
+        centerline_2d = lane.centre_line[:, :2]
         lane_type, lane_subtype = cls._determine_lane_type_and_subtype(lane, road)
-
+        idx = XodrLaneId(road.id, lane.id, lane_section_idx)
         return cls(
             _xodr=lane,
-            idx=(int(road.id), lane_idx),
-            xodr_idx=make_xodr_idx(road_id=road.id, section_idx=lane_section_idx, lane_id=lane.id, side=None),
+            idx=idx,
+            xodr_idx=idx,
             centerline=centerline_2d,
             type=lane_type,
             subtype=lane_subtype,
-            successor_ids=[(int(road.id), lane_section_idx + 1, successor) for successor in lane.successor_ids],
-            predecessor_ids=[(int(road.id), lane_section_idx - 1, predecessor) for predecessor in lane.predecessor_ids],
-            right_boundary_id=make_xodr_idx(
-                road_id=road.id, section_idx=lane_section_idx, side="right", lane_id=lane.id
-            ),
-            left_boundary_id=make_xodr_idx(road_id=road.id, section_idx=lane_section_idx, side="left", lane_id=lane.id),
+            successor_ids=[
+                XodrLaneId(s.road_id, s.id, s.lane_section_id) for s in set([o[0] for o in lane.successor_data])
+            ],
+            predecessor_ids=[
+                XodrLaneId(p.road_id, p.id, p.lane_section_id) for p in set([o[0] for o in lane.predecessor_data])
+            ],
+            right_boundary_id=XodrBoundaryId(road.id, lane.id, lane_section_idx, side="right"),
+            left_boundary_id=XodrBoundaryId(road.id, lane.id, lane_section_idx, side="left"),
         )
 
     @staticmethod
     def _determine_lane_type_and_subtype(lane: PyxodrLane, road: PyxodrRoad):
-        lane_type = (
-            LaneClassificationType.TYPE_UNKNOWN
-            if road.road_xml.get("junction") == "-1"
-            else LaneClassificationType.TYPE_INTERSECTION
-        )
+        is_junction = road.road_xml.get("junction") != "-1"
         lane_type_str = (getattr(lane, "type", "unknown") or "unknown").lower()
+
+        if is_junction:
+            lane_type = LaneClassificationType.TYPE_INTERSECTION
+        else:
+            lane_type = odrlanetype2osilanetype[lane_type_str]
 
         if lane_type_str in LANE_SUBTYPE_MAP:
             lane_subtype = LANE_SUBTYPE_MAP[lane_type_str]
@@ -418,5 +459,5 @@ class LaneXodr(Lane):
 
     def plot(self, ax: plt.Axes):
         c = "green" if self.type != LaneClassificationType.TYPE_INTERSECTION else "black"
-        ax.plot(*np.array(self.centerline).T, color=c, alpha=0.5)
+        ax.plot(*np.asarray(self.centerline).T, color=c, alpha=0.5)
         ax.add_patch(PltPolygon(self.polygon.exterior.coords, fc="blue", alpha=0.2, ec="black"))

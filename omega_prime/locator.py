@@ -69,8 +69,8 @@ class ShapelyTrajectoryTools:
         ref_points_after = l.interpolate(np.clip(s + cls.epsi, 0, l.length))
         ref_points = l.interpolate(np.clip(s, 0, l.length))
         ref_points_before = l.interpolate(np.clip(s - cls.epsi, 0, l.length))
-        lane_tangent_vec = np.array([np.array(o.coords)[0] for o in ref_points_after]) - np.array(
-            [np.array(o.coords)[0] for o in ref_points_before]
+        lane_tangent_vec = np.asarray([np.asarray(o.coords)[0] for o in ref_points_after]) - np.asarray(
+            [np.asarray(o.coords)[0] for o in ref_points_before]
         )
         lane_tangent_norm_angle = np.arctan2(lane_tangent_vec[:, 1], lane_tangent_vec[:, 0]) - np.pi / 2
         if return_heading_of_ref_at_st:
@@ -198,6 +198,7 @@ class WrappedLane:
     end_points: list[shapely.Point]
     on_intersection: bool = False
     type: Any = None
+    subtype: Any = None
     original_lane: Any = None
     db: Any = None
 
@@ -220,6 +221,7 @@ class WrappedLane:
             end_points=end_points,
             on_intersection=l.type == betterosi.LaneClassificationType.TYPE_INTERSECTION,
             type=l.type,
+            subtype=l.subtype,
             original_lane=l,
         )
 
@@ -334,7 +336,7 @@ class Locator:
             no_associations = np.where(np.all(np.isnan(np.stack(list(lon_distances.values()))), axis=0))[0]
         except ValueError:
             # no arrays to stack
-            no_associations = np.array(list(range(len(xys))))
+            no_associations = np.arange(len(xys))
         if hasattr(self.all_lanes[0], "polygon") and self.all_lanes[0].polygon is not None:
             no_asscociation_idxs, intersection_lane_ids = self.str_tree.query_nearest(polys[no_associations])
         else:
@@ -407,12 +409,14 @@ class Locator:
                     g.add_edge(lid, external2internal_laneid[external_sid], label=LaneRelation.successor)
                 except KeyError:
                     pass
-            right_neigbours = [i for i in str_tree.query(lane.border_right, predicate="covered_by") if i != lid]
-            left_neigbours = [i for i in str_tree.query(lane.border_left, predicate="covered_by") if i != lid]
+            right_neigbours = [
+                int(i) for i in str_tree.query(lane.border_right, predicate="covered_by") if int(i) != lid
+            ]
+            left_neigbours = [int(i) for i in str_tree.query(lane.border_left, predicate="covered_by") if int(i) != lid]
             for rn in right_neigbours:
-                g.add_edge(lid, rn)
+                g.add_edge(lid, rn, label=LaneRelation.neighbour_right)
             for ln in left_neigbours:
-                g.add_edge(lid, ln)
+                g.add_edge(lid, ln, label=LaneRelation.neighbour_left)
         return g
 
     def get_single_lane_association(
