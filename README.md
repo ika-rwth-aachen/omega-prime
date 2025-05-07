@@ -74,7 +74,7 @@ iterator_of_recordings = converter.yield_recordings()
 
 or with `omega-prime from-lxd ./exiD-dataset-v2.0 ./exiD-as-omega-prime --n-workers=4`.
 
-Tested with exiD-v2.0 and inD-v1.1
+Tested with exiD-v2.0, inD-v1.1, highD-v3.0
 
 ## File Format
 Based on [MCAP](https://mcap.dev/), [ASAM OSI](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/specification/index.html) and [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) the ASAM OSI GroundTruth messages and ASAM OpenDRIVE map are packaged as shown in the following figure.

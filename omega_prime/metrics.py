@@ -22,7 +22,7 @@ class Metric:
         try:
             df, properties = self.compute_func(df, **kwargs)
             assert isinstance(df, pl.LazyFrame)
-            assert all(p in properties for p in self.computes_properties+self.computes_intermediate_properties)
+            assert all(p in properties for p in self.computes_properties + self.computes_intermediate_properties)
             return df, properties
 
         except TypeError as e:
@@ -57,7 +57,7 @@ def metric(
     requires_columns: list[str] | None = None,
     requires_properties: list[str] | None = None,
     computes_intermediate_columns: list[str] | None = None,
-    computes_intermediate_properties: list[str] | None = None
+    computes_intermediate_properties: list[str] | None = None,
 ):
     def decorator(func):
         return Metric(
@@ -82,10 +82,10 @@ def distance_traveled(df) -> tuple[pl.DataFrame, dict[str, pl.DataFrame]]:
         .fill_null(0.0)
         .cum_sum()
         .alias("distance_traveled"),
-        
     ), {}
 
-@metric(computes_columns=['vel'])
+
+@metric(computes_columns=["vel"])
 def vel(df) -> tuple[pl.DataFrame, dict[str, pl.DataFrame]]:
     return df.with_columns(
         (pl.col("vel_x") ** 2 + pl.col("vel_y") ** 2).sqrt().alias("vel"),
@@ -95,7 +95,7 @@ def vel(df) -> tuple[pl.DataFrame, dict[str, pl.DataFrame]]:
 @metric(
     requires_columns=["distance_traveled", "vel"],
     computes_properties=["timegaps", "min_timegaps"],
-    computes_intermediate_properties=['crossed']
+    computes_intermediate_properties=["crossed"],
 )
 def timegaps_and_min_timgaps(df, /, ego_id, time_buffer=2e9):
     ego_df = df.filter(idx=ego_id)
@@ -132,19 +132,15 @@ def timegaps_and_min_timgaps(df, /, ego_id, time_buffer=2e9):
         pl.col("timegap").get(pl.col("timegap").abs().arg_min()).alias("min_timegap")
     )
 
-    return df, {
-        "timegaps": timegaps,
-        "min_timegaps": min_timegaps,
-        "crossed": crossed
-    }
-    
+    return df, {"timegaps": timegaps, "min_timegaps": min_timegaps, "crossed": crossed}
+
 
 @metric(
     requires_columns=["distance_traveled", "vel"],
-    requires_properties=['crossed','timegaps'],
+    requires_properties=["crossed", "timegaps"],
     computes_properties=["p_timegaps", "min_p_timegaps"],
 )
-def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps,time_buffer=2e9):
+def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps, time_buffer=2e9):
     p_timegaps = (
         crossed.join(timegaps, how="right", suffix="_overlap", on=["idx", "idx_ego"])
         .with_columns(
@@ -183,12 +179,7 @@ def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps,time_buffer=2e
     }
 
 
-metrics = [
-    vel,
-    distance_traveled,
-    timegaps_and_min_timgaps, 
-    p_timegaps_and_min_p_timgaps
-]
+metrics = [vel, distance_traveled, timegaps_and_min_timgaps, p_timegaps_and_min_p_timgaps]
 
 
 @dataclass
@@ -204,7 +195,8 @@ class MetricManager:
         self._dependencies = {
             val: [i]
             for i, m in enumerate(self.metrics)
-            for val in [f"column_{n}" for n in m.computes_columns+m.computes_intermediate_columns] + [f"property_{n}" for n in m.computes_properties+m.computes_intermediate_properties]
+            for val in [f"column_{n}" for n in m.computes_columns + m.computes_intermediate_columns]
+            + [f"property_{n}" for n in m.computes_properties + m.computes_intermediate_properties]
         } | {
             i: [f"column_{n}" for n in m.requires_columns] + [f"property_{n}" for n in m.requires_properties]
             for i, m in enumerate(self.metrics)

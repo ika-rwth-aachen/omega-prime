@@ -59,13 +59,23 @@ class LxdConverter(DatasetConverter):
             .map_elements((lambda x: vehicles[x] if x in vehicles else -1), return_dtype=int)
             .alias("subtype"),
         )
-        meta = meta.rename({"trackId": "idx"})
+        if "trackId" in meta.columns:
+            meta = meta.rename({"trackId": "idx"})
+        else:
+            meta = meta.rename({"id": "idx"})
 
         tracks = recording._get_tracks_data()
+        if "trackId" not in tracks.columns:
+            tracks = tracks.rename({"id": "trackId"})
+        if "xCenter" in tracks.columns:
+            tracks = tracks.rename(
+                {
+                    "xCenter": "x",
+                    "yCenter": "y",
+                }
+            )
         tracks = tracks.rename(
             {
-                "xCenter": "x",
-                "yCenter": "y",
                 "xVelocity": "vel_x",
                 "yVelocity": "vel_y",
                 "xAcceleration": "acc_x",
@@ -73,7 +83,22 @@ class LxdConverter(DatasetConverter):
                 "trackId": "idx",
             }
         )
-        tracks = tracks.join(meta.select(["idx", "role", "type", "subtype"]), on="idx", how="left")
+
+        if "drivingDirection" in meta.columns:
+            # for highD
+            highd_attrs = ["drivingDirection"]
+        else:
+            highd_attrs = []
+
+        tracks = tracks.join(meta.select(["idx", "role", "type", "subtype"] + highd_attrs), on="idx", how="left")
+
+        if "drivingDirection" in meta.columns:
+            tracks = tracks.with_columns(
+                (pl.col("drivingDirection") * np.pi).alias("heading"),
+                pl.col("width").alias("length"),
+                pl.col("height").alias("width"),
+            )
+
         is_vehicle = pl.col("type") == betterosi.MovingObjectType.TYPE_VEHICLE
         is_bicycle = pl.col("subtype") == betterosi.MovingObjectVehicleClassificationType.TYPE_BICYCLE
         is_pedestrian = pl.col("type") == betterosi.MovingObjectType.TYPE_PEDESTRIAN
