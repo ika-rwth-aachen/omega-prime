@@ -128,8 +128,8 @@ LANE_TYPE_MAP = {
 
 odrlanetype2osilanetype = {odrlt: osilt for osilt, ts in LANE_TYPE_MAP.items() for odrlt in ts}
 
-XodrLaneId = namedtuple("XodrLaneIdx", ["road_id", "lane_id", "section_idx"])
-XodrBoundaryId = namedtuple("XodrBoundaryIdx", ["road_id", "lane_id", "section_idx", "side"])
+XodrLaneId = namedtuple("XodrLaneId", ["road_id", "lane_id", "section_idx"])
+XodrBoundaryId = namedtuple("XodrBoundaryId", ["road_id", "lane_id", "section_idx", "side"])
 
 
 @dataclass(repr=False)
