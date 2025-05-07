@@ -1,8 +1,4 @@
 
-<img src="https://www.ika.rwth-aachen.de/images/ika-logo-a-blau-blau-rgb.svg" align="right" width="240">
-</br>
-</br>
-
 [![](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](https://github.com/ika-rwth-aachen/omega-prime/blob/master/LICENSE) 
 [![](https://img.shields.io/pypi/v/omega-prime.svg)](https://pypi.python.org/pypi/omega-prime)
 [![](https://github.com/ika-rwth-aachen/omega-prime/workflows/CI/badge.svg)](https://github.com/ika-rwth-aachen/omega-prime/actions)
@@ -98,3 +94,11 @@ Funded by the European Union. Views and opinions expressed are however those of 
 
 <img src="https://raw.githubusercontent.com/ika-rwth-aachen/omega-prime/refs/heads/main/docs/funded_by_eu.svg"
 style="width:4in" />
+
+# Notice
+
+> [!IMPORTANT]
+> The project is open-sourced and maintained by the [**Institute for Automotive Engineering (ika) at RWTH Aachen University**](https://www.ika.rwth-aachen.de/).
+> We cover a wide variety of research topics within our [*Vehicle Intelligence & Automated Driving*](https://www.ika.rwth-aachen.de/en/competences/fields-of-research/vehicle-intelligence-automated-driving.html) domain.
+> If you would like to learn more about how we can support your automated driving or robotics efforts, feel free to reach out to us!
+> :email: ***opensource@ika.rwth-aachen.de***
