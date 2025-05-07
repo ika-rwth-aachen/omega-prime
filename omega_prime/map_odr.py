@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from omega_prime.map import Map, Lane, LaneBoundary
-import shapely
+from shapely import LineString, Polygon, simplify
 import numpy as np
 from matplotlib.patches import Polygon as PltPolygon
 import matplotlib.pyplot as plt
@@ -306,9 +306,9 @@ class LaneBoundaryXodr(LaneBoundary):
         lane_idx: int = None,
     ):
         if side == "left":
-            polyline = shapely.LineString(boundary.boundary_line)
+            polyline = LineString(boundary.boundary_line)
         elif side == "right":
-            polyline = shapely.LineString(boundary.lane_reference_line)
+            polyline = LineString(boundary.lane_reference_line)
         else:
             raise ValueError(f"Invalid side '{side}'. Expected 'left' or 'right'.")
 
@@ -410,19 +410,13 @@ class LaneXodr(Lane):
                 np.flip(self.right_boundary.polyline, axis=0),
             ]
         )
-        polygon = shapely.Polygon(coords)
+        polygon = Polygon(coords)
         if not polygon.is_valid:
-            polygon = polygon.buffer(0)
+            polygon = simplify(polygon, tolerance=0.01)
         self.polygon = polygon
         return self
 
     def plot(self, ax: plt.Axes):
         c = "green" if self.type != LaneClassificationType.TYPE_INTERSECTION else "black"
         ax.plot(*np.array(self.centerline).T, color=c, alpha=0.5)
-        # try:
-        if isinstance(self.polygon, shapely.geometry.MultiPolygon):
-            ps = self.polygon.geoms
-        else:
-            ps = [self.polygon]
-        for p in ps:
-            ax.add_patch(PltPolygon(p.exterior.coords, fc="blue", alpha=0.2, ec="black"))
+        ax.add_patch(PltPolygon(self.polygon.exterior.coords, fc="blue", alpha=0.2, ec="black"))
