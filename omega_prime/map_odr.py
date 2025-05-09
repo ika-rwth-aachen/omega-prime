@@ -17,6 +17,8 @@ from pathlib import Path
 import betterosi
 from betterosi import MapAsamOpenDrive
 from collections import namedtuple
+import warnings
+
 
 logger = logging.getLogger(__name__)
 
@@ -128,8 +130,8 @@ LANE_TYPE_MAP = {
 
 odrlanetype2osilanetype = {odrlt: osilt for osilt, ts in LANE_TYPE_MAP.items() for odrlt in ts}
 
-XodrLaneId = namedtuple("XodrLaneId", ["road_id", "lane_id", "section_idx"])
-XodrBoundaryId = namedtuple("XodrBoundaryId", ["road_id", "lane_id", "section_idx", "side"])
+XodrLaneId = namedtuple("XodrLaneId", ["road_id", "lane_id", "section_id"])
+XodrBoundaryId = namedtuple("XodrBoundaryId", ["road_id", "lane_id", "section_id", "side"])
 
 
 @dataclass(repr=False)
@@ -235,25 +237,25 @@ class MapOdr(Map):
 
         for road in rn.get_roads():
             lane_idx = 0
-            for lane_section_idx, lane_section in enumerate(road.lane_sections):
+            for lane_section_id, lane_section in enumerate(road.lane_sections):
                 for lane in lane_section.lanes:
                     boundary_line = getattr(lane, "boundary_line", None)
                     if boundary_line is None or not len(boundary_line):
                         logger.warning(
-                            f"Skipping road {road.id} / lane_section {lane_section_idx} / lane {lane.id}: missing boundary_line"
+                            f"Skipping road {road.id} / lane_section {lane_section_id} / lane {lane.id}: missing boundary_line"
                         )
                         continue
 
                     try:
                         left_boundary = LaneBoundaryXodr.create(
-                            lane, road.id, lane.id, lane_section_idx, "left", lane_idx=lane_idx
+                            lane, road.id, lane.id, lane_section_id, "left", lane_idx=lane_idx
                         )
                         right_boundary = LaneBoundaryXodr.create(
-                            lane, road.id, lane.id, lane_section_idx, "right", lane_idx=lane_idx
+                            lane, road.id, lane.id, lane_section_id, "right", lane_idx=lane_idx
                         )
                     except Exception as e:
                         logger.error(
-                            f"Failed to create boundaries for road {road.id} / lane_section {lane_section_idx} / lane {lane.id}: {e}"
+                            f"Failed to create boundaries for road {road.id} / lane_section {lane_section_id} / lane {lane.id}: {e}"
                         )
                         continue
 
@@ -261,11 +263,11 @@ class MapOdr(Map):
                     lane_boundaries[right_boundary.xodr_idx] = right_boundary
 
                     try:
-                        lane_obj = LaneXodr.create(lane, road, lane_section_idx, lane_idx)
+                        lane_obj = LaneXodr.create(lane, road, lane_section_id, lane_idx)
                         lanes[lane_obj.xodr_idx] = lane_obj
                     except Exception as e:
                         logger.error(
-                            f"Failed to create lane object for road {road.id} / lane_section {lane_section_idx} / lane {lane.id}: {e}"
+                            f"Failed to create lane object for road {road.id} / lane_section {lane_section_id} / lane {lane.id}: {e}"
                         )
 
                     lane_idx += 1
@@ -329,7 +331,7 @@ class MapOdr(Map):
 @dataclass(repr=False)
 class LaneBoundaryXodr(LaneBoundary):
     _xodr: PyxodrLane
-    xodr_idx: str
+    xodr_idx: XodrBoundaryId
 
     @classmethod
     def create(
@@ -337,7 +339,7 @@ class LaneBoundaryXodr(LaneBoundary):
         boundary: PyxodrLane,
         road_id: str,
         lane_id: str,
-        lane_section_idx,
+        lane_section_id,
         side: str,
         type: str = None,
         lane_idx: int = None,
@@ -354,7 +356,7 @@ class LaneBoundaryXodr(LaneBoundary):
 
         lane_boundary_type = cls._determine_lane_boundary_type(type)
 
-        idx = XodrBoundaryId(road_id, lane_id, lane_section_idx, side)
+        idx = XodrBoundaryId(road_id, lane_id, lane_section_id, side)
         return cls(
             idx=idx,
             xodr_idx=idx,
@@ -392,17 +394,17 @@ class LaneBoundaryXodr(LaneBoundary):
 @dataclass(repr=False)
 class LaneXodr(Lane):
     _xodr: PyxodrLane
-    xodr_idx: str
+    xodr_idx: XodrLaneId
 
     @classmethod
-    def create(cls, lane: PyxodrLane, road: PyxodrRoad, lane_section_idx: int, lane_idx: int = None):
+    def create(cls, lane: PyxodrLane, road: PyxodrRoad, lane_section_id: int, lane_idx: int = None):
         centre_line = getattr(lane, "centre_line", None)
         if centre_line is None or not len(centre_line):
             raise ValueError(f"Lane {lane.id} has no centre_line")
 
         centerline_2d = lane.centre_line[:, :2]
         lane_type, lane_subtype = cls._determine_lane_type_and_subtype(lane, road)
-        idx = XodrLaneId(road.id, lane.id, lane_section_idx)
+        idx = XodrLaneId(road.id, lane.id, lane_section_id)
         return cls(
             _xodr=lane,
             idx=idx,
@@ -416,8 +418,8 @@ class LaneXodr(Lane):
             predecessor_ids=[
                 XodrLaneId(p.road_id, p.id, p.lane_section_id) for p in set([o[0] for o in lane.predecessor_data])
             ],
-            right_boundary_id=XodrBoundaryId(road.id, lane.id, lane_section_idx, side="right"),
-            left_boundary_id=XodrBoundaryId(road.id, lane.id, lane_section_idx, side="left"),
+            right_boundary_id=XodrBoundaryId(road.id, lane.id, lane_section_id, side="right"),
+            left_boundary_id=XodrBoundaryId(road.id, lane.id, lane_section_id, side="left"),
         )
 
     @staticmethod
@@ -454,6 +456,14 @@ class LaneXodr(Lane):
         polygon = Polygon(coords)
         if not polygon.is_valid:
             polygon = simplify(polygon, tolerance=0.01)
+            if not polygon.is_valid:
+                polygon = polygon.buffer(0)
+                if not polygon.is_valid:
+                    raise ValueError(f"Could not compute valid polygon for Lane {self.xodr_idx}")
+                else:
+                    warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.xodr_idx}.")
+            else:
+                warnings.warn(f"Needed to simplify polygon for Lane {self.xodr_idx}.")
         self.polygon = polygon
         return self
 
