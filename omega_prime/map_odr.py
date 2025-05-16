@@ -2,13 +2,14 @@ import logging
 from dataclasses import dataclass
 from omega_prime.map import Map, Lane, LaneBoundary
 from shapely import LineString, Polygon, simplify
+from shapely.plotting import plot_polygon
 import numpy as np
 from matplotlib.patches import Polygon as PltPolygon
 import matplotlib.pyplot as plt
 from betterosi import LaneClassificationType, LaneClassificationSubtype, LaneBoundaryClassificationType
-from pyxodr.road_objects.network import RoadNetwork as PyxodrRoadNetwork
-from pyxodr.road_objects.road import Road as PyxodrRoad
-from pyxodr.road_objects.lane import Lane as PyxodrLane
+from pyxodr_omega_prime.road_objects.network import RoadNetwork as PyxodrRoadNetwork
+from pyxodr_omega_prime.road_objects.road import Road as PyxodrRoad
+from pyxodr_omega_prime.road_objects.lane import Lane as PyxodrLane
 from pathlib import Path
 from lxml import etree
 import pyproj
@@ -28,11 +29,12 @@ class RoadNetwork(PyxodrRoadNetwork):
         self,
         xml_string: str,
         resolution: float = 0.1,
+        ignored_lane_types: set[str] = set([]),
     ):
         self.root = etree.fromstring(xml_string.encode("utf-8"))
         self.tree = etree.ElementTree(self.root)
         self.resolution = resolution
-        self.ignored_lane_types = set([])
+        self.ignored_lane_types = ignored_lane_types
         self.road_ids_to_object = {}
 
 
@@ -159,11 +161,18 @@ class MapOdr(Map):
         is_odr_xml: bool = False,
         is_mcap: bool = False,
         step_size=0.01,
+        ignored_lane_types: set[str] = set([]),
     ):
         if Path(filename).suffix in [".xodr", ".odr"] or is_odr_xml:
             with open(filename) as f:
                 odr_xml = f.read()
-            return cls.create(odr_xml=odr_xml, name=Path(filename).stem, step_size=step_size, parse=parse)
+            return cls.create(
+                odr_xml=odr_xml,
+                name=Path(filename).stem,
+                step_size=step_size,
+                parse=parse,
+                ignored_lane_types=ignored_lane_types,
+                )
         if Path(filename).suffix in [".mcap"] or is_mcap:
             map = next(iter(betterosi.read(filename, mcap_topics=topics, mcap_return_betterosi=False)))
             return cls.create(
@@ -191,16 +200,17 @@ class MapOdr(Map):
         self._lane_boundaries = val
 
     @classmethod
-    def create(cls, odr_xml, name, step_size=0.01, parse: bool = False):
+    def create(cls, odr_xml, name, step_size=0.01, parse: bool = False, ignored_lane_types: set[str] = set([])):
         self = cls(odr_xml=odr_xml, name=name, step_size=step_size, lanes={}, lane_boundaries={})
         self._lane_boundaries = None
         self._lanes = None
+        self.ignored_lane_types = ignored_lane_types
         if parse:
             self.parse()
         return self
 
     def parse(self):
-        rn = RoadNetwork(self.odr_xml, resolution=self.step_size)
+        rn = RoadNetwork(self.odr_xml, resolution=self.step_size, ignored_lane_types=self.ignored_lane_types)
 
         lane_boundaries = {}
         lanes = {}
@@ -345,9 +355,16 @@ class LaneBoundaryXodr(LaneBoundary):
         lane_idx: int = None,
     ):
         if side == "left":
-            polyline = LineString(boundary.boundary_line)
+            if len(boundary.boundary_line) == 1:
+                polyline = LineString([boundary.boundary_line[0]]*2)
+            else:
+                polyline = LineString(boundary.boundary_line)
         elif side == "right":
-            polyline = LineString(boundary.lane_reference_line)
+            if len(boundary.lane_reference_line) == 1:
+                polyline = LineString([boundary.lane_reference_line[0]]*2)
+            else:
+                polyline = LineString(boundary.lane_reference_line)
+            
         else:
             raise ValueError(f"Invalid side '{side}'. Expected 'left' or 'right'.")
 
@@ -461,13 +478,15 @@ class LaneXodr(Lane):
                 if not polygon.is_valid:
                     raise ValueError(f"Could not compute valid polygon for Lane {self.xodr_idx}")
                 else:
-                    warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.xodr_idx}.")
+                    #warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.xodr_idx}.")
+                    pass
             else:
-                warnings.warn(f"Needed to simplify polygon for Lane {self.xodr_idx}.")
+                #warnings.warn(f"Needed to simplify polygon for Lane {self.xodr_idx}.")
+                pass
         self.polygon = polygon
         return self
 
     def plot(self, ax: plt.Axes):
         c = "green" if self.type != LaneClassificationType.TYPE_INTERSECTION else "black"
         ax.plot(*np.asarray(self.centerline).T, color=c, alpha=0.5)
-        ax.add_patch(PltPolygon(self.polygon.exterior.coords, fc="blue", alpha=0.2, ec="black"))
+        plot_polygon(self.polygon, ax=ax, facecolor="blue", edgecolor= "green", alpha=0.2)

@@ -435,9 +435,10 @@ class Recording:
         validate: bool = False,
         parse_map: bool = False,
         compute_polygons: bool = False,
+        step_size: float = 0.01,
     ):
         if Path(filepath).suffix == ".parquet":
-            return cls.from_parquet(filepath, parse_map=parse_map, validate=validate, compute_polygons=compute_polygons)
+            return cls.from_parquet(filepath, parse_map=parse_map, validate=validate, compute_polygons=compute_polygons, step_size=step_size)
 
         gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=False)
         gts, tmp_gts = itertools.tee(gts, 2)
@@ -552,7 +553,7 @@ class Recording:
             ax.add_patch(PltPolygon(p.exterior.coords, fc="red"))
 
     @classmethod
-    def from_parquet(cls, filename, parse_map: bool = False, **kwargs):
+    def from_parquet(cls, filename, parse_map: bool = False, step_size: float = 0.01, **kwargs):
         t = pq.read_table(filename)
         df = pl.DataFrame(t)
         if t.schema.metadata is not None and b"xodr" in t.schema.metadata:
@@ -560,6 +561,7 @@ class Recording:
                 odr_xml=t.schema.metadata[b"xodr"].decode(),
                 name=t.schema.metadata[b"xodr_name"].decode(),
                 parse=parse_map,
+                step_size=step_size,
             )
         else:
             m = None
