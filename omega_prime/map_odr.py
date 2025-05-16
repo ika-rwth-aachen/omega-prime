@@ -1,8 +1,8 @@
 import logging
 from dataclasses import dataclass
 from omega_prime.map import Map, Lane, LaneBoundary
-from shapely import LineString, Polygon, simplify
-from shapely.plotting import plot_polygon
+from shapely import LineString, Polygon, simplify, MultiPolygon
+from matplotlib.patches import Polygon as PltPolygon
 import numpy as np
 import matplotlib.pyplot as plt
 from betterosi import LaneClassificationType, LaneClassificationSubtype, LaneBoundaryClassificationType
@@ -17,6 +17,7 @@ from pathlib import Path
 import betterosi
 from betterosi import MapAsamOpenDrive
 from collections import namedtuple
+import warnings
 
 
 logger = logging.getLogger(__name__)
@@ -476,10 +477,10 @@ class LaneXodr(Lane):
                 if not polygon.is_valid:
                     raise ValueError(f"Could not compute valid polygon for Lane {self.xodr_idx}")
                 else:
-                    # warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.xodr_idx}.")
+                    warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.xodr_idx}.")
                     pass
             else:
-                # warnings.warn(f"Needed to simplify polygon for Lane {self.xodr_idx}.")
+                warnings.warn(f"Needed to simplify polygon for Lane {self.xodr_idx}.")
                 pass
         self.polygon = polygon
         return self
@@ -487,4 +488,9 @@ class LaneXodr(Lane):
     def plot(self, ax: plt.Axes):
         c = "green" if self.type != LaneClassificationType.TYPE_INTERSECTION else "black"
         ax.plot(*np.asarray(self.centerline).T, color=c, alpha=0.5)
-        plot_polygon(self.polygon, ax=ax, facecolor="blue", edgecolor="green", alpha=0.2)
+        if isinstance(self.polygon, MultiPolygon):
+            ps = self.polygon.geoms
+        else:
+            ps = [self.polygon]
+        for p in ps:
+            ax.add_patch(PltPolygon(p.exterior.coords, fc="blue", alpha=0.2, ec="black"))
