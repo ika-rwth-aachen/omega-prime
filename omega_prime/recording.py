@@ -438,7 +438,9 @@ class Recording:
         step_size: float = 0.01,
     ):
         if Path(filepath).suffix == ".parquet":
-            return cls.from_parquet(filepath, parse_map=parse_map, validate=validate, compute_polygons=compute_polygons, step_size=step_size)
+            return cls.from_parquet(
+                filepath, parse_map=parse_map, validate=validate, compute_polygons=compute_polygons, step_size=step_size
+            )
 
         gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=False)
         gts, tmp_gts = itertools.tee(gts, 2)

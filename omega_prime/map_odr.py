@@ -172,7 +172,7 @@ class MapOdr(Map):
                 step_size=step_size,
                 parse=parse,
                 ignored_lane_types=ignored_lane_types,
-                )
+            )
         if Path(filename).suffix in [".mcap"] or is_mcap:
             map = next(iter(betterosi.read(filename, mcap_topics=topics, mcap_return_betterosi=False)))
             return cls.create(
@@ -356,15 +356,15 @@ class LaneBoundaryXodr(LaneBoundary):
     ):
         if side == "left":
             if len(boundary.boundary_line) == 1:
-                polyline = LineString([boundary.boundary_line[0]]*2)
+                polyline = LineString([boundary.boundary_line[0]] * 2)
             else:
                 polyline = LineString(boundary.boundary_line)
         elif side == "right":
             if len(boundary.lane_reference_line) == 1:
-                polyline = LineString([boundary.lane_reference_line[0]]*2)
+                polyline = LineString([boundary.lane_reference_line[0]] * 2)
             else:
                 polyline = LineString(boundary.lane_reference_line)
-            
+
         else:
             raise ValueError(f"Invalid side '{side}'. Expected 'left' or 'right'.")
 
@@ -478,10 +478,10 @@ class LaneXodr(Lane):
                 if not polygon.is_valid:
                     raise ValueError(f"Could not compute valid polygon for Lane {self.xodr_idx}")
                 else:
-                    #warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.xodr_idx}.")
+                    # warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.xodr_idx}.")
                     pass
             else:
-                #warnings.warn(f"Needed to simplify polygon for Lane {self.xodr_idx}.")
+                # warnings.warn(f"Needed to simplify polygon for Lane {self.xodr_idx}.")
                 pass
         self.polygon = polygon
         return self
@@ -489,4 +489,4 @@ class LaneXodr(Lane):
     def plot(self, ax: plt.Axes):
         c = "green" if self.type != LaneClassificationType.TYPE_INTERSECTION else "black"
         ax.plot(*np.asarray(self.centerline).T, color=c, alpha=0.5)
-        plot_polygon(self.polygon, ax=ax, facecolor="blue", edgecolor= "green", alpha=0.2)
+        plot_polygon(self.polygon, ax=ax, facecolor="blue", edgecolor="green", alpha=0.2)
