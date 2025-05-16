@@ -4,7 +4,6 @@ from omega_prime.map import Map, Lane, LaneBoundary
 from shapely import LineString, Polygon, simplify
 from shapely.plotting import plot_polygon
 import numpy as np
-from matplotlib.patches import Polygon as PltPolygon
 import matplotlib.pyplot as plt
 from betterosi import LaneClassificationType, LaneClassificationSubtype, LaneBoundaryClassificationType
 from pyxodr_omega_prime.road_objects.network import RoadNetwork as PyxodrRoadNetwork
@@ -18,7 +17,6 @@ from pathlib import Path
 import betterosi
 from betterosi import MapAsamOpenDrive
 from collections import namedtuple
-import warnings
 
 
 logger = logging.getLogger(__name__)
