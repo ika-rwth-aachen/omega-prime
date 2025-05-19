@@ -76,11 +76,11 @@ multidict==6.4.3
     # via grpclib
 mypy-extensions==1.1.0
     # via typing-inspect
-narwhals==1.39.1
+narwhals==1.40.0
     # via altair
 networkx==3.4.2
     # via omega-prime (./pyproject.toml)
-numpy==2.2.5
+numpy==2.2.6
     # via
     #   omega-prime (./pyproject.toml)
     #   betterosi
@@ -143,7 +143,7 @@ python-dateutil==2.9.0.post0
     #   pandas
 pytz==2025.2
     # via pandas
-pyxodr-omega-prime==0.1.4
+pyxodr-omega-prime==0.1.5
     # via omega-prime (./pyproject.toml)
 referencing==0.36.2
     # via
@@ -161,7 +161,7 @@ scipy==1.15.3
     # via
     #   omega-prime (./pyproject.toml)
     #   pyxodr-omega-prime
-shapely==2.1.0
+shapely==2.1.1
     # via
     #   omega-prime (./pyproject.toml)
     #   pyxodr-omega-prime
