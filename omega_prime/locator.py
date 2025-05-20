@@ -2,7 +2,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-import betterosi
 import networkx as nx
 import numpy as np
 import shapely
@@ -10,6 +9,7 @@ import xarray as xr
 from matplotlib.patches import Polygon as PltPolygon
 from strenum import StrEnum
 import polars as pl
+
 
 class ShapelyTrajectoryTools:
     epsi = 1e-10
@@ -180,53 +180,6 @@ class LaneRelation(StrEnum):
 
 
 @dataclass
-class MockRoad:
-    odr_idx: int
-
-
-@dataclass
-class WrappedLane:
-    idx: Any
-    road: Any
-    centerline: shapely.LineString
-    polygon: shapely.Polygon
-    border_left: shapely.LineString
-    border_right: shapely.LineString
-    predecessor_idxs: list[Any]
-    successor_idxs: list[Any]
-    start_points: list[shapely.Point]
-    end_points: list[shapely.Point]
-    on_intersection: bool = False
-    type: Any = None
-    subtype: Any = None
-    original_lane: Any = None
-    db: Any = None
-
-    @classmethod
-    def from_odr_lane(cls, map, l):
-        start_points = np.stack([l.left_boundary.polyline[0, :2], l.right_boundary.polyline[0, :2]])
-        end_points = np.stack([l.left_boundary.polyline[-1, :2], l.right_boundary.polyline[-1, :2]])
-        l.odr_idx = l.idx[1]
-        l.road = MockRoad(odr_idx=l.idx[0])
-        return cls(
-            idx=l.idx,
-            road=l.road,
-            centerline=shapely.LineString(l.centerline[:, :2]),
-            polygon=l.polygon,
-            border_left=shapely.LineString(l.left_boundary.polyline[:, :2]),
-            border_right=shapely.LineString(l.right_boundary.polyline[:, :2]),
-            predecessor_idxs=l.predecessor_ids,
-            successor_idxs=l.successor_ids,
-            start_points=start_points,
-            end_points=end_points,
-            on_intersection=l.type == betterosi.LaneClassificationType.TYPE_INTERSECTION,
-            type=l.type,
-            subtype=l.subtype,
-            original_lane=l,
-        )
-
-
-@dataclass
 class Locator:
     all_lanes: Any  # array of all lanes
     external2internal_laneid: dict[Any, int] = field(init=False)
@@ -236,21 +189,21 @@ class Locator:
     extended_centerlines: list[shapely.LineString] = field(init=False)
 
     g: nx.DiGraph = field(init=False)  # Lane Relation Graph
-    xodr2external_laneid: None | dict = None
 
     @classmethod
-    def from_mapodr(cls, map):
-        all_lanes = [WrappedLane.from_odr_lane(map, l) for l in map.lanes.values()]
-        return cls(all_lanes=all_lanes, xodr2external_laneid={l.idx: l.idx for l in all_lanes})
+    def from_map(cls, map):
+        all_lanes = list(map.lanes.values())
+        return cls(all_lanes=all_lanes)
 
     def __post_init__(self):
         self.external2internal_laneid = {l.idx: i for i, l in enumerate(self.all_lanes)}
+        self.internal2external_laneid = [l.idx for l in self.all_lanes]
+
         self.extended_centerlines = [ShapelyTrajectoryTools.extend_linestring(l.centerline) for l in self.all_lanes]
         if hasattr(self.all_lanes[0], "polygon") and self.all_lanes[0].polygon is not None:
             self.str_tree = shapely.STRtree([l.polygon for l in self.all_lanes])
         else:
             self.str_tree = shapely.STRtree([l.centerline for l in self.all_lanes])
-        self.internal2external_laneid = [l.idx for l in self.all_lanes]
         self.lane_point_distances = [
             np.unique(shapely.line_locate_point(cl, shapely.points(cl.coords))) for cl in self.extended_centerlines
         ]
@@ -271,11 +224,11 @@ class Locator:
             )
         return xys
 
-    def xys2sts(self, xys, poly=None):
+    def xys2sts(self, xys, polygons=None):
         if isinstance(xys, np.ndarray) and xys.ndim == 2:
             assert xys.shape[1] == 2
             xys = shapely.points(xys)
-        lat_distances, lon_distances = self._xys2sts(xys, poly)
+        lat_distances, lon_distances = self._xys2sts(xys, polygons)
         single_lane_association = self.get_single_lane_association(lat_distances)
         sla = np.zeros(len(single_lane_association), dtype=tuple)
         for i, v in enumerate(single_lane_association):
@@ -303,18 +256,18 @@ class Locator:
         sts[:, 0] -= ShapelyTrajectoryTools.l_append
         return sts
 
-    def _xys2sts(self, xys, polys=None):
+    def _xys2sts(self, xys, polygons=None):
         # xys should be an array of shapely objects or an array of points with dim (n_points, 2)
         if isinstance(xys, np.ndarray) and xys.ndim == 2:
             assert xys.shape[1] == 2
             xys = shapely.points(xys)
         else:
             xys = np.array(xys)
-        if polys is None:
-            polys = xys
+        if polygons is None:
+            polygons = xys
         lon_distances = defaultdict(lambda: np.nan * np.ones((len(xys),)))
         lat_distances = defaultdict(lambda: np.nan * np.ones((len(xys),)))
-        point_idxs, intersection_lane_ids = self.str_tree.query(polys, predicate="intersects")
+        point_idxs, intersection_lane_ids = self.str_tree.query(polygons, predicate="intersects")
         for l_id in set(intersection_lane_ids):
             lps = point_idxs[intersection_lane_ids == l_id]
             (
@@ -327,13 +280,13 @@ class Locator:
             # no arrays to stack
             no_associations = np.arange(len(xys))
         if hasattr(self.all_lanes[0], "polygon") and self.all_lanes[0].polygon is not None:
-            no_asscociation_idxs, intersection_lane_ids = self.str_tree.query_nearest(polys[no_associations])
+            no_asscociation_idxs, intersection_lane_ids = self.str_tree.query_nearest(polygons[no_associations])
         else:
             # Create an empty numpy array for no_asscociation_idxs
             no_asscociation_idxs = np.array([])
             intersection_lane_ids = np.array([])
             if len(no_associations) > 0:
-                for idx, poly in enumerate(polys[no_associations]):
+                for idx, poly in enumerate(polygons[no_associations]):
                     # Returns the indxes of all centerlines that are in range
                     nearby_idx = self.query_centerlines(poly, range_percentage=0.1)
                     # Connect the no_assosciation_idxs with the intersection_lane_ids
@@ -355,16 +308,21 @@ class Locator:
         assert len(no_asscociation_new) == 0
         return lat_distances, lon_distances
 
-    def locate_mv(self, mv):
-        moving = mv._df.filter(
-            pl.any_horizontal((pl.col('x','y').diff()!=0).fill_null(True)).alias('is_moving')
-        )['total_nanos','x','y']
-        xrd = self.xys2sts(moving['x','y'].to_numpy()).assign_coords({"time": moving["total_nanos"].to_numpy()}).set_coords("time")
-        if moving.height<mv._df.height:
-            xrd = xrd.sel({'time': mv._df['total_nanos'].to_numpy()}, method='ffill', drop=True)
-            xrd['time'] =  mv._df["total_nanos"].to_numpy()
+    def locate_mv(self, mv, use_polygon: bool = False):
+        mv.polygon
+        moving = mv._df.filter(pl.any_horizontal((pl.col("x", "y").diff() != 0).fill_null(True)).alias("is_moving"))[
+            "total_nanos", "x", "y", "polygon"
+        ]
+        xrd = (
+            self.xys2sts(moving["x", "y"].to_numpy(), polygons=moving["polygon"] if use_polygon else None)
+            .assign_coords({"time": moving["total_nanos"].to_numpy()})
+            .set_coords("time")
+        )
+        if moving.height < mv._df.height:
+            xrd = xrd.sel({"time": mv._df["total_nanos"].to_numpy()}, method="ffill", drop=True)
+            xrd["time"] = mv._df["total_nanos"].to_numpy()
         return xrd
-    
+
     def query_centerlines(self, point, range_percentage=0.1):
         """
         Query the nearest centerline and all centerlines within a range percentage.
@@ -398,20 +356,22 @@ class Locator:
         external2internal_laneid = self.external2internal_laneid
         g = nx.DiGraph()
         for lid, lane in enumerate(all_lanes):
-            for external_pid in lane.predecessor_idxs:
+            for external_pid in lane.predecessor_ids:
                 try:
                     g.add_edge(lid, external2internal_laneid[external_pid], label=LaneRelation.predecessor)
                 except KeyError:
                     pass
-            for external_sid in lane.successor_idxs:
+            for external_sid in lane.successor_ids:
                 try:
                     g.add_edge(lid, external2internal_laneid[external_sid], label=LaneRelation.successor)
                 except KeyError:
                     pass
             right_neigbours = [
-                int(i) for i in str_tree.query(lane.border_right, predicate="covered_by") if int(i) != lid
+                int(i) for i in str_tree.query(lane.right_boundary.polyline, predicate="covered_by") if int(i) != lid
             ]
-            left_neigbours = [int(i) for i in str_tree.query(lane.border_left, predicate="covered_by") if int(i) != lid]
+            left_neigbours = [
+                int(i) for i in str_tree.query(lane.left_boundary.polyline, predicate="covered_by") if int(i) != lid
+            ]
             for rn in right_neigbours:
                 g.add_edge(lid, rn, label=LaneRelation.neighbour_right)
             for ln in left_neigbours:

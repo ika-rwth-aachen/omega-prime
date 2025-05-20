@@ -43,12 +43,12 @@ def test_centerline():
         rec = omega_prime.Recording.from_file(p / mapping[3][0], p / mapping[3][1], validate=False)
 
         # Create a locator and remove all polygons from the lanes
-        locator = omega_prime.Locator.from_mapodr(rec.map)
+        locator = omega_prime.Locator.from_map(rec.map)
         for lane in locator.all_lanes:
             lane.polygon = None  # Remove polygons
 
         # Create a new locator using only centerlines
-        locator_cl = omega_prime.Locator(locator.all_lanes, locator.internal2external_laneid)
+        locator_cl = omega_prime.Locator(locator.all_lanes)
 
         # Prepare input coordinates for xys2sts
         xys = np.stack([rec.moving_objects[0].x, rec.moving_objects[0].y]).T
@@ -76,7 +76,7 @@ def test_locator():
         rec = omega_prime.Recording.from_file(p / mapping[3][0], p / mapping[3][1], validate=False)
 
         # Create a locator and remove all polygons from the lanes
-        locator = omega_prime.Locator.from_mapodr(rec.map)
+        locator = omega_prime.Locator.from_map(rec.map)
 
         # Prepare input coordinates for xys2sts
         xys = np.stack([rec.moving_objects[0].x, rec.moving_objects[0].y]).T
@@ -101,5 +101,5 @@ def test_parquet():
 
 
 if __name__ == "__main__":
-    test_locator()
+    test_centerline()
     # pass

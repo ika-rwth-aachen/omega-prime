@@ -7,6 +7,7 @@ from .locator import LaneRelation, Locator
 from .map import Lane, LaneBoundary, Map, MapOsi
 from .recording import MovingObject, Recording
 from importlib.metadata import version
+
 __version__ = version("omega_prime")
 
 __all__ = [

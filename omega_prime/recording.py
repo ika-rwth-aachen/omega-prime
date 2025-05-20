@@ -26,27 +26,28 @@ import polars_st as st
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
 polars_schema = {
-    'total_nanos': pl.UInt64,
-    'idx': pl.UInt32,
-    'x': pl.Float64,
-    'y': pl.Float64,
-    'z': pl.Float64,
-    'vel_x': pl.Float32,
-    'vel_y': pl.Float32,
-    'vel_z': pl.Float32,
-    'acc_x': pl.Float32,
-    'acc_y': pl.Float32,
-    'acc_z': pl.Float32,
-    'length': pl.Float32,
-    'width': pl.Float32,
-    'height': pl.Float32,
-    'roll': pl.Float32,
-    'pitch': pl.Float32,
-    'yaw': pl.Float32,
-    'type': pl.Int8,
-    'role': pl.Int8,
-    'subtype': pl.Int8
+    "total_nanos": pl.UInt64,
+    "idx": pl.UInt32,
+    "x": pl.Float64,
+    "y": pl.Float64,
+    "z": pl.Float64,
+    "vel_x": pl.Float32,
+    "vel_y": pl.Float32,
+    "vel_z": pl.Float32,
+    "acc_x": pl.Float32,
+    "acc_y": pl.Float32,
+    "acc_z": pl.Float32,
+    "length": pl.Float32,
+    "width": pl.Float32,
+    "height": pl.Float32,
+    "roll": pl.Float32,
+    "pitch": pl.Float32,
+    "yaw": pl.Float32,
+    "type": pl.Int8,
+    "role": pl.Int8,
+    "subtype": pl.Int8,
 }
+
 
 @extensions.register_check_method(
     statistics=["column_name", "column_value", "other_column_name", "other_column_unset_value"]
@@ -74,26 +75,41 @@ recording_moving_object_schema = pa.DataFrameSchema(
     title="DataFrame Schema for ASAM OSI GroundTruth of MovingObjects",
     description="",
     columns={
-        "x": pa.Column(float, title="MovingObject.base.position.x", description="osi3.Vector3d.x"),
-        "y": pa.Column(float, title="MovingObject.base.position.y", description="osi3.Vector3d.y"),
-        "z": pa.Column(float, title="MovingObject.base.position.z", description="osi3.Vector3d.z"),
-        "vel_x": pa.Column(float, title="MovingObject.base.velocity.x", description="osi3.Vector3d.x"),
-        "vel_y": pa.Column(float, title="MovingObject.base.velocity.y", description="osi3.Vector3d.y"),
-        "vel_z": pa.Column(float, title="MovingObject.base.velocity.z", description="osi3.Vector3d.z"),
-        "acc_x": pa.Column(float, title="MovingObject.base.acceleration.x", description="osi3.Vector3d.x"),
-        "acc_y": pa.Column(float, title="MovingObject.base.acceleration.y", description="osi3.Vector3d.y"),
-        "acc_z": pa.Column(float, title="MovingObject.base.acceleration.z", description="osi3.Vector3d.z"),
+        "x": pa.Column(polars_schema["x"], title="MovingObject.base.position.x", description="osi3.Vector3d.x"),
+        "y": pa.Column(polars_schema["y"], title="MovingObject.base.position.y", description="osi3.Vector3d.y"),
+        "z": pa.Column(polars_schema["z"], title="MovingObject.base.position.z", description="osi3.Vector3d.z"),
+        "vel_x": pa.Column(polars_schema["vel_x"], title="MovingObject.base.velocity.x", description="osi3.Vector3d.x"),
+        "vel_y": pa.Column(polars_schema["vel_y"], title="MovingObject.base.velocity.y", description="osi3.Vector3d.y"),
+        "vel_z": pa.Column(polars_schema["vel_z"], title="MovingObject.base.velocity.z", description="osi3.Vector3d.z"),
+        "acc_x": pa.Column(
+            polars_schema["acc_x"], title="MovingObject.base.acceleration.x", description="osi3.Vector3d.x"
+        ),
+        "acc_y": pa.Column(
+            polars_schema["acc_y"], title="MovingObject.base.acceleration.y", description="osi3.Vector3d.y"
+        ),
+        "acc_z": pa.Column(
+            polars_schema["acc_z"], title="MovingObject.base.acceleration.z", description="osi3.Vector3d.z"
+        ),
         "length": pa.Column(
-            float, pa.Check.gt(0), title="MovingObject.base.dimesion.length", description="osi3.Dimenstion3d.length"
+            polars_schema["length"],
+            pa.Check.gt(0),
+            title="MovingObject.base.dimesion.length",
+            description="osi3.Dimenstion3d.length",
         ),
         "width": pa.Column(
-            float, pa.Check.gt(0), title="MovingObject.base.dimesion.width", description="osi3.Dimenstion3d.width"
+            polars_schema["width"],
+            pa.Check.gt(0),
+            title="MovingObject.base.dimesion.width",
+            description="osi3.Dimenstion3d.width",
         ),
         "height": pa.Column(
-            float, pa.Check.ge(0), title="MovingObject.base.dimesion.height", description="osi3.Dimenstion3d.height"
+            polars_schema["height"],
+            pa.Check.ge(0),
+            title="MovingObject.base.dimesion.height",
+            description="osi3.Dimenstion3d.height",
         ),
         "type": pa.Column(
-            int,
+            polars_schema["type"],
             pa.Check.between(
                 0, 4, error=f"Type must be one of { ({o.name: o.value for o in betterosi.MovingObjectType}) }"
             ),
@@ -101,7 +117,7 @@ recording_moving_object_schema = pa.DataFrameSchema(
             description="osi3.MovingObject.Type",
         ),
         "role": pa.Column(
-            int,
+            polars_schema["role"],
             pa.Check.between(
                 -1,
                 10,
@@ -111,7 +127,7 @@ recording_moving_object_schema = pa.DataFrameSchema(
             description="osi3.MovingObject.VehicleClassification.Role",
         ),
         "subtype": pa.Column(
-            int,
+            polars_schema["subtype"],
             pa.Check.between(
                 -1,
                 17,
@@ -121,17 +137,28 @@ recording_moving_object_schema = pa.DataFrameSchema(
             description="osi3.MovingObject.VehicleClassification.Type",
         ),
         "roll": pa.Column(
-            float, pi_valued, title="MovingObject.base.orientation.roll", description="osi3.Orientation3d.roll"
+            polars_schema["roll"],
+            pi_valued,
+            title="MovingObject.base.orientation.roll",
+            description="osi3.Orientation3d.roll",
         ),
         "pitch": pa.Column(
-            float, pi_valued, title="MovingObject.base.orientation.pitch", description="osi3.Orientation3d.pitch"
+            polars_schema["pitch"],
+            pi_valued,
+            title="MovingObject.base.orientation.pitch",
+            description="osi3.Orientation3d.pitch",
         ),
         "yaw": pa.Column(
-            float, pi_valued, title="MovingObject.base.orientation.yaw", description="osi3.Orientation3d.yaw"
+            polars_schema["yaw"],
+            pi_valued,
+            title="MovingObject.base.orientation.yaw",
+            description="osi3.Orientation3d.yaw",
         ),
-        "idx": pa.Column(int, pa.Check.ge(0), title="MovingObject.id.value", description="osi3.Identifier.value"),
+        "idx": pa.Column(
+            polars_schema["idx"], pa.Check.ge(0), title="MovingObject.id.value", description="osi3.Identifier.value"
+        ),
         "total_nanos": pa.Column(
-            int,
+            polars_schema["total_nanos"],
             pa.Check.ge(0),
             title="GroundTruth.timestamp.nanos+1e9*GroundTruth.timestamp.seconds",
             description="osi3.Timestamp.nanos, osi3.Timestamp.seconds",
@@ -192,7 +219,7 @@ class MovingObject:
     @property
     def df(self):
         return self._df
-    
+
     @property
     def polygon(self):
         if "polygon" not in self._df.columns:
@@ -200,14 +227,15 @@ class MovingObject:
             self._df = self._recording._df.filter(pl.col("idx") == self.idx)
         return self._df["polygon"]
 
-
     @property
     def nanos(self):
-        return self._df['total_nanos']
+        return self._df["total_nanos"]
 
-    def plot(self, ax: plt.Axes):
+    def plot(self, ax: plt.Axes | None = None):
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+            ax.set_aspect(1)
         ax.plot(self.x, self.y, label=str(self.idx), c="red", alpha=0.5)
-        pass
 
     def plot_mv_frame(self, ax: plt.Axes, frame: int):
         if "polygon" not in self._df.columns:
@@ -334,7 +362,10 @@ class Recording:
             recording_moving_object_schema.validate(df, lazy=True)
         super().__init__()
         self.nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
-        mapping = pl.DataFrame({"total_nanos": list(self.nanos2frame.keys()), "frame": list(self.nanos2frame.values())}, schema=dict(total_nanos=polars_schema['total_nanos'], frame=pl.UInt32))
+        mapping = pl.DataFrame(
+            {"total_nanos": list(self.nanos2frame.keys()), "frame": list(self.nanos2frame.values())},
+            schema=dict(total_nanos=polars_schema["total_nanos"], frame=pl.UInt32),
+        )
         if "frame" in df.columns:
             df = df.drop("frame")
         df = df.join(mapping, on="total_nanos", how="left")
@@ -369,19 +400,29 @@ class Recording:
     @property
     def moving_objects(self):
         if self._moving_objects is None:
-            self._mv_df = self._df.group_by('idx').agg(
-                pl.col('length','width','height').mean(),
-                pl.col('type','subtype','role').median(),
-                pl.col('frame').min().alias('birth'),
-                pl.col('frame').max().alias('end'),
-                pl.col('total_nanos').min().alias('t_birth'),
-                pl.col('total_nanos').max().alias('t_end'),
-            ).with_columns(
-                pl.col('type').map_elements(lambda x: betterosi.MovingObjectType(x), return_dtype=object),
-                pl.col('subtype').map_elements(lambda x: betterosi.MovingObjectVehicleClassificationType(x) if x!=-1 else None, return_dtype=object),
-                pl.col('role').map_elements(lambda x: betterosi.MovingObjectVehicleClassificationRole(x).name if x!=-1 else None, return_dtype=object),
+            self._mv_df = (
+                self._df.group_by("idx")
+                .agg(
+                    pl.col("length", "width", "height").mean(),
+                    pl.col("type", "subtype", "role").median(),
+                    pl.col("frame").min().alias("birth"),
+                    pl.col("frame").max().alias("end"),
+                    pl.col("total_nanos").min().alias("t_birth"),
+                    pl.col("total_nanos").max().alias("t_end"),
+                )
+                .with_columns(
+                    pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x), return_dtype=object),
+                    pl.col("subtype").map_elements(
+                        lambda x: betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None,
+                        return_dtype=object,
+                    ),
+                    pl.col("role").map_elements(
+                        lambda x: betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None,
+                        return_dtype=object,
+                    ),
+                )
             )
-            
+
             self._moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
 
         return self._moving_objects
@@ -451,7 +492,7 @@ class Recording:
                         else -1,
                     )
 
-        df_mv = pl.DataFrame(get_gts(),schema=polars_schema).sort(["total_nanos", "idx"])
+        df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
         return cls(df_mv, projections=projs, **kwargs)
 
     @classmethod
@@ -516,13 +557,19 @@ class Recording:
 
     def interpolate(self, new_nanos: list[int] | None = None, hz: float | None = None):
         df = self._df
+        nanos_min, nanos_max, frame_min, frame_max = df.select(
+            nanos_min = pl.col('total_nanos').min(),
+            nanos_max = pl.col('total_nanos').max(),
+            frame_min = pl.col('frame').min(),
+            frame_max = pl.col('frame').max()
+        ).row(0)
         if new_nanos is None and hz is None:
             new_nanos = np.linspace(
-                df["total_nanos"].min(), df["total_nanos"].max(), df["frame"].max() - df["frame"].min(), dtype=int
+               nanos_min, nanos_max, frame_max - frame_min, dtype=int
             )
         elif hz is not None:
             step = 1_000_000_000 / hz
-            new_nanos = np.arange(start=df["total_nanos"].min(), stop=df["total_nanos"].max() + 1, step=step, dtype=int)
+            new_nanos = np.arange(start=nanos_min, stop=nanos_max + 1, step=step, dtype=int)
         else:
             new_nanos = np.array(new_nanos)
         new_dfs = []
@@ -541,10 +588,10 @@ class Recording:
                 track_data[c] = np.mod(
                     np.interp(track_new_nanos, track_df["total_nanos"], np.unwrap(track_df[c], period=np.pi)), np.pi
                 )
-            new_track_df = pl.DataFrame(track_data, schema=polars_schema)
+            new_track_df = pl.DataFrame(track_data)
             new_track_df = new_track_df.with_columns(
-                pl.Series(name="idx", values=np.ones_like(track_new_nanos) * idx, dtype=polars_schema['idx']),
-                pl.Series(name="total_nanos", values=track_new_nanos, dtype=polars_schema['total_nanos']),
+                pl.Series(name="idx", values=np.ones_like(track_new_nanos) * idx, dtype=polars_schema["idx"]),
+                pl.Series(name="total_nanos", values=track_new_nanos, dtype=polars_schema["total_nanos"]),
             )
             new_dfs.append(new_track_df)
         new_df = pl.concat(new_dfs)
@@ -553,6 +600,7 @@ class Recording:
     def plot(self, ax=None, legend=False) -> plt.Axes:
         if ax is None:
             fig, ax = plt.subplots(1, 1)
+            ax.set_aspect(1)
         if self.map:
             self.map.plot(ax)
         self.plot_mvs(ax=ax)
@@ -563,8 +611,9 @@ class Recording:
     def plot_mvs(self, ax=None, legend=False):
         if ax is None:
             fig, ax = plt.subplots(1, 1)
+            ax.set_aspect(1)
         for [idx], mv in self._df["idx", "x", "y"].group_by("idx"):
-            ax.plot(mv["x"], mv["y"], c="red", alpha=0.5, label=str(idx))
+            ax.plot(*mv["x", "y"], c="red", alpha=0.5, label=str(idx))
         if legend:
             ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         return ax
@@ -628,34 +677,6 @@ class Recording:
             self._df = self._add_polygons(self._df)
         if "geometry" not in self._df.columns:
             self._df = self._df.with_columns(geometry=st.from_shapely("polygon"))
-        
-        
-        if not hasattr(self, "_map_dict") and plot_map:
-            map_df = pl.DataFrame(
-                [
-                    pl.Series(name="polygon", values=[l.polygon for l in self.map.lanes.values()]),
-                    pl.Series(name="idx", values=[i for i, _ in enumerate(self.map.lanes.keys())]),
-                    pl.Series(name="type", values=[o.type.name for o in self.map.lanes.values()]),
-                ]
-            )
-            map_df = map_df.with_columns(geometry=st.from_shapely("polygon"))
-            map_df = map_df.with_columns(pl.col("geometry").st.simplify(tolerance=1))
-        
-            buffer = 2
-            [xmin], [xmax], [ymin], [ymax] = self._df.select(
-                (pl.col("x").min()-buffer).alias("xmin"),
-                (pl.col("x").max()+buffer).alias("xmax"),
-                (pl.col("y").min()-buffer).alias("ymin"),
-                (pl.col("y").max()+buffer).alias("ymax"),
-            )[0]
-            
-            pov_df = pl.DataFrame({"polygon": [shapely.Polygon([[xmax, ymax], [xmax, ymin], [xmin, ymin], [xmin, ymax]])]})
-            pov_df = pov_df.select(geometry=st.from_shapely("polygon"))
-            map_df = map_df["geometry", "idx", "type"].with_columns(
-                pl.col('geometry').st.intersection(pl.lit(pov_df['geometry'])).st.area(),
-                pl.col('geometry').st.area().alias('larea')
-            ).st.to_dicts()
-            self._map_dict = {'values': map_df}
 
         if end_frame != -1:
             df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)
@@ -671,31 +692,25 @@ class Recording:
 
         mv_dict = {"values": df["geometry", "idx", "frame", "type"].st.to_dicts()}
 
-        view = alt.layer(
-            alt.Chart(
-                mv_dict
-            ).mark_geoshape(
-            ).encode(
-                tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
-                color=alt.value("blue")
-                if idx is None
-                else alt.when(alt.FieldEqualPredicate(equal=idx, field="properties.idx"))
-                .then(alt.value("red"))
-                .otherwise(alt.value("blue")),
-            ).transform_filter(
-                alt.FieldEqualPredicate(field="properties.frame", equal=op_var)
-            ),
-            None if not plot_map else alt.Chart(
-                self._map_dict
-            ).mark_geoshape(
-                color="green", fillOpacity=0.4
-            ).encode(
-                tooltip=["properties.idx:N", "properties.type:O"]
+        view = (
+            alt.layer(
+                alt.Chart(mv_dict)
+                .mark_geoshape()
+                .encode(
+                    color=(
+                        alt.value("blue")
+                        if idx is None
+                        else alt.when(alt.FieldEqualPredicate(equal=idx, field="properties.idx"))
+                        .then(alt.value("red"))
+                        .otherwise(alt.value("blue"))
+                    ),
+                    tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
+                )
+                .transform_filter(alt.FieldEqualPredicate(field="properties.frame", equal=op_var)),
+                None if not plot_map else self.map.plot_altair(recording=self),
             )
-        ).properties(
-            title="Map"
-        ).project(
-            "identity", reflectY=True
+            .properties(title="Map")
+            .project("identity", reflectY=True)
         )
 
         if metric_column is not None and idx is not None:

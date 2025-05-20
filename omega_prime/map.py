@@ -6,6 +6,9 @@ import numpy as np
 import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
+import polars as pl
+import altair as alt
+import polars_st as st
 
 
 @dataclass
@@ -24,8 +27,11 @@ class LaneBoundary:
     polyline: shapely.LineString
     # reference: Any = field(init=False, default=None)
 
-    def plot(self, ax: plt.Axes):
-        ax.plot(*np.array(self.polyline.coords).T, color="gray", alpha=0.1)
+    def plot(self, ax: plt.Axes | None = None):
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+            ax.set_aspect(1)
+        ax.plot(*np.array(self.polyline.coords)[:, :2].T, color="gray", alpha=0.1)
 
     def get_osi(self) -> betterosi.LaneBoundary:
         raise NotImplementedError()
@@ -56,12 +62,15 @@ class LaneBoundaryOsi(LaneBoundary):
 class LaneBase:
     _map: "Map" = field(init=False)
     idx: Any
-    centerline: np.ndarray
+    centerline: shapely.LineString
     type: betterosi.LaneClassificationType
     subtype: betterosi.LaneClassificationSubtype
     successor_ids: list[Any]
     predecessor_ids: list[Any]
-    source_reference: Any = field(init=False)
+
+    @property
+    def on_intersection(self):
+        return self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION
 
 
 @dataclass(repr=False)
@@ -71,7 +80,54 @@ class Lane(LaneBase):
     polygon: shapely.Polygon = field(init=False)
     left_boundary: LaneBoundary = field(init=False)
     right_boundary: LaneBoundary = field(init=False)
-    # source_reference: Any = None
+    _oriented_borders: Any = field(init=False, default=None)
+    _start_points: Any = field(init=False, default=None)
+    _end_points: Any = field(init=False, default=None)
+
+    # for ase_engine/omega_prime
+    def _get_oriented_borders(self):
+        center_start = self.centerline.interpolate(0, normalized=True)
+        left = self.left_boundary.polyline
+        invert_left = left.project(center_start, normalized=True) > 0.5
+        if invert_left:
+            left = shapely.reverse(left)
+        right = self.right_boundary.polyline
+        invert_right = right.project(center_start, normalized=True) > 0.5
+        if invert_right:
+            right = shapely.reverse(right)
+        return left, right
+
+    @property
+    def oriented_borders(self):
+        if self._oriented_borders is None:
+            self._oriented_borders = self._get_oriented_borders()
+        return self._oriented_borders
+
+    @property
+    def start_points(self):
+        if self._start_points is None:
+            self._start_points = np.array([b.interpolate(0, normalized=True) for b in self.oriented_borders])
+        return self._start_points
+
+    @property
+    def end_points(self):
+        if self._end_points is None:
+            self._end_points = np.array([b.interpolate(1, normalized=True) for b in self.oriented_borders])
+        return self._end_points
+
+    def plot(self, ax: plt.Axes | None = None):
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+            ax.set_aspect(1)
+        c = "black" if not self.on_intersection else "green"
+        ax.plot(*np.asarray(self.centerline.coords).T, color=c, alpha=0.3, zorder=-10)
+        if self.polygon is not None:
+            if isinstance(self.polygon, shapely.MultiPolygon):
+                ps = self.polygon.geoms
+            else:
+                ps = [self.polygon]
+            for p in ps:
+                ax.add_patch(PltPolygon(p.exterior.coords, fc="blue", alpha=0.2, ec=c))
 
 
 @dataclass(repr=False)
@@ -83,7 +139,7 @@ class LaneOsiCenterline(LaneBase):
         cl = np.array([(p.x, p.y) for p in lane.classification.centerline])
         if not lane.classification.centerline_is_driving_direction:
             cl = np.flip(cl, axis=0)
-        return cl
+        return shapely.LineString(cl)
 
     @classmethod
     def create(cls, lane: betterosi.Lane):
@@ -96,10 +152,6 @@ class LaneOsiCenterline(LaneBase):
             successor_ids=[],
             predecessor_ids=[],
         )
-
-    def plot(self, ax: plt.Axes):
-        c = "black" if not self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION else "green"
-        ax.plot(*np.array(self.centerline).T, color=c, alpha=0.3, zorder=-10)
 
 
 @dataclass(repr=False)
@@ -134,10 +186,6 @@ class LaneOsi(Lane, LaneOsiCenterline):
         self.right_boundary = self._map.lane_boundaries[self.right_boundary_ids[0]]
 
         # for omega
-        self.oriented_borders = self._get_oriented_borders()
-        self.start_points = np.array([b.interpolate(0, normalized=True) for b in self.oriented_borders])
-        self.end_points = np.array([b.interpolate(1, normalized=True) for b in self.oriented_borders])
-        return self
 
     def set_polygon(self):
         self.polygon = shapely.Polygon(
@@ -152,35 +200,65 @@ class LaneOsi(Lane, LaneOsiCenterline):
             self.polygon = shapely.convex_hull(self.polygon)
         # TODO: fix or warning
 
-    def plot(self, ax: plt.Axes):
-        c = "green" if not self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION else "black"
-        ax.plot(*np.array(self.centerline).T, color=c, alpha=0.5)
-        ax.add_patch(PltPolygon(self.polygon.exterior.coords, fc="blue", alpha=0.2, ec="black"))
-
-    # for ase_engine/omega_prime
-    def _get_oriented_borders(self):
-        center_start = shapely.LineString(self.centerline).interpolate(0, normalized=True)
-        left = self.left_boundary.polyline
-        invert_left = left.project(center_start, normalized=True) > 0.5
-        if invert_left:
-            left = shapely.reverse(left)
-        right = self.right_boundary.polyline
-        invert_right = right.project(center_start, normalized=True) > 0.5
-        if invert_right:
-            right = shapely.reverse(right)
-        return left, right
-
 
 @dataclass(repr=False)
 class Map:
-    lane_boundaries: dict[int, LaneBoundary]
-    lanes: dict[int:Lane]
+    lane_boundaries: dict[Any, LaneBoundary]
+    lanes: dict[Any:Lane]
 
-    def plot(self, ax: plt.Axes):
+    def plot(self, ax: plt.Axes | None = None):
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+            ax.set_aspect(1)
         for l in self.lanes.values():
             l.plot(ax)
         for b in self.lane_boundaries.values():
             b.plot(ax)
+
+    def plot_altair(self, recording=None):
+        if not hasattr(self, "_plot_dict"):
+            if next(iter(self.lanes.values())).polygon is not None:
+                shapely_series = pl.Series(name="shapely", values=[l.polygon for l in self.lanes.values()])
+            else:
+                shapely_series = (pl.Series(name="shapely", values=[l.centerline for l in self.lanes.values()]),)
+
+            map_df = pl.DataFrame(
+                [
+                    shapely_series,
+                    pl.Series(name="idx", values=[i for i, _ in enumerate(self.lanes.keys())]),
+                    pl.Series(name="type", values=[o.type.name for o in self.lanes.values()]),
+                    pl.Series(name="on_intersection", values=[o.on_intersection for o in self.lanes.values()]),
+                ]
+            )
+            map_df = map_df.with_columns(geometry=st.from_shapely("shapely")).drop("shapely")
+
+            if recording is not None:
+                buffer = 5
+                [xmin], [xmax], [ymin], [ymax] = recording._df.select(
+                    (pl.col("x").min() - buffer).alias("xmin"),
+                    (pl.col("x").max() + buffer).alias("xmax"),
+                    (pl.col("y").min() - buffer).alias("ymin"),
+                    (pl.col("y").max() + buffer).alias("ymax"),
+                )[0]
+
+                pov_df = pl.DataFrame(
+                    {"polygon": [shapely.Polygon([[xmax, ymax], [xmax, ymin], [xmin, ymin], [xmin, ymax]])]}
+                )
+                pov_df = pov_df.select(geometry=st.from_shapely("polygon"))
+                map_df = map_df.with_columns(
+                    pl.col("geometry").st.intersection(pl.lit(pov_df["geometry"])),
+                )
+            self._plot_dict = {"values": map_df.st.to_dicts()}
+
+        c = (
+            alt.Chart(self._plot_dict)
+            .mark_geoshape(color="green", fillOpacity=0.4)
+            .encode(tooltip=["properties.idx:N", "properties.type:O", "properties.on_intersection:O"])
+        )
+        if recording is None:
+            return c.properties(title="Map").project("identity", reflectY=True)
+        else:
+            return c
 
     @classmethod
     def create(cls, *args, **kwargs):
