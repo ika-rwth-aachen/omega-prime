@@ -186,41 +186,13 @@ class MovingObject:
         super().__init__()
         self.idx = int(idx)
         self._recording = recording
-        self._df = self._recording._df.filter(pl.col("idx") == self.idx)
+        self._df = self._recording._df.filter(idx=self.idx)
+        self._mv_df = self._recording._mv_df.filter(idx=self.idx)
 
-        for k in [
-            "x",
-            "y",
-            "z",
-            "vel_x",
-            "vel_y",
-            "vel_z",
-            "acc_x",
-            "acc_y",
-            "acc_z",
-            "yaw",
-            "roll",
-            "pitch",
-            "vel",
-            "acc",
-        ]:
-            setattr(self, k, self._df[k])
-        self.timestamps = self._df["total_nanos"] / 1e9
-        for k in ["length", "width", "height"]:
-            setattr(self, f"{k}s", self._df[k])
-            setattr(self, k, self._df[k].mean())
-
-        self.type = betterosi.MovingObjectType(self._df["type"][0])
-        subtype_int = self._df["subtype"][0]
-        self.subtype = betterosi.MovingObjectVehicleClassificationType(subtype_int) if subtype_int != -1 else None
-        role_int = self._df["role"][0]
-        self.role = betterosi.MovingObjectVehicleClassificationRole(role_int) if role_int != -1 else None
-        self.birth = int(self._df["frame"][0])
-        self.end = int(self._df["frame"][-1])
-
-    # def set(self, k, val):
-    #    self._recording._df.loc[self._recording._df["idx"] == self.idx, k] = val
-
+    @property
+    def df(self):
+        return self._df
+    
     @property
     def polygon(self):
         if "polygon" not in self._df.columns:
@@ -228,13 +200,10 @@ class MovingObject:
             self._df = self._recording._df.filter(pl.col("idx") == self.idx)
         return self._df["polygon"]
 
-    @property
-    def polygons(self):
-        return self.polygon
 
     @property
     def nanos(self):
-        return self.timestamps * 1e9
+        return self._df['total_nanos']
 
     def plot(self, ax: plt.Axes):
         ax.plot(self.x, self.y, label=str(self.idx), c="red", alpha=0.5)
@@ -246,6 +215,15 @@ class MovingObject:
         polys = self._df.filter(pl.col("frame") == frame)["polygon"]
         for p in polys:
             ax.add_patch(PltPolygon(p.exterior.coords, fc="red", alpha=0.2))
+
+    def __getattr__(self, k):
+        try:
+            return self._mv_df[k].first()
+        except:
+            try:
+                return self._df[k]
+            except:
+                return self._df[k[:-1]]
 
 
 class Recording:
@@ -333,7 +311,7 @@ class Recording:
         mvs = [get_object(r) for r in df.iter_rows(named=True)]
         gt = betterosi.GroundTruth(
             version=betterosi.InterfaceVersion(version_major=3, version_minor=7, version_patch=9),
-            timestamp=betterosi.Timestamp(seconds=int(nanos // 1_000_000_000), nanos=int(nanos % 1_000_000_000)),
+            timestamp=betterosi.Timestamp(seconds=int(nanos // int(1e9)), nanos=int(nanos % int(1e9))),
             host_vehicle_id=betterosi.Identifier(value=0)
             if host_vehicle_idx is None
             else betterosi.Identifier(value=host_vehicle_idx),
@@ -377,10 +355,12 @@ class Recording:
         self.projections = projections if projections is not None else []
         self._df = df
         self.map = map
-        self._moving_objects = (
-            None  # = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
-        )
+        self._moving_objects = None
         self.host_vehicle_idx = host_vehicle_idx
+
+    @property
+    def df(self):
+        return self._df
 
     @property
     def host_vehicle(self):
@@ -389,7 +369,21 @@ class Recording:
     @property
     def moving_objects(self):
         if self._moving_objects is None:
+            self._mv_df = self._df.group_by('idx').agg(
+                pl.col('length','width','height').mean(),
+                pl.col('type','subtype','role').median(),
+                pl.col('frame').min().alias('birth'),
+                pl.col('frame').max().alias('end'),
+                pl.col('total_nanos').min().alias('t_birth'),
+                pl.col('total_nanos').max().alias('t_end'),
+            ).with_columns(
+                pl.col('type').map_elements(lambda x: betterosi.MovingObjectType(x), return_dtype=object),
+                pl.col('subtype').map_elements(lambda x: betterosi.MovingObjectVehicleClassificationType(x) if x!=-1 else None, return_dtype=object),
+                pl.col('role').map_elements(lambda x: betterosi.MovingObjectVehicleClassificationRole(x).name if x!=-1 else None, return_dtype=object),
+            )
+            
             self._moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
+
         return self._moving_objects
 
     def to_osi_gts(self) -> list[betterosi.GroundTruth]:
