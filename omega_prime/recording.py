@@ -288,7 +288,7 @@ class Recording:
 
     @staticmethod
     def get_moving_object_ground_truth(
-        nanos: int, df: pl.DataFrame, host_vehicle=None, validate=False
+        nanos: int, df: pl.DataFrame, host_vehicle_idx: int | None = None, validate: bool = False
     ) -> betterosi.GroundTruth:
         if validate:
             recording_moving_object_schema.validate(df, lazy=True)
@@ -314,13 +314,21 @@ class Recording:
             version=betterosi.InterfaceVersion(version_major=3, version_minor=7, version_patch=9),
             timestamp=betterosi.Timestamp(seconds=int(nanos // 1_000_000_000), nanos=int(nanos % 1_000_000_000)),
             host_vehicle_id=betterosi.Identifier(value=0)
-            if host_vehicle is None
-            else betterosi.Identifier(value=host_vehicle),
+            if host_vehicle_idx is None
+            else betterosi.Identifier(value=host_vehicle_idx),
             moving_object=mvs,
         )
         return gt
 
-    def __init__(self, df, map=None, projections=None, host_vehicle=None, validate=False, compute_polygons=False):
+    def __init__(
+        self,
+        df,
+        map=None,
+        projections=None,
+        host_vehicle_idx: int | None = None,
+        validate=False,
+        compute_polygons=False,
+    ):
         if not isinstance(df, pl.DataFrame):
             df = pl.DataFrame(df)
         if validate:
@@ -353,7 +361,11 @@ class Recording:
         self._moving_objects = (
             None  # = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
         )
-        self.host_vehicle = host_vehicle
+        self.host_vehicle_idx = host_vehicle_idx
+
+    @property
+    def host_vehicle(self):
+        return self.moving_objects.get(self.host_vehicle_idx, None)
 
     @property
     def moving_objects(self):
@@ -364,7 +376,9 @@ class Recording:
     def to_osi_gts(self) -> list[betterosi.GroundTruth]:
         first_iteration = True
         for [nanos], group_df in self._df.sort(["total_nanos"]).group_by("total_nanos", maintain_order=True):
-            gt = self.get_moving_object_ground_truth(nanos, group_df, host_vehicle=self.host_vehicle, validate=False)
+            gt = self.get_moving_object_ground_truth(
+                nanos, group_df, host_vehicle_idx=self.host_vehicle_idx, validate=False
+            )
             if first_iteration:
                 first_iteration = False
                 if self.map is not None and isinstance(self.map, MapOsi | MapOsiCenterline):
@@ -485,7 +499,7 @@ class Recording:
     @classmethod
     def from_hdf(cls, filename, key="moving_object"):
         df = pl.DataFrame(pd.read_hdf(filename, key=key))
-        return cls(df, map=None, host_vehicle=None)
+        return cls(df, map=None, host_vehicle_idx=None)
 
     def interpolate(self, new_nanos: list[int] | None = None, hz: float | None = None):
         df = self._df
@@ -521,7 +535,7 @@ class Recording:
             )
             new_dfs.append(new_track_df)
         new_df = pl.concat(new_dfs)
-        return self.__init__(new_df, self.map, self.host_vehicle)
+        return self.__init__(new_df, self.map, self.host_vehicle_idx)
 
     def plot(self, ax=None, legend=False) -> plt.Axes:
         if ax is None:
