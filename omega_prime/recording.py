@@ -25,7 +25,28 @@ import polars as pl
 import polars_st as st
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
-
+polars_schema = {
+    'total_nanos': pl.UInt64,
+    'idx': pl.UInt32,
+    'x': pl.Float64,
+    'y': pl.Float64,
+    'z': pl.Float64,
+    'vel_x': pl.Float32,
+    'vel_y': pl.Float32,
+    'vel_z': pl.Float32,
+    'acc_x': pl.Float32,
+    'acc_y': pl.Float32,
+    'acc_z': pl.Float32,
+    'length': pl.Float32,
+    'width': pl.Float32,
+    'height': pl.Float32,
+    'roll': pl.Float32,
+    'pitch': pl.Float32,
+    'yaw': pl.Float32,
+    'type': pl.Int8,
+    'role': pl.Int8,
+    'subtype': pl.Int8
+}
 
 @extensions.register_check_method(
     statistics=["column_name", "column_value", "other_column_name", "other_column_unset_value"]
@@ -330,14 +351,12 @@ class Recording:
         compute_polygons=False,
     ):
         if not isinstance(df, pl.DataFrame):
-            df = pl.DataFrame(df)
+            df = pl.DataFrame(df, schema_overrides=polars_schema)
         if validate:
             recording_moving_object_schema.validate(df, lazy=True)
-        if not isinstance(df, pl.DataFrame):
-            df = pl.DataFrame(df)
         super().__init__()
         self.nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
-        mapping = pl.DataFrame({"total_nanos": list(self.nanos2frame.keys()), "frame": list(self.nanos2frame.values())})
+        mapping = pl.DataFrame({"total_nanos": list(self.nanos2frame.keys()), "frame": list(self.nanos2frame.values())}, schema=dict(total_nanos=polars_schema['total_nanos'], frame=pl.UInt32))
         if "frame" in df.columns:
             df = df.drop("frame")
         df = df.join(mapping, on="total_nanos", how="left")
@@ -438,7 +457,7 @@ class Recording:
                         else -1,
                     )
 
-        df_mv = pl.DataFrame(get_gts()).sort(["total_nanos", "idx"])
+        df_mv = pl.DataFrame(get_gts(),schema=polars_schema).sort(["total_nanos", "idx"])
         return cls(df_mv, projections=projs, **kwargs)
 
     @classmethod
@@ -498,7 +517,7 @@ class Recording:
 
     @classmethod
     def from_hdf(cls, filename, key="moving_object"):
-        df = pl.DataFrame(pd.read_hdf(filename, key=key))
+        df = pl.DataFrame(pd.read_hdf(filename, key=key), schema_overrides=polars_schema)
         return cls(df, map=None, host_vehicle_idx=None)
 
     def interpolate(self, new_nanos: list[int] | None = None, hz: float | None = None):
@@ -528,10 +547,10 @@ class Recording:
                 track_data[c] = np.mod(
                     np.interp(track_new_nanos, track_df["total_nanos"], np.unwrap(track_df[c], period=np.pi)), np.pi
                 )
-            new_track_df = pl.DataFrame(track_data)
+            new_track_df = pl.DataFrame(track_data, schema=polars_schema)
             new_track_df = new_track_df.with_columns(
-                pl.Series(name="idx", values=np.ones_like(track_new_nanos) * idx),
-                pl.Series(name="total_nanos", values=track_new_nanos),
+                pl.Series(name="idx", values=np.ones_like(track_new_nanos) * idx, dtype=polars_schema['idx']),
+                pl.Series(name="total_nanos", values=track_new_nanos, dtype=polars_schema['total_nanos']),
             )
             new_dfs.append(new_track_df)
         new_df = pl.concat(new_dfs)
@@ -571,7 +590,7 @@ class Recording:
     @classmethod
     def from_parquet(cls, filename, parse_map: bool = False, step_size: float = 0.01, **kwargs):
         t = pq.read_table(filename)
-        df = pl.DataFrame(t)
+        df = pl.DataFrame(t, schema_overrides=polars_schema)
         if t.schema.metadata is not None and b"xodr" in t.schema.metadata:
             m = MapOdr.create(
                 odr_xml=t.schema.metadata[b"xodr"].decode(),
@@ -615,16 +634,34 @@ class Recording:
             self._df = self._add_polygons(self._df)
         if "geometry" not in self._df.columns:
             self._df = self._df.with_columns(geometry=st.from_shapely("polygon"))
-        if not hasattr(self, "_map_df") and plot_map:
-            self._map_df = pl.DataFrame(
+        
+        
+        if not hasattr(self, "_map_dict") and plot_map:
+            map_df = pl.DataFrame(
                 [
                     pl.Series(name="polygon", values=[l.polygon for l in self.map.lanes.values()]),
                     pl.Series(name="idx", values=[i for i, _ in enumerate(self.map.lanes.keys())]),
                     pl.Series(name="type", values=[o.type.name for o in self.map.lanes.values()]),
                 ]
             )
-            self._map_df = self._map_df.with_columns(geometry=st.from_shapely("polygon"))
-            self._map_df.with_columns(pl.col("geometry").st.simplify(tolerance=1))
+            map_df = map_df.with_columns(geometry=st.from_shapely("polygon"))
+            map_df = map_df.with_columns(pl.col("geometry").st.simplify(tolerance=1))
+        
+            buffer = 2
+            [xmin], [xmax], [ymin], [ymax] = self._df.select(
+                (pl.col("x").min()-buffer).alias("xmin"),
+                (pl.col("x").max()+buffer).alias("xmax"),
+                (pl.col("y").min()-buffer).alias("ymin"),
+                (pl.col("y").max()+buffer).alias("ymax"),
+            )[0]
+            
+            pov_df = pl.DataFrame({"polygon": [shapely.Polygon([[xmax, ymax], [xmax, ymin], [xmin, ymin], [xmin, ymax]])]})
+            pov_df = pov_df.select(geometry=st.from_shapely("polygon"))
+            map_df = map_df["geometry", "idx", "type"].with_columns(
+                pl.col('geometry').st.intersection(pl.lit(pov_df['geometry'])).st.area(),
+                pl.col('geometry').st.area().alias('larea')
+            ).st.to_dicts()
+            self._map_dict = {'values': map_df}
 
         if end_frame != -1:
             df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)
@@ -638,46 +675,35 @@ class Recording:
         slider = alt.binding_range(min=frame_min, max=frame_max, step=1, name="frame")
         op_var = alt.param(value=0, bind=slider)
 
-        [xmin], [xmax], [ymin], [ymax] = df.select(
-            pl.col("x").min().alias("xmin"),
-            pl.col("x").max().alias("xmax"),
-            pl.col("y").min().alias("ymin"),
-            pl.col("y").max().alias("ymax"),
-        )[0]
-        pov = {
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [[[xmax, ymax], [xmax, ymin], [xmin, ymin], [xmin, ymax], [xmax, ymax]]],
-            },
-            "properties": {},
-        }
-        if plot_map:
-            map = (
-                self._map_df["geometry", "idx", "type"]
-                .st.plot(color="green", fillOpacity=0.4)
-                .encode(tooltip=["properties.idx:N", "properties.type:O"])
-            )
-        mvs = (
-            df["geometry", "idx", "frame", "type"]
-            .st.plot()
-            .encode(
+        mv_dict = {"values": df["geometry", "idx", "frame", "type"].st.to_dicts()}
+
+        view = alt.layer(
+            alt.Chart(
+                mv_dict
+            ).mark_geoshape(
+            ).encode(
                 tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
                 color=alt.value("blue")
                 if idx is None
                 else alt.when(alt.FieldEqualPredicate(equal=idx, field="properties.idx"))
                 .then(alt.value("red"))
                 .otherwise(alt.value("blue")),
+            ).transform_filter(
+                alt.FieldEqualPredicate(field="properties.frame", equal=op_var)
+            ),
+            None if not plot_map else alt.Chart(
+                self._map_dict
+            ).mark_geoshape(
+                color="green", fillOpacity=0.4
+            ).encode(
+                tooltip=["properties.idx:N", "properties.type:O"]
             )
-            .transform_filter(alt.FieldEqualPredicate(field="properties.frame", equal=op_var))
+        ).properties(
+            title="Map"
+        ).project(
+            "identity", reflectY=True
         )
 
-        map_view = (
-            ((map + mvs) if plot_map else mvs)
-            .project("identity", reflectY=True, fit=pov)
-            .properties(height=int(ymax - ymin) * 3, width=int(xmax - xmin) * 3, title="Map")
-        )
-        view = map_view
         if metric_column is not None and idx is not None:
             metric = (
                 df["idx", metric_column, "frame"]
