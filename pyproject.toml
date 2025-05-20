@@ -41,7 +41,7 @@ dependencies = [
     'pyproj',
     'betterosi>=0.3.4',
     'lxd-io>=0.4.6',
-    'pyxodr',
+    'pyxodr-omega-prime',
     'joblib',
     'tqdm_joblib'
 ]
