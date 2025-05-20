@@ -1,10 +1,8 @@
 import logging
 from dataclasses import dataclass
 from omega_prime.map import Map, Lane, LaneBoundary
-from shapely import LineString, Polygon, simplify, MultiPolygon
-from matplotlib.patches import Polygon as PltPolygon
+from shapely import LineString, Polygon, simplify
 import numpy as np
-import matplotlib.pyplot as plt
 from betterosi import LaneClassificationType, LaneClassificationSubtype, LaneBoundaryClassificationType
 from pyxodr_omega_prime.road_objects.network import RoadNetwork as PyxodrRoadNetwork
 from pyxodr_omega_prime.road_objects.road import Road as PyxodrRoad
@@ -268,12 +266,12 @@ class MapOdr(Map):
                         )
                         continue
 
-                    lane_boundaries[left_boundary.xodr_idx] = left_boundary
-                    lane_boundaries[right_boundary.xodr_idx] = right_boundary
+                    lane_boundaries[left_boundary.idx] = left_boundary
+                    lane_boundaries[right_boundary.idx] = right_boundary
 
                     try:
                         lane_obj = LaneXodr.create(lane, road, lane_section_id, lane_idx)
-                        lanes[lane_obj.xodr_idx] = lane_obj
+                        lanes[lane_obj.idx] = lane_obj
                     except Exception as e:
                         logger.error(
                             f"Failed to create lane object for road {road.id} / lane_section {lane_section_id} / lane {lane.id}: {e}"
@@ -289,8 +287,8 @@ class MapOdr(Map):
         self.projection = projection
         for lane in self.lanes.values():
             lane._map = self
-            lane.set_boundaries()
-            lane.set_polygon()
+            lane._set_boundaries()
+            lane._set_polygon()
         return self
 
     def setup_lanes_and_boundaries(self):
@@ -340,7 +338,7 @@ class MapOdr(Map):
 @dataclass(repr=False)
 class LaneBoundaryXodr(LaneBoundary):
     _xodr: PyxodrLane
-    xodr_idx: XodrBoundaryId
+    idx: XodrBoundaryId
 
     @classmethod
     def create(
@@ -373,17 +371,7 @@ class LaneBoundaryXodr(LaneBoundary):
         lane_boundary_type = cls._determine_lane_boundary_type(type)
 
         idx = XodrBoundaryId(road_id, lane_id, lane_section_id, side)
-        return cls(
-            idx=idx,
-            xodr_idx=idx,
-            type=lane_boundary_type,
-            polyline=np.asarray(polyline.coords),
-            _xodr=boundary,
-        )
-
-    def plot(self, ax: plt.Axes):
-        ax.plot(*np.asarray(self.polyline[:, :2]).T, color="gray", alpha=0.1)
-        ax.set_aspect(1)
+        return cls(idx=idx, type=lane_boundary_type, polyline=polyline, _xodr=boundary)
 
     @staticmethod
     def _extract_lane_boundary_type_from_xml(lane, side: str) -> str:
@@ -410,7 +398,7 @@ class LaneBoundaryXodr(LaneBoundary):
 @dataclass(repr=False)
 class LaneXodr(Lane):
     _xodr: PyxodrLane
-    xodr_idx: XodrLaneId
+    idx: XodrLaneId
 
     @classmethod
     def create(cls, lane: PyxodrLane, road: PyxodrRoad, lane_section_id: int, lane_idx: int = None):
@@ -424,8 +412,7 @@ class LaneXodr(Lane):
         return cls(
             _xodr=lane,
             idx=idx,
-            xodr_idx=idx,
-            centerline=centerline_2d,
+            centerline=LineString(centerline_2d),
             type=lane_type,
             subtype=lane_subtype,
             successor_ids=[
@@ -457,16 +444,16 @@ class LaneXodr(Lane):
 
         return lane_type, lane_subtype
 
-    def set_boundaries(self):
+    def _set_boundaries(self):
         self.left_boundary = self._map.lane_boundaries[self.left_boundary_id]
         self.right_boundary = self._map.lane_boundaries[self.right_boundary_id]
         return self
 
-    def set_polygon(self):
+    def _set_polygon(self):
         coords = np.concatenate(
             [
-                self.left_boundary.polyline,
-                np.flip(self.right_boundary.polyline, axis=0),
+                np.asarray(self.left_boundary.polyline.coords),
+                np.flip(np.asarray(self.right_boundary.polyline.coords), axis=0),
             ]
         )
         polygon = Polygon(coords)
@@ -475,22 +462,12 @@ class LaneXodr(Lane):
             if not polygon.is_valid:
                 polygon = polygon.buffer(0)
                 if not polygon.is_valid:
-                    raise ValueError(f"Could not compute valid polygon for Lane {self.xodr_idx}")
+                    raise ValueError(f"Could not compute valid polygon for Lane {self.idx}")
                 else:
-                    warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.xodr_idx}.")
+                    warnings.warn(f"Needed to simplify and buffer polygon for Lane {self.idx}.")
                     pass
             else:
-                warnings.warn(f"Needed to simplify polygon for Lane {self.xodr_idx}.")
+                warnings.warn(f"Needed to simplify polygon for Lane {self.idx}.")
                 pass
         self.polygon = polygon
         return self
-
-    def plot(self, ax: plt.Axes):
-        c = "green" if self.type != LaneClassificationType.TYPE_INTERSECTION else "black"
-        ax.plot(*np.asarray(self.centerline).T, color=c, alpha=0.5)
-        if isinstance(self.polygon, MultiPolygon):
-            ps = self.polygon.geoms
-        else:
-            ps = [self.polygon]
-        for p in ps:
-            ax.add_patch(PltPolygon(p.exterior.coords, fc="blue", alpha=0.2, ec="black"))
