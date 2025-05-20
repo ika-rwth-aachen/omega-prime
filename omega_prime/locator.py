@@ -9,7 +9,7 @@ import shapely
 import xarray as xr
 from matplotlib.patches import Polygon as PltPolygon
 from strenum import StrEnum
-
+import polars as pl
 
 class ShapelyTrajectoryTools:
     epsi = 1e-10
@@ -256,17 +256,6 @@ class Locator:
         ]
         self.g = self._get_routing_graph()
 
-    def fullid2xodrid(self, roadlane_id):
-        """
-        conversion of roadlane id to xodr ids
-        """
-        if isinstance(roadlane_id[0], list):
-            roadlane_id = tuple([tuple(roadlane_id[0]), tuple(roadlane_id[1])])
-        else:
-            roadlane_id = tuple(roadlane_id)
-        l = self.all_lanes[self.external2internal_laneid[roadlane_id]]
-        return l.road.odr_idx, l.odr_idx
-
     def get_route(self, start_id, end_id):
         return nx.shortest_path(self.g, start_id, end_id)
 
@@ -366,6 +355,16 @@ class Locator:
         assert len(no_asscociation_new) == 0
         return lat_distances, lon_distances
 
+    def locate_mv(self, mv):
+        moving = mv._df.filter(
+            pl.any_horizontal((pl.col('x','y').diff()!=0).fill_null(True)).alias('is_moving')
+        )['total_nanos','x','y']
+        xrd = self.xys2sts(moving['x','y'].to_numpy()).assign_coords({"time": moving["total_nanos"].to_numpy()}).set_coords("time")
+        if moving.height<mv._df.height:
+            xrd = xrd.sel({'time': mv._df['total_nanos'].to_numpy()}, method='ffill', drop=True)
+            xrd['time'] =  mv._df["total_nanos"].to_numpy()
+        return xrd
+    
     def query_centerlines(self, point, range_percentage=0.1):
         """
         Query the nearest centerline and all centerlines within a range percentage.
