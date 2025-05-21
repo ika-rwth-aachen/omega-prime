@@ -570,19 +570,20 @@ class Recording:
             frame_min=pl.col("frame").min(),
             frame_max=pl.col("frame").max(),
         ).row(0)
-        if new_nanos is None and hz is None:
-            new_nanos = np.linspace(nanos_min, nanos_max, frame_max - frame_min, dtype=int)
-        elif hz is not None:
-            step = 1_000_000_000 / hz
-            new_nanos = np.arange(start=nanos_min, stop=nanos_max + 1, step=step, dtype=int)
+        if new_nanos is None:
+            if hz is None:
+                new_nanos = np.linspace(nanos_min, nanos_max, frame_max - frame_min, dtype=int)
+            else:
+                step = 1e9 / hz
+                new_nanos = np.arange(start=nanos_min, stop=nanos_max + 1, step=step, dtype=int)
         else:
             new_nanos = np.array(new_nanos)
         new_dfs = []
         for [idx], track_df in df.group_by("idx"):
             track_data = {}
-            track_new_nanos = new_nanos[
-                track_df["frame"].min() - df["frame"].min() : track_df["frame"].max() - df["frame"].min() + 1
-            ]
+            track_new_nanos = new_nanos[np.logical_and(
+                track_df["total_nanos"].min()<=new_nanos,track_df["total_nanos"].max()>=new_nanos
+            )]
             for c in ["x", "y", "z", "vel_x", "vel_y", "vel_z", "acc_x", "acc_y", "acc_z", "length", "width", "height"]:
                 track_data[c] = np.interp(track_new_nanos, track_df["total_nanos"], track_df[c])
             for c in ["type", "subtype", "role"]:
@@ -600,7 +601,7 @@ class Recording:
             )
             new_dfs.append(new_track_df)
         new_df = pl.concat(new_dfs)
-        return self.__init__(new_df, self.map, self.host_vehicle_idx)
+        return self.__init__(df=new_df, map=self.map, host_vehicle_idx=self.host_vehicle_idx)
 
     def plot(self, ax=None, legend=False) -> plt.Axes:
         if ax is None:
