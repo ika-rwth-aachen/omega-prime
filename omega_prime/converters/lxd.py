@@ -94,7 +94,7 @@ class LxdConverter(DatasetConverter):
 
         if "drivingDirection" in meta.columns:
             tracks = tracks.with_columns(
-                (pl.col("drivingDirection") * np.pi).alias("heading"),
+                (pl.col("drivingDirection") * 180).alias("heading"),
                 pl.col("width").alias("length"),
                 pl.col("height").alias("width"),
             )
@@ -105,7 +105,7 @@ class LxdConverter(DatasetConverter):
         tracks = tracks.with_columns(
             [pl.lit(0.0).alias(k) for k in ["acc_z", "z", "vel_z", "roll", "pitch"]]
             + [
-                (((pl.col("heading") + np.pi) % (2 * np.pi)) - np.pi).alias("yaw"),
+                ((((pl.col("heading") / 180 * np.pi) + np.pi) % (2 * np.pi)) - np.pi).alias("yaw"),
                 (pl.col("frame") * dt * NANOS_PER_SEC).cast(pl.Int64).alias("total_nanos"),
                 pl.when(is_vehicle & is_bicycle)
                 .then(0.8)

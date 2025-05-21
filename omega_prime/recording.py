@@ -581,9 +581,9 @@ class Recording:
         new_dfs = []
         for [idx], track_df in df.group_by("idx"):
             track_data = {}
-            track_new_nanos = new_nanos[np.logical_and(
-                track_df["total_nanos"].min()<=new_nanos,track_df["total_nanos"].max()>=new_nanos
-            )]
+            track_new_nanos = new_nanos[
+                np.logical_and(track_df["total_nanos"].min() <= new_nanos, track_df["total_nanos"].max() >= new_nanos)
+            ]
             for c in ["x", "y", "z", "vel_x", "vel_y", "vel_z", "acc_x", "acc_y", "acc_z", "length", "width", "height"]:
                 track_data[c] = np.interp(track_new_nanos, track_df["total_nanos"], track_df[c])
             for c in ["type", "subtype", "role"]:
