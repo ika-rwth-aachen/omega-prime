@@ -10,7 +10,7 @@ from matplotlib.patches import Polygon as PltPolygon
 import pandas as pd
 import polars as pl
 import altair as alt
-
+import json
 import pandera.polars as pa
 import pandera.extensions as extensions
 import pyarrow
@@ -444,6 +444,13 @@ class Recording:
     def from_osi_gts(cls, gts: list[betterosi.GroundTruth], **kwargs):
         projs = []
 
+        gts, tmp_gts = itertools.tee(gts, 2)
+        first_gt = next(tmp_gts)
+        if first_gt.host_vehicle_id is not None:
+            host_vehicle_idx = first_gt.host_vehicle_id.value
+        else:
+            host_vehicle_idx = None
+
         def get_gts():
             for i, gt in enumerate(gts):
                 total_nanos = gt.timestamp.seconds * 1_000_000_000 + gt.timestamp.nanos
@@ -493,7 +500,7 @@ class Recording:
                     )
 
         df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
-        return cls(df_mv, projections=projs, **kwargs)
+        return cls(df_mv, projections=projs, host_vehicle_idx=host_vehicle_idx, **kwargs)
 
     @classmethod
     def from_file(
@@ -510,7 +517,7 @@ class Recording:
                 filepath, parse_map=parse_map, validate=validate, compute_polygons=compute_polygons, step_size=step_size
             )
 
-        gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=False)
+        gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
         gts, tmp_gts = itertools.tee(gts, 2)
         first_gt = next(tmp_gts)
         r = cls.from_osi_gts(gts, validate=validate, compute_polygons=compute_polygons)
@@ -558,15 +565,13 @@ class Recording:
     def interpolate(self, new_nanos: list[int] | None = None, hz: float | None = None):
         df = self._df
         nanos_min, nanos_max, frame_min, frame_max = df.select(
-            nanos_min = pl.col('total_nanos').min(),
-            nanos_max = pl.col('total_nanos').max(),
-            frame_min = pl.col('frame').min(),
-            frame_max = pl.col('frame').max()
+            nanos_min=pl.col("total_nanos").min(),
+            nanos_max=pl.col("total_nanos").max(),
+            frame_min=pl.col("frame").min(),
+            frame_max=pl.col("frame").max(),
         ).row(0)
         if new_nanos is None and hz is None:
-            new_nanos = np.linspace(
-               nanos_min, nanos_max, frame_max - frame_min, dtype=int
-            )
+            new_nanos = np.linspace(nanos_min, nanos_max, frame_max - frame_min, dtype=int)
         elif hz is not None:
             step = 1_000_000_000 / hz
             new_nanos = np.arange(start=nanos_min, stop=nanos_max + 1, step=step, dtype=int)
@@ -634,45 +639,61 @@ class Recording:
     def from_parquet(cls, filename, parse_map: bool = False, step_size: float = 0.01, **kwargs):
         t = pq.read_table(filename)
         df = pl.DataFrame(t, schema_overrides=polars_schema)
-        if t.schema.metadata is not None and b"xodr" in t.schema.metadata:
-            m = MapOdr.create(
-                odr_xml=t.schema.metadata[b"xodr"].decode(),
-                name=t.schema.metadata[b"xodr_name"].decode(),
-                parse=parse_map,
-                step_size=step_size,
-            )
-        else:
-            m = None
-        return cls(df, map=m, **kwargs)
+        m = None
+        host_vehicle_idx = None
+        if t.schema.metadata is not None:
+            if b"host_vehicle_idx" in t.schema.metadata:
+                host_vehicle_idx = int(t.schema.metadata[b"host_vehicle_idx"].decode())
+            if b"xodr" in t.schema.metadata:
+                m = MapOdr.create(
+                    odr_xml=t.schema.metadata[b"xodr"].decode(),
+                    name=t.schema.metadata[b"xodr_name"].decode(),
+                    parse=parse_map,
+                    step_size=step_size,
+                )
+            elif b"osi" in t.schema.metadata:
+                gt = betterosi.GroundTruth().from_json(t.schema.metadata[b"osi"].decode())
+                if len(gt.lane_boundary) > 0:
+                    m = MapOsi.create(gt)
+                else:
+                    m = MapOsiCenterline.create(gt)
+        return cls(df, map=m, host_vehicle_idx=host_vehicle_idx, **kwargs)
 
     def to_parquet(self, filename):
+        metadata = {}
+        if self.host_vehicle_idx is not None:
+            metadata[b"host_vehicle_idx"] = str(self.host_vehicle_idx).encode()
         if len(self.projections) > 0:
-            proj_dict = {
+            proj_meta = {
                 b"proj_string": self.projections[0]["proj_string"],
             }
             if self.projections[0]["offset"] is not None:
-                proj_dict[b"offset_x"] = str(self.projections[0]["offset"].x).encode()
-                proj_dict[b"offset_y"] = str(self.projections[0]["offset"].y).encode()
-                proj_dict[b"offset_z"] = str(self.projections[0]["offset"].z).encode()
-                proj_dict[b"offset_yaw"] = str(self.projections[0]["offset"].yaw).encode()
+                proj_meta[b"offset_x"] = str(self.projections[0]["offset"].x).encode()
+                proj_meta[b"offset_y"] = str(self.projections[0]["offset"].y).encode()
+                proj_meta[b"offset_z"] = str(self.projections[0]["offset"].z).encode()
+                proj_meta[b"offset_yaw"] = str(self.projections[0]["offset"].yaw).encode()
 
         else:
-            proj_dict = {}
+            proj_meta = {}
         to_drop = ["frame"]
         if "polygon" in self._df.columns:
             to_drop.append("polygon")
         t = pyarrow.table(self._df.drop(*to_drop))
+        map_meta = {}
         if hasattr(self.map, "odr_xml"):
-            t = t.cast(
-                t.schema.with_metadata(
-                    proj_dict | {b"xodr": self.map.odr_xml.encode(), b"xodr_name": self.map.name.encode()}
-                )
-            )
-        else:
-            t = t.cast(t.schema.with_metadata(proj_dict | {}))
+            map_meta = {b"xodr": self.map.odr_xml.encode(), b"xodr_name": self.map.name.encode()}
+        elif hasattr(self.map, "_osi"):
+            d = json.loads(self.map._osi.to_json())
+            if "movingObject" in d:
+                del d["movingObject"]
+            map_meta = {b"osi": json.dumps(d).encode()}
+
+        t = t.cast(t.schema.with_metadata(metadata | proj_meta | map_meta))
         pq.write_table(t, filename)
 
-    def plot_altair(self, start_frame=0, end_frame=-1, plot_map=True, metric_column=None, idx=None):
+    def plot_altair(
+        self, start_frame=0, end_frame=-1, plot_map=True, plot_map_polys=True, metric_column=None, idx=None
+    ):
         if "polygon" not in self._df.columns:
             self._df = self._add_polygons(self._df)
         if "geometry" not in self._df.columns:
@@ -698,16 +719,16 @@ class Recording:
                 .mark_geoshape()
                 .encode(
                     color=(
-                        alt.value("blue")
-                        if idx is None
-                        else alt.when(alt.FieldEqualPredicate(equal=idx, field="properties.idx"))
+                        alt.when(alt.FieldEqualPredicate(equal=self.host_vehicle_idx or -1, field="properties.idx"))
+                        .then(alt.value("red"))
+                        .when(alt.FieldEqualPredicate(equal=-1 if idx is None else idx, field="properties.idx"))
                         .then(alt.value("red"))
                         .otherwise(alt.value("blue"))
                     ),
                     tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
                 )
                 .transform_filter(alt.FieldEqualPredicate(field="properties.frame", equal=op_var)),
-                None if not plot_map else self.map.plot_altair(recording=self),
+                None if not plot_map else self.map.plot_altair(recording=self, plot_polys=plot_map_polys),
             )
             .properties(title="Map")
             .project("identity", reflectY=True)

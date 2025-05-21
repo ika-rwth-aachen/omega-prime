@@ -72,6 +72,20 @@ class LaneBase:
     def on_intersection(self):
         return self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION
 
+    def plot(self, ax: plt.Axes | None = None):
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+            ax.set_aspect(1)
+        c = "black" if not self.on_intersection else "green"
+        ax.plot(*np.asarray(self.centerline.coords).T, color=c, alpha=0.3, zorder=-10)
+        if hasattr(self, "polygon") and self.polygon is not None:
+            if isinstance(self.polygon, shapely.MultiPolygon):
+                ps = self.polygon.geoms
+            else:
+                ps = [self.polygon]
+            for p in ps:
+                ax.add_patch(PltPolygon(p.exterior.coords, fc="blue", alpha=0.2, ec=c))
+
 
 @dataclass(repr=False)
 class Lane(LaneBase):
@@ -114,20 +128,6 @@ class Lane(LaneBase):
         if self._end_points is None:
             self._end_points = np.array([b.interpolate(1, normalized=True) for b in self.oriented_borders])
         return self._end_points
-
-    def plot(self, ax: plt.Axes | None = None):
-        if ax is None:
-            fig, ax = plt.subplots(1, 1)
-            ax.set_aspect(1)
-        c = "black" if not self.on_intersection else "green"
-        ax.plot(*np.asarray(self.centerline.coords).T, color=c, alpha=0.3, zorder=-10)
-        if self.polygon is not None:
-            if isinstance(self.polygon, shapely.MultiPolygon):
-                ps = self.polygon.geoms
-            else:
-                ps = [self.polygon]
-            for p in ps:
-                ax.add_patch(PltPolygon(p.exterior.coords, fc="blue", alpha=0.2, ec=c))
 
 
 @dataclass(repr=False)
@@ -215,12 +215,15 @@ class Map:
         for b in self.lane_boundaries.values():
             b.plot(ax)
 
-    def plot_altair(self, recording=None):
+    def plot_altair(self, recording=None, plot_polys=True):
+        arbitrary_lane = next(iter(self.lanes.values()))
+        plot_polys = hasattr(arbitrary_lane, "polygon") and arbitrary_lane.polygon is not None and plot_polys
+
         if not hasattr(self, "_plot_dict"):
-            if next(iter(self.lanes.values())).polygon is not None:
+            if plot_polys:
                 shapely_series = pl.Series(name="shapely", values=[l.polygon for l in self.lanes.values()])
             else:
-                shapely_series = (pl.Series(name="shapely", values=[l.centerline for l in self.lanes.values()]),)
+                shapely_series = pl.Series(name="shapely", values=[l.centerline for l in self.lanes.values()])
 
             map_df = pl.DataFrame(
                 [
@@ -252,8 +255,15 @@ class Map:
 
         c = (
             alt.Chart(self._plot_dict)
-            .mark_geoshape(color="green", fillOpacity=0.4)
-            .encode(tooltip=["properties.idx:N", "properties.type:O", "properties.on_intersection:O"])
+            .mark_geoshape(fillOpacity=0.4, filled=True if plot_polys else False)
+            .encode(
+                tooltip=["properties.idx:N", "properties.type:O", "properties.on_intersection:O"],
+                color=(
+                    alt.when(alt.FieldEqualPredicate(equal=True, field="properties.on_intersection"))
+                    .then(alt.value("black"))
+                    .otherwise(alt.value("green"))
+                ),
+            )
         )
         if recording is None:
             return c.properties(title="Map").project("identity", reflectY=True)
