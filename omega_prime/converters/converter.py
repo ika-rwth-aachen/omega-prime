@@ -74,10 +74,13 @@ class DatasetConverter(ABC):
                 self._out_path / f"{self.get_recording_name(recording)}.{'parquet' if save_as_parquet else 'mcap'}"
             )
             rec = self.to_omega_prime_recording(recording)
-            if save_as_parquet:
-                rec.to_parquet(out_filename)
+            if rec is None:
+                logger.error(f"error during map conversion in the source_recording: {source_recording}")
             else:
-                rec.to_mcap(out_filename)
+                if save_as_parquet:
+                    rec.to_parquet(out_filename)
+                else:
+                    rec.to_mcap(out_filename)
 
     def convert(self, n_workers: int | None = None, save_as_parquet: bool = False) -> None:
         if n_workers is None:
