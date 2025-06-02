@@ -17,7 +17,7 @@ NANOS_PER_SEC = 1000000000  # 1 s
 
 
 class DatasetConverter(ABC):
-    def __init__(self, dataset_path: str, out_path: str, n_workers=1) -> None:
+    def __init__(self, dataset_path: str, out_path: str = "./", n_workers=1) -> None:
         self._dataset_path = Path(dataset_path)
         self._out_path = Path(out_path)
         self.n_workers = n_workers
@@ -68,34 +68,40 @@ class DatasetConverter(ABC):
         """
         pass
 
-    def convert_source_recording(self, source_recording, save_as_parquet: bool = False) -> None:
+    def convert_source_recording(
+        self, source_recording, save_as_parquet: bool = False, skip_existing: bool = False
+    ) -> None:
         for recording in self.get_recordings(source_recording):
             out_filename = (
                 self._out_path / f"{self.get_recording_name(recording)}.{'parquet' if save_as_parquet else 'mcap'}"
             )
-            rec = self.to_omega_prime_recording(recording)
-            if rec is None:
-                logger.error(f"error during map conversion in the source_recording: {source_recording}")
-            else:
-                if save_as_parquet:
-                    rec.to_parquet(out_filename)
+            if not skip_existing or not out_filename.exists():
+                Path(out_filename).parent.mkdir(exist_ok=True, parents=True)
+                rec = self.to_omega_prime_recording(recording)
+                if rec is None:
+                    logger.error(f"error during map conversion in the source_recording: {source_recording}")
                 else:
-                    rec.to_mcap(out_filename)
+                    if save_as_parquet:
+                        rec.to_parquet(out_filename)
+                    else:
+                        rec.to_mcap(out_filename)
 
-    def convert(self, n_workers: int | None = None, save_as_parquet: bool = False) -> None:
+    def convert(self, n_workers: int | None = None, save_as_parquet: bool = False, skip_existing: bool = False) -> None:
         if n_workers is None:
             n_workers = self.n_workers
         if n_workers == -1:
             n_workers = jb.cpu_count() - 1
-        self._out_path.mkdir(exist_ok=True)
+        self._out_path.mkdir(exist_ok=True, parents=True)
         recordings = self.get_source_recordings()
         if n_workers > 1:
-            partial_fct = partial(self.convert_source_recording, save_as_parquet=save_as_parquet)
+            partial_fct = partial(
+                self.convert_source_recording, save_as_parquet=save_as_parquet, skip_existing=skip_existing
+            )
             with tqdm_joblib(desc="Source Recordings", total=len(recordings)):
                 jb.Parallel(n_jobs=n_workers)(jb.delayed(partial_fct)(rec) for rec in recordings)
         else:
             for rec in tqdm(recordings, total=len(recordings)):
-                self.convert_source_recording(rec, save_as_parquet=save_as_parquet)
+                self.convert_source_recording(rec, save_as_parquet=save_as_parquet, skip_existing=skip_existing)
 
     def yield_recordings(self) -> Iterator[Recording]:
         source_recordings = self.get_source_recordings()
