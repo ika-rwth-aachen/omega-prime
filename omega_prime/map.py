@@ -221,9 +221,13 @@ class Map:
 
         if not hasattr(self, "_plot_dict"):
             if plot_polys:
-                shapely_series = pl.Series(name="shapely", values=[l.polygon.simplify(.1) for l in self.lanes.values()])
+                shapely_series = pl.Series(
+                    name="shapely", values=[l.polygon.simplify(0.1) for l in self.lanes.values()]
+                )
             else:
-                shapely_series = pl.Series(name="shapely", values=[l.centerline.simplify(.1) for l in self.lanes.values()])
+                shapely_series = pl.Series(
+                    name="shapely", values=[l.centerline.simplify(0.1) for l in self.lanes.values()]
+                )
 
             map_df = pl.DataFrame(
                 [

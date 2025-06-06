@@ -712,26 +712,42 @@ class Recording:
         slider = alt.binding_range(min=frame_min, max=frame_max, step=1, name="frame")
         op_var = alt.param(value=0, bind=slider)
 
+        df = df.with_columns(
+            pl.concat_str(
+                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name[5:], return_dtype=str),
+                pl.col("subtype").map_elements(
+                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name[5:],
+                    return_dtype=str,
+                ),
+                separator="-",
+            ).alias("type")
+        )
         mv_dict = {"values": df["geometry", "idx", "frame", "type"].st.to_dicts()}
 
         view = (
             alt.layer(
-                *[o for o in [
-                    None if not plot_map else self.map.plot_altair(recording=self, plot_polys=plot_map_polys),
-                    alt.Chart(mv_dict)
-                    .mark_geoshape()
-                    .encode(
-                        color=(
-                            alt.when(alt.FieldEqualPredicate(equal=self.host_vehicle_idx or -1, field="properties.idx"))
-                            .then(alt.value("red"))
-                            .when(alt.FieldEqualPredicate(equal=-1 if idx is None else idx, field="properties.idx"))
-                            .then(alt.value("red"))
-                            .otherwise(alt.value("blue"))
-                        ),
-                        tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
-                    )
-                    .transform_filter(alt.FieldEqualPredicate(field="properties.frame", equal=op_var)),
-                ] if o is not None]
+                *[
+                    o
+                    for o in [
+                        None if not plot_map else self.map.plot_altair(recording=self, plot_polys=plot_map_polys),
+                        alt.Chart(mv_dict)
+                        .mark_geoshape()
+                        .encode(
+                            color=(
+                                alt.when(
+                                    alt.FieldEqualPredicate(equal=self.host_vehicle_idx or -1, field="properties.idx")
+                                )
+                                .then(alt.value("red"))
+                                .when(alt.FieldEqualPredicate(equal=-1 if idx is None else idx, field="properties.idx"))
+                                .then(alt.value("red"))
+                                .otherwise(alt.value("blue"))
+                            ),
+                            tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
+                        )
+                        .transform_filter(alt.FieldEqualPredicate(field="properties.frame", equal=op_var)),
+                    ]
+                    if o is not None
+                ]
             )
             .properties(title="Map")
             .project("identity", reflectY=True)

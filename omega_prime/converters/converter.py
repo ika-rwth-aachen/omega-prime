@@ -9,6 +9,8 @@ from tqdm_joblib import tqdm_joblib
 from functools import partial
 from ..recording import Recording
 from collections.abc import Iterator
+from typing import Annotated
+import typer
 
 
 logger.configure(handlers=[{"sink": sys.stdout, "level": "WARNING"}])
@@ -108,3 +110,30 @@ class DatasetConverter(ABC):
         for sr in tqdm(source_recordings, total=len(source_recordings)):
             for recording in self.get_recordings(sr):
                 yield self.to_omega_prime_recording(recording)
+
+    @classmethod
+    def convert_cli(
+        cls,
+        dataset_path: Annotated[
+            Path,
+            typer.Argument(exists=True, dir_okay=True, file_okay=False, readable=True, help="Root of the dataset"),
+        ],
+        output_path: Annotated[
+            Path,
+            typer.Argument(
+                file_okay=False, writable=True, help="In which folder to write the created omega-prime files"
+            ),
+        ],
+        n_workers: Annotated[int, typer.Option(help="Set to -1 for n_cpus-1 workers.")] = 1,
+        save_as_parquet: Annotated[
+            bool,
+            typer.Option(
+                help="If activated, omega-prime recordings will be stored as parquet files instead of mcap (use for large recordings). Will loose information in OSI that are not mandatory in omega-prime."
+            ),
+        ] = False,
+        skip_existing: Annotated[bool, typer.Option(help="Only convert not yet converted files")] = False,
+    ):
+        Path(output_path).mkdir(exist_ok=True)
+        cls(dataset_path=dataset_path, out_path=output_path, n_workers=n_workers).convert(
+            save_as_parquet=save_as_parquet, skip_existing=skip_existing
+        )

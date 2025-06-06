@@ -55,7 +55,7 @@ Repository = "https://github.com/ika-rwth-aachen/omega-prime"
 test = ['ruff', 'pdoc3', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets']
 
 [project.scripts]
-omega-prime = "omega_prime.cli:app"
+omega-prime = "omega_prime.cli:main"
 
 [tool.ruff]
 lint.ignore = ["E741", "E701", "E501", "I001"]

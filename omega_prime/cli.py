@@ -7,6 +7,8 @@ from pathlib import Path
 from mcap_protobuf.decoder import DecoderFactory
 from mcap.reader import make_reader
 import omega_prime
+from omega_prime.converters import load_converters_into_cli
+
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -94,5 +96,10 @@ def to_parquet(
     r.to_parquet(output)
 
 
-if __name__ == "__main__":
+def main():
+    load_converters_into_cli(app)
     app()
+
+
+if __name__ == "__main__":
+    main()

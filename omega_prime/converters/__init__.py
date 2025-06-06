@@ -1,36 +1,26 @@
 from .lxd import LxdConverter
-
-from pathlib import Path
-from typing import Annotated
-
 import typer
+
+from importlib.metadata import entry_points
+from warnings import warn
 
 __all__ = ["app"]
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
+app.command("from-lxd", help="Convert datasets from LevelXData to omega-prime.")(LxdConverter.convert_cli)
 
-@app.command("from-lxd", help="Convert datasets from LevelXData to omega-prime.")
-def convert_lxd_cli(
-    dataset_path: Annotated[
-        Path,
-        typer.Argument(
-            exists=True, dir_okay=True, file_okay=False, readable=True, help="Root of the LevelXData dataset"
-        ),
-    ],
-    output_path: Annotated[
-        Path,
-        typer.Argument(file_okay=False, writable=True, help="In which folder to write the created omega-prime files"),
-    ],
-    n_workers: Annotated[int, typer.Option(help="Set to -1 for n_cpus-1 workers.")] = 1,
-    save_as_parquet: Annotated[
-        bool,
-        typer.Option(
-            help="If activated, omega-prime recordings will be stored as parquet files instead of mcap (use for large recordings). Will loose information in OSI that are not mandatory in omega-prime."
-        ),
-    ] = False,
-):
-    Path(output_path).mkdir(exist_ok=True)
-    LxdConverter(dataset_path=dataset_path, out_path=output_path, n_workers=n_workers).convert(
-        save_as_parquet=save_as_parquet
-    )
+
+def load_converters_into_cli(app):
+    discovered_plugins = {o.name: o for o in entry_points(group="omega_prime.plugins.converter")}
+    for p_name, p in discovered_plugins.items():
+        try:
+            converter = p.load()
+        except ModuleNotFoundError:
+            warn(f"Failed to load converter extension from dist `{p.dist.name}` called `{p.name}`.")
+        try:
+            app.command(p.name, help=f"Convert datasets with {p.dist.name} {p.name} to omega-prime.")(
+                converter.convert_cli
+            )
+        except AttributeError:
+            warn(f"Converter `{p.name}` of `{p.dist.name}` is not a `omega_prime.DatasetConverter`")
