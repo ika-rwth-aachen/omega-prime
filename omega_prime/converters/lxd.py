@@ -16,7 +16,7 @@ vehicles = {
     "truck": vct.TYPE_HEAVY_TRUCK,
     "bicycle": vct.TYPE_BICYCLE,
     "van": vct.TYPE_DELIVERY_VAN,
-    "ad_shuttle": vct.TYPE_OTHER
+    "ad_shuttle": vct.TYPE_OTHER,
 }
 pedestrians = {"pedestrian": betterosi.MovingObjectType.TYPE_PEDESTRIAN}
 
