@@ -96,6 +96,20 @@ def to_parquet(
     r.to_parquet(output)
 
 
+@app.command()
+def visualize(
+    input: Annotated[Path, typer.Argument(exists=True, dir_okay=False)],
+    height: int = 500,
+    width: int = 1600,
+    start_frame: int = 0,
+    end_frame: int = -1
+):
+    import altair as alt
+    alt.renderers.enable("browser")
+    r = omega_prime.Recording.from_file(input, validate=False, parse_map=True)
+    r.plot_altair(start_frame=start_frame, end_frame=end_frame,height=height, width=width).show()
+
+
 def main():
     load_converters_into_cli(app)
     app()

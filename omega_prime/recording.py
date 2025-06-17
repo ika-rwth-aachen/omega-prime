@@ -693,7 +693,7 @@ class Recording:
         pq.write_table(t, filename)
 
     def plot_altair(
-        self, start_frame=0, end_frame=-1, plot_map=True, plot_map_polys=True, metric_column=None, idx=None
+        self, start_frame=0, end_frame=-1, plot_map=True, plot_map_polys=True, metric_column=None, idx=None, height=None,width=None
     ):
         if "polygon" not in self._df.columns:
             self._df = self._add_polygons(self._df)
@@ -749,7 +749,7 @@ class Recording:
                     if o is not None
                 ]
             )
-            .properties(title="Map")
+            .properties(title="Map", height=height, width=width)
             .project("identity", reflectY=True)
         )
 
