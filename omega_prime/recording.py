@@ -355,6 +355,7 @@ class Recording:
         host_vehicle_idx: int | None = None,
         validate=False,
         compute_polygons=False,
+        traffic_light_states: dict | None = None,
     ):
         if not isinstance(df, pl.DataFrame):
             df = pl.DataFrame(df, schema_overrides=polars_schema)
@@ -384,6 +385,8 @@ class Recording:
                 .alias("acc")
             )
         self.projections = projections if projections is not None else []
+        self.traffic_light_states = traffic_light_states if traffic_light_states is not None else {}
+        
         self._df = df
         self.map = map
         self._moving_objects = None
@@ -438,11 +441,14 @@ class Recording:
                 if self.map is not None and isinstance(self.map, MapOsi | MapOsiCenterline):
                     gt.lane_boundary = [b._osi for b in self.map.lane_boundaries.values()]
                     gt.lane = [l._osi for l in self.map.lanes.values()]
+            if nanos in self.traffic_light_states:
+                gt.traffic_light = self.traffic_light_states[nanos]
             yield gt
 
     @classmethod
     def from_osi_gts(cls, gts: list[betterosi.GroundTruth], **kwargs):
         projs = []
+        traffic_light_states = {}
 
         gts, tmp_gts = itertools.tee(gts, 2)
         first_gt = next(tmp_gts)
@@ -471,6 +477,9 @@ class Recording:
                         else None,
                     )
                 )
+
+                traffic_light_states[total_nanos] = gt.traffic_light
+                
                 for mv in gt.moving_object:
                     yield dict(
                         total_nanos=total_nanos,
@@ -500,7 +509,7 @@ class Recording:
                     )
 
         df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
-        return cls(df_mv, projections=projs, host_vehicle_idx=host_vehicle_idx, **kwargs)
+        return cls(df_mv, projections=projs, host_vehicle_idx=host_vehicle_idx, traffic_light_states=traffic_light_states, **kwargs)
 
     @classmethod
     def from_file(
