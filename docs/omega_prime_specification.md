@@ -210,27 +210,13 @@ OpenDRIVE for information on the map level is specified. Accuracy
 requirements of signals are derived from the
 [OMEGAFormat](https://github.com/ika-rwth-aachen/omega_format/blob/main/doc/signal_list_reference.md).
 
-### Coordinate System
+### Coordinate Systems
 
-Coordinate system and geo-reference are defined in the same way in both
-ASAM OpenDRIVE (Inertial Coordinate Systems) and ASAM OSI Ground Truth
-messages, relying on the ISO 8855 standard for the coordinate system,
-and on PROJ-string for the geo-reference.
+ASAM OSI and ASAM OpenDRIVE are harmonized in terms of their inertial coordinate system specification (handedness, axis directions and rotation order). The OpenDRIVE 'inertial coordinate system' is defined in the same way as OSI’s 'global coordinate system', relying on the ISO 8855 standard. Both OpenDRIVE and ASAM OSI define further context-related coordinate systems (e.g. road reference line coordinate system in OpenDRIVE, host vehicle coordinate system in OSI). Each standard’s documentation must be consulted when working with data structures using these coordinate systems.
 
-The origin and orientation of the coordinate system are defined through
-an offset (ASAM OpenDRIVE offset element and ASAM OSI GroundTruth
-`proj_frame_offset`), which defines and *offset* in x, y and z
-direction and an orientation through a *heading/yaw angle* in radiant.
+#### Geo reference
 
-The origin of the coordinate system is georeferenced through a
-PROJ-string (geoReference tag in ASAM OpenDRIVE and GroundTruth
-proj\_string in ASAM OSI). The PROJ-string, as well as the offset must
-be given in the ASAM OSI GroundTruth messages and the OpenDRIVE map.
-
-One OSI GroundTruth message is used for each observation, i.e., each
-timestep. Therefore, for each of those messages a PROJ-string and offset
-should be defined. This means that the coordinate system used to provide
-dynamic object position, can be changed for each observation.
+For both OSI and OpenDRIVE the inertial coordinate system’s origin can be mapped to a geographic coordinate system using PROJ transformations in a harmonized way. Both standards allow the definition of a PROJ-string and a corresponding offset. The offset parameter offers a position (x, y, z) and an orientation offset (yaw/heading). It is recommended by both standards to set the orientation offset to 0. For OMEGA-PRIME real-world datasets, both PROJ-string and offset must be given in every frame of the ASAM OSI GroundTruth message as well as in the ASAM OpenDRIVE map.
 
 <u>Note:</u> Pay attention that even if it moves from one observation to
 the next, this coordinate system never encompasses velocity. Therefore,
@@ -244,34 +230,39 @@ style="width:5.36121in;"/>
 Figure 1: Geo-reference and coordinate system in ASAM OpenDRIVE and ASAM
 OSI
 
-###  Moving Elements
+###  Dynamic Information
 
 For representing object-list based trajectory information of moving
 elements, OMEGA-PRIME utilizes [ASAM OSI v3.7.0 GroundTruth
 messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html)
-Each GroundTruth message defines one point in time. The dynamic extend
-of the SSD is therefore be represented through a sequence of OSI
+Each GroundTruth message defines one point in time. The dynamic extent
+of the SSD is therefore represented through a sequence of OSI
 GroundTruth messages. To appropriately cover highly dynamic contexts
 found in urban environments, OMEGA-PRIME sets a minimum required
-frequency of 10Hz on those messages. The following signals are required
+frequency of 10Hz on those messages. The following table describes required and optional signals
 to be set in each of the OSI GroundTruth message. Detailed info about
 the signal content are found in the [ASAM OSI
 documentation](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html).
-Cursive text indicates that the signal is optional. All other signals are
-mandatory. The column minimal accuracy indicates the desired accuracy of
+The column 'Minimal accuracy' indicates the desired accuracy of
 the signal in relation to the real world.
+
+**Important note on optional fields:**
+In both Protocol Buffers v2 and v3, scalar fields (such as integers, strings, floats, etc.) that are not explicitly set during serialization will be deserialized with their values set to their default values. Numeric fields default to 0, boolean values default to false, strings default to empty strings, and enums default to their first defined type.
+This leads to the additional OMEGA-PRIME constraint that if any nested field of an optional protobuf message is set during serialization, any other nested scalar fields (not other nested messages) become required by definition. Leaving these fields unset will result in potential misinterpretation during deserialization.
 
 <table>
 <colgroup>
 <col style="width: 23%" />
 <col style="width: 38%" />
-<col style="width: 38%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
 </colgroup>
 <thead>
 <tr>
 <th><strong>Signal hierarchy</strong></th>
 <th><strong>Data model and type</strong></th>
-<th><strong>Minimal Accuracy</strong></th>
+<th><strong>Minimal accuracy</strong></th>
+<th><strong>Required / optional</strong></th>
 </tr>
 </thead>
 <tbody>
@@ -279,210 +270,275 @@ the signal in relation to the real world.
 <td>country_code</td>
 <td>int [3 digit ISO country code (e.g. germany=276,usa=840)].</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>version</td>
 <td>InterfaceVersion</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. version_major</td>
 <td>int = 3</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. version_minor</td>
 <td>int = 7</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. version_patch</td>
 <td>int = 0</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>proj_frame_offset</td>
 <td>GroundTruthProjFrameOffset</td>
 <td>0,2 m</td>
+<td>required</td>
 </tr>
 <tr>
 <td>. position</td>
 <td>Vector3D</td>
 <td>0,2 m</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. yaw</td>
-<td>float</td>
+<td>float<br/>Recommendation: Set angle to 0</td>
 <td>0,035 rad (2°)</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>proj_string</td>
-<td>str [PROJ coordinate transformation software library] (mandatory for
-real world data. Can be omitted for simulation data)</td>
+<td>str [PROJ coordinate transformation software library]</td>
 <td></td>
+<td>- required for real world data</br>- optional for simulation data</td>
 </tr>
 <tr>
 <td>timestamp</td>
 <td>Timestamp (total time is combination of seconds and nanos)</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. nanos</td>
 <td>int</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. seconds</td>
 <td>int</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>host_vehicle_id</td>
 <td>Identifier</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
-<td>. val</td>
-<td>Int [default = -1]</td>
+<td>. value</td>
+<td>int</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>moving_object</td>
 <td>list[MovingObject]</td>
 <td></td>
+<td></td>
+</tr>
+<tr>
+<td>. id</td>
+<td>Identifier</td>
+<td></td>
+<td>required</td>
+</tr>
+<tr>
+<td>. . value</td>
+<td>int</td>
+<td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. base</td>
 <td>BaseMoving</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . dimension</td>
 <td>Dimension3D</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . . x</td>
 <td>float [m]</td>
 <td>0,2 m</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . . y</td>
 <td>float [m]</td>
 <td>0,2 m</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . . z</td>
 <td>float [m]</td>
 <td>0,2 m</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . position</td>
 <td>Vector3D</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . . x</td>
 <td>float [m]</td>
 <td>0,2 m</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . . y</td>
 <td>float [m]</td>
 <td>0,2 m</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . . z</td>
 <td>float [m]</td>
 <td>0,2 m</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . orientation</td>
 <td>Orientation3D</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . . roll</td>
 <td>float [rad]</td>
 <td>0,035 rad (2°)</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . . pitch</td>
 <td>float [rad]</td>
 <td>0,035 rad (2°)</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . . yaw</td>
 <td>float [rad]</td>
 <td>0,035 rad (2°)</td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . velocity</td>
 <td>Vector3D</td>
 <td>0,1 m/s</td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . acceleration</td>
 <td>Vector3D</td>
 <td>0,1 m/s^2</td>
+<td>required</td>
 </tr>
 <tr>
 <td>. type</td>
 <td>MovingObjectType (Other, Vehicle, Pedestrian, Animal)</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
-<td><i>. vehicle_attributes</i></td>
-<td><i>MovingObjectVehicleAttributes # mandatory from osi but not from SSD
-perspective (description of where axles are ..., vehicle lights,)</i></td>
+<td>. vehicle_attributes</td>
+<td>MovingObjectVehicleAttributes</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
 <td>. vehicle_classification</td>
 <td>MovingObjectVehicleClassification</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . type</td>
 <td><p>MovingObjectVehicleClassificationType</p>
-<p>(Other, Small car, compact car, car, medium car, luxuray car,
+<p>(Other, car,
 delivery van, semitrailer, trailer, motorbike, bicycle, bus, tram,
-train, wheelchair, standup scooter</p></td>
+train, wheelchair, standup scooter)</p></td>
 <td></td>
+<td>required</td>
+</tr>
+<tr>
+<td>. . has_trailer</td>
+<td>bool</td>
+<td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. . role</td>
-<td>MovingObjectVehicleClassificationRole (Other, civiel, ambulance,
-fire, police, public transport, road assistance, garbage collectin, road
-construction, military)</td>
+<td><p>MovingObjectVehicleClassificationRole</p>
+<p>(Other, civil, ambulance, fire, police, public transport, road assistance, garbage collection, road construction, military)</p>
+</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
-<td><i>. pedestrian_attributes</i></td>
-<td><i>MovingObjectPedestrianAttributes # mandatory from osi but not from
-SSD perspective (skeleton description)</i></td>
+<td>. pedestrian_attributes</td>
+<td>MovingObjectPedestrianAttributes</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
 <td>traffic_light</td>
 <td>list[TrafficLight]</td>
 <td></td>
+<td></td>
 </tr>
 <tr>
-<td><i>. base</i></td>
-<td><i>BaseStationary</i></td>
+<td>. id</td>
+<td>Identifier</td>
 <td></td>
+<td>required</td>
+</tr>
+<td>. . value</td>
+<td>int</td>
+<td></td>
+<td><sup>[1]</sup></td>
+</tr>
+<td>. base</td>
+<td>BaseStationary</td>
+<td></td>
+<td>optional<sup>[2]</sup> (provided through OpenDRIVE map)</td>
 </tr>
 <tr>
 <td>. classification</td>
 <td>TrafficLightClassification</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . color</td>
 <td>TrafficLightClassificationColor (other, red, yellow, green, blue,
 white)</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . icon</td>
@@ -490,105 +546,119 @@ white)</td>
 arrow_left, arrow_diag_left, arrow_straight_ahead_left, arrow_right,
 ...)</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . mode</td>
 <td>TrafficLightClassificationMode (other, off, constant, flashing,
 counting)</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . counter</td>
 <td>float</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
 <td>. . is_out_of_servcie</td>
 <td>bool</td>
 <td></td>
+<td>required</td>
 </tr>
 <tr>
-<td><i>. model_reference</i></td>
-<td><i>str</i></td>
+<td>. model_reference</td>
+<td>str</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
 <td>. source_reference</td>
-<td>list[ExternalReference]</td>
+<td>list[ExternalReference]<br/> The source reference maps the dynamic OSI traffic light information to the static traffic light information in the OpenDRIVE map.</td>
 <td></td>
+<td>required<br/>(must contain at least one element referencing the OpenDRIVE traffic light)</td>
 </tr>
 <tr>
-<td><i>environmental_conditions</i></td>
-<td><i>EnvironmentalConditions</i></td>
+<td>environmental_conditions</td>
+<td>EnvironmentalConditions</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
-<td><i>. ambient_illumination</i></td>
-<td><i>EnvironmentalConditionsAmbientIllumination</i></td>
+<td>. ambient_illumination</td>
+<td>EnvironmentalConditionsAmbientIllumination</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
-<td><i>. time_of_day</i></td>
-<td><i>EnvironmentalConditionsTimeOfDay</i></td>
+<td>. time_of_day</td>
+<td>EnvironmentalConditionsTimeOfDay</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
-<td><i>. unix_timestamp</i></td>
-<td><i>int</i></td>
+<td>. unix_timestamp</td>
+<td>int</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
-<td><i>. atmospheric_pressure</i></td>
-<td><i>Float[PA]</i></td>
+<td>. atmospheric_pressure</td>
+<td>float [PA]</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
-<td><i>. temperature</i></td>
-<td><i>Float[K]</i></td>
+<td>. temperature</td>
+<td>float [K]</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
-<td><i>. relative_humidity</i></td>
-<td><i>float</i></td>
+<td>. relative_humidity</td>
+<td>float</td>
 <td></td>
+<td><sup>[1]</sup></td>
 </tr>
 <tr>
-<td><i>. precipitation</i></td>
-<td><i>EnvironmentalConditionsPrecipitation</i></td>
+<td>. precipitation</td>
+<td>EnvironmentalConditionsPrecipitation</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
-<td><i>. fog</i></td>
-<td><i>EnvironmentalConditionsFog</i></td>
+<td>. fog</td>
+<td>EnvironmentalConditionsFog</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
-<td><i>. clouds</i></td>
-<td><i>EnvironmentalConditionsCloudLayer</i></td>
+<td>. clouds</td>
+<td>EnvironmentalConditionsCloudLayer</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
-<td><i>. wind</i></td>
-<td><i>EnvironmentalConditionsWind</i></td>
+<td>. wind</td>
+<td>EnvironmentalConditionsWind</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 <tr>
-<td><i>. sun</i></td>
-<td><i>EnvironmentalConditionsSun</i></td>
+<td>. sun</td>
+<td>EnvironmentalConditionsSun</td>
 <td></td>
+<td>optional<sup>[2]</sup></td>
 </tr>
 </tbody>
 </table>
 
-A sequence of those ground truth messages defines a traffic observation.
-For the encapsulation of serialized messages of OSI, OMEGA-PRIME uses
-MCAP. The sequence of *GroundTruth message* should be stored under the
-topic `/ground_truth` in an MCAP file. The `log_time` and
-`publish_time` of each message should correspond to
-`GroundTruth.seconds x 1_000_000_000 + GroundTruth.nanos`. The
-frequency of *GroundTruth messages* should be at least 10 Hz.
+[1] This field is only optional if its parent message is not set. <i>Example: If any message or field of `environmental_conditions` is set, optional scalar type fields become required.</i>
 
-### Map information
+[2] Any contained scalar type fields of this message become required if this message is optionally set. This principle applies to all nested messages inside this message.
+
+### Static Information
 
 The static map information is defined through ASAM OpenDRIVE 1.8.1. The
 map should contain information on the roads all observed traffic
@@ -600,22 +670,31 @@ on data model and format definitions. When real-world data is
 represented, the deviation of the modelled geometries to the real-world
 counterparts should not be larger than 0.2m.
 
-### Data-Format
+## OMEGA-PRIME Format Specification
 
-The data format of OMEGA-PRIME consists of a sequence of OSI 3.7.0
-GroundTruth messages and an OpenDRIVE 1.8.1 file. The OSI GroundTruth
-messages are stored in an MCAP file (see Figure 1) und the topic
-`/ground_turth`. The OpenDRIVE map is either stored inside the MCAP
-under `/ground_truth_map` (see 1.2.4.1) or in the same folder as an
-OpenDRIVE XML (see 1.2.4.2).
+The OMEGA-PRIME MCAP multi-channel trace file format is a binary file format that allows for storing a serialized specified subset of an OSI GroundTruth message stream, along with additional meta-data, OpenDRIVE map data and other related data streams.
 
-<img src="./omega_prime/omega_specification.svg"
-style="width:6.69306in;height:3.32491in" />
+OMEGA-PRIME is based on the [OSI MCAP multi-channel trace file format](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/current/interface/architecture/trace_file_formats.html#_multi_channel_trace_file_format) and therefore is a specialization with additional constraints and requirements. Hence, any valid OMEGA-PRIME multi-channel trace file is also a valid OSI MCAP file, but not the other way around. This means that an OMEGA-PRIME MCAP file must comply with all constraints and requirements defined in the OSI MCAP format specification. This includes general file writing requirements (e.g. chunk indexing), mandatory file-global metadata definitions (e.g., OSI version, zero time, authors, data sources) as well as mandatory channel-specific metadata for the OSI GroundTruth channel.
 
-Figure : file structure of OMEGA-PRIME self-contained package - scenario
-source data file.
+The following rules apply to OMEGA-PRIME multi-channel trace files:
 
-#### Option A: Self-contained Package
+-	The OMEGA-PRIME OSI GroundTruth message stream must be stored as a compliant OSI channel as specified by the OSI MCAP format specification.
+-	The channel name of the OMEGA-PRIME OSI GroundTruth data must be `\ground_truth`.
+-	The OMEGA-PRIME OSI GroundTruth message interface must comply with the required subset as defined in the table in section 'Dynamic Information'.
+-	The version of the OMEGA-PRIME OSI GroundTruth messages must be 3.7.0. 
+-	The message frequency of consecutive OMEGA-PRIME OSI GroundTruth messages must be 10Hz or higher.
+
+The OMEGA-PRIME format specifies two options to store the associated ASAM OpenDRIVE map data:
+
+-	**Option A**: Additional MCAP channel which holds a protobuf-encoded message containing a map reference string and the associated ASAM OpenDRIVE map data as specified in the section 'Option A'. 
+-	**Option B**: Additional ASAM OpenDRIVE XML file located in the same folder as the OSI GroundTruth MCAP file.
+
+The following rules apply independent of the chosen option:
+-	The version of the OpenDRIVE map data must be 1.8.1.
+
+The following sections specify the rules depending on the chosen option.
+
+### Option A: Self-contained Package
 
 Storing map data with object data in a single file has the benefit that
 there is no chance that the association gets lost or is unclear. This is
@@ -637,7 +716,14 @@ message MapAsamOpenDrive
     required string open_drive_xml_content = 2;
 }
 ```
-#### Option B: One Map – Multiple Recordings
+
+<img src="./omega_prime/omega_specification.svg"
+style="width:6.69306in;height:3.32491in" />
+
+Figure : file structure of OMEGA-PRIME self-contained package - scenario
+source data file.
+
+### Option B: One Map – Multiple Recordings
 
 On the data provider side, it could be useful to just store an instance
 of the map once, when you have multiple recordings of the same map. This
