@@ -232,8 +232,7 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 </tr>
 <tr>
 <td>proj_string</td>
-<td>str [PROJ coordinate transformation software library] (mandatory for
-real world data. Can be omitted for simulation data)</td>
+<td>str [PROJ coordinate transformation software library] (mandatory for real world data. Can be omitted for simulation data)</td>
 <td></td>
 </tr>
 <tr>
@@ -348,8 +347,7 @@ real world data. Can be omitted for simulation data)</td>
 </tr>
 <tr>
 <td><i>. vehicle_attributes</i></td>
-<td><i>MovingObjectVehicleAttributes # mandatory from osi but not from SSD
-perspective (description of where axles are ..., vehicle lights,)</i></td>
+<td><i>MovingObjectVehicleAttributes # mandatory from osi but not from SSD perspective (description of where axles are ..., vehicle lights,)</i></td>
 <td></td>
 </tr>
 <tr>
@@ -360,22 +358,17 @@ perspective (description of where axles are ..., vehicle lights,)</i></td>
 <tr>
 <td>. . type</td>
 <td><p>MovingObjectVehicleClassificationType</p>
-<p>(Other, Small car, compact car, car, medium car, luxuray car,
-delivery van, semitrailer, trailer, motorbike, bicycle, bus, tram,
-train, wheelchair, standup scooter</p></td>
+<p>(Other, Small car, compact car, car, medium car, luxuray car, delivery van, semitrailer, trailer, motorbike, bicycle, bus, tram, train, wheelchair, standup scooter)</p></td>
 <td></td>
 </tr>
 <tr>
 <td>. . role</td>
-<td>MovingObjectVehicleClassificationRole (Other, civiel, ambulance,
-fire, police, public transport, road assistance, garbage collectin, road
-construction, military)</td>
+<td>MovingObjectVehicleClassificationRole (Other, civiel, ambulance, fire, police, public transport, road assistance, garbage  collectin, road construction, military)</td>
 <td></td>
 </tr>
 <tr>
 <td><i>. pedestrian_attributes</i></td>
-<td><i>MovingObjectPedestrianAttributes # mandatory from osi but not from
-SSD perspective (skeleton description)</i></td>
+<td><i>MovingObjectPedestrianAttributes # mandatory from osi but not from SSD perspective (skeleton description)</i></td>
 <td></td>
 </tr>
 <tr>
@@ -395,21 +388,17 @@ SSD perspective (skeleton description)</i></td>
 </tr>
 <tr>
 <td>. . color</td>
-<td>TrafficLightClassificationColor (other, red, yellow, green, blue,
-white)</td>
+<td>TrafficLightClassificationColor (other, red, yellow, green, blue, white)</td>
 <td></td>
 </tr>
 <tr>
 <td>. . icon</td>
-<td>TrafficLightClassificationIcon (other, none, arrow_straight_ahead,
-arrow_left, arrow_diag_left, arrow_straight_ahead_left, arrow_right,
-...)</td>
+<td>TrafficLightClassificationIcon (other, none, arrow_straight_ahead, arrow_left, arrow_diag_left, arrow_straight_ahead_left, arrow_right, ...)</td>
 <td></td>
 </tr>
 <tr>
 <td>. . mode</td>
-<td>TrafficLightClassificationMode (other, off, constant, flashing,
-counting)</td>
+<td>TrafficLightClassificationMode (other, off, constant, flashing, counting)</td>
 <td></td>
 </tr>
 <tr>
