@@ -38,7 +38,9 @@ class ShapelyTrajectoryTools:
         if isinstance(l, shapely.Point):
             cl = np.asarray(l.coords)[0]
             return shapely.LineString(np.stack([cl - np.array([0, 1]), cl, cl + np.array([0, 1])]))
-
+        if l.is_empty:
+            cl = np.array([0, 0])
+            return shapely.LineString(np.stack([cl - np.array([0, 1]), cl, cl + np.array([0, 1])]))
         startvec = np.asarray(l.interpolate(0, normalized=True).coords) - np.asarray(
             l.interpolate(0 + cls.epsi, normalized=True).coords
         )

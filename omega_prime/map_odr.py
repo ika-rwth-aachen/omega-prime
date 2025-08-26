@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from omega_prime.map import Map, Lane, LaneBoundary
-from shapely import LineString, Polygon, simplify
+from shapely import LineString, Polygon, simplify, make_valid
 import numpy as np
 from betterosi import LaneClassificationType, LaneClassificationSubtype, LaneBoundaryClassificationType
 from pyxodr_omega_prime.road_objects.network import RoadNetwork as PyxodrRoadNetwork
@@ -16,7 +16,6 @@ import betterosi
 from betterosi import MapAsamOpenDrive
 from collections import namedtuple
 import warnings
-
 
 logger = logging.getLogger(__name__)
 
@@ -352,18 +351,16 @@ class LaneBoundaryXodr(LaneBoundary):
         lane_idx: int = None,
     ):
         if side == "left":
-            if len(boundary.boundary_line) == 1:
-                polyline = LineString([boundary.boundary_line[0]] * 2)
-            else:
-                polyline = LineString(boundary.boundary_line)
+            bl = boundary.boundary_line
         elif side == "right":
-            if len(boundary.lane_reference_line) == 1:
-                polyline = LineString([boundary.lane_reference_line[0]] * 2)
-            else:
-                polyline = LineString(boundary.lane_reference_line)
-
+            bl = boundary.lane_reference_line
         else:
             raise ValueError(f"Invalid side '{side}'. Expected 'left' or 'right'.")
+
+        if len(bl) == 1:
+            polyline = LineString([bl[0]] * 2)
+        else:
+            polyline = LineString(bl)
 
         if type is None and hasattr(boundary, "lane_xml"):
             type = cls._extract_lane_boundary_type_from_xml(boundary, side)
@@ -406,13 +403,16 @@ class LaneXodr(Lane):
         if centre_line is None or not len(centre_line):
             raise ValueError(f"Lane {lane.id} has no centre_line")
 
-        centerline_2d = lane.centre_line[:, :2]
+        centerline = LineString(centre_line[:, :2])
+        if not centerline.is_valid:
+            centerline = make_valid(centerline)
+
         lane_type, lane_subtype = cls._determine_lane_type_and_subtype(lane, road)
         idx = XodrLaneId(road.id, lane.id, lane_section_id)
         return cls(
             _xodr=lane,
             idx=idx,
-            centerline=LineString(centerline_2d),
+            centerline=centerline,
             type=lane_type,
             subtype=lane_subtype,
             successor_ids=[
