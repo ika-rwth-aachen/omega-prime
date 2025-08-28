@@ -144,18 +144,20 @@ Then the representation of moving objects through ASAM OSI Ground Truth messages
 Lastly, the usage of ASAM OpenDRIVE for information on the map level is specified.
 Accuracy requirements of signals are derived from the [OMEGAFormat](https://github.com/ika-rwth-aachen/omega_format/blob/main/doc/signal_list_reference.md).
 
-### Coordinate System
+### Coordinate Systems
 
-Coordinate system and geo-reference are defined in the same way in both ASAM OpenDRIVE (Inertial Coordinate Systems) and ASAM OSI Ground Truth messages, relying on the ISO 8855 standard for the coordinate system, and on PROJ-string for the geo-reference.
+ASAM OSI and ASAM OpenDRIVE are harmonized in terms of their inertial coordinate system specification (handedness, axis directions and rotation order).
+The OpenDRIVE 'inertial coordinate system' is defined in the same way as OSI’s 'global coordinate system', relying on the ISO 8855 standard.
+Both OpenDRIVE and ASAM OSI define further context-related coordinate systems (e.g. road reference line coordinate system in OpenDRIVE, sensor or object coordinate system in OSI).
+Each standard's documentation must be consulted when working with data structures using these coordinate systems.
 
-The origin and orientation of the coordinate system are defined through an offset (ASAM OpenDRIVE offset element and ASAM OSI GroundTruth `proj_frame_offset`), which defines and *offset* in x, y and z direction and an orientation through a *heading/yaw angle* in radiant.
+#### Geo Reference
 
-The origin of the coordinate system is georeferenced through a PROJ-string (geoReference tag in ASAM OpenDRIVE and GroundTruth proj\_string in ASAM OSI).
-The PROJ-string, as well as the offset must be given in the ASAM OSI GroundTruth messages and the OpenDRIVE map.
-
-One OSI GroundTruth message is used for each observation, i.e., each timestep.
-Therefore, for each of those messages a PROJ-string and offset should be defined.
-This means that the coordinate system used to provide dynamic object position, can be changed for each observation.
+For both OSI and OpenDRIVE the inertial coordinate system’s origin can be mapped to a geographic coordinate system using PROJ transformations in a harmonized way.
+Both standards allow the definition of a PROJ-string and a corresponding offset.
+The offset parameter offers a position (x, y, z) and an orientation offset (yaw/heading).
+It is recommended by both standards to set the orientation offset to 0.
+For OMEGA-PRIME real-world datasets, both PROJ-string and offset must be given in every frame of the ASAM OSI GroundTruth message as well as in the ASAM OpenDRIVE map.
 
 <u>Note:</u> Pay attention that even if it moves from one observation to the next, this coordinate system never encompasses velocity.
 Therefore, relative measurements of velocities from a moving observer must not be directly stored in the GroundTruth message but have to be processed first.
@@ -164,23 +166,33 @@ Therefore, relative measurements of velocities from a moving observer must not b
 
 Figure 1: Geo-reference and coordinate system in ASAM OpenDRIVE and ASAM OSI
 
-###  Moving Elements
+###  Dynamic Information
 
-For representing object-list based trajectory information of moving elements, OMEGA-PRIME utilizes [ASAM OSI v3.7.0 GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html).
+For representing object-list based trajectory information of moving elements and the dynamic information of traffic signs, OMEGA-PRIME utilizes [ASAM OSI GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html).
 Each GroundTruth message defines one point in time.
-The dynamic extend of the SSD is therefore be represented through a sequence of OSI GroundTruth messages.
+The dynamic extent of the SSD is therefore be represented through a sequence of OSI GroundTruth messages.
 To appropriately cover highly dynamic contexts found in urban environments, OMEGA-PRIME sets a minimum required frequency of 10Hz on those messages.
-The following signals are required to be set in each of the OSI GroundTruth message.
+Unless stated otherwise, the fields listed in the following table are mandatory in each of the OSI GroundTruth messages.
 Detailed info about the signal content are found in the [ASAM OSI documentation](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html).
-Cursive text indicates that the signal is optional.
-All other signals are mandatory.
-The column minimal accuracy indicates the desired accuracy of the signal in relation to the real world.
+Additional fields, e.g. as defined in the Open Simulation Interface, are optional.
+To represent a corresponding sequence of weather observations the OSI message `environmental_conditions` (contained in OSI GroundTruth) can be filled.
+The column 'Minimal Accuracy' indicates the desired accuracy of the signal in relation to the real world.
+
+##### Note on Field Presence in Protobuf
+With all proto fields being intentionally marked as `optional` in OSI, [field presence](https://protobuf.dev/programming-guides/field_presence/) is tracked independent of the protobuf version (proto2, proto3).
+Though, the default value handling (in the case of unset fields) might still cause confusion, e.g., basic type fields are deserialized using their default value (0 for numeric types, false for booleans, zero-valued enumerator for enums, zero-length value for strings, bytes and repeated fields) even if they weren't set during serialization.
+Hence, to know if a field was intentionally set, the presence checking functionality of the corresponding protobuf implementation (if implemented) can be used.
+**Example:**
+`osi3::MovingObject::VehicleClassification::has_trailer` is not a mandatory field in the OMEGA-PRIME format.
+If ``has_trailer`` was not set during serialization, it will still resolve to its basic type's default value (`false`) when deserializing/reading the value.
+This could theoretically be interpreted to mean that the `has_trailer` field has been left blank on purpose to indicate `false` for a reader.
+Though, it could be checked if the field was actually intendedly set to false using the field presence checking functionality (e.g. `msg.HasField('foo')` in Python).
 
 <table>
 <colgroup>
 <col style="width: 23%" />
-<col style="width: 38%" />
-<col style="width: 38%" />
+<col style="width: 46%" />
+<col style="width: 30%" />
 </colgroup>
 <thead>
 <tr>
@@ -190,6 +202,14 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>map_reference</td>
+<td>
+<p>str</p>
+<p>Content depends on the chosen map association option (see 'OMEGA-PRIME Format Specification').</p>
+</td>
+<td></td>
+</tr>
 <tr>
 <td>country_code</td>
 <td>int [3 digit ISO country code (e.g. germany=276,usa=840)].</td>
@@ -202,17 +222,17 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 </tr>
 <tr>
 <td>. version_major</td>
-<td>int = 3</td>
+<td>int</td>
 <td></td>
 </tr>
 <tr>
 <td>. version_minor</td>
-<td>int = 7</td>
+<td>int</td>
 <td></td>
 </tr>
 <tr>
 <td>. version_patch</td>
-<td>int = 0</td>
+<td>int</td>
 <td></td>
 </tr>
 <tr>
@@ -232,7 +252,10 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 </tr>
 <tr>
 <td>proj_string</td>
-<td>str [PROJ coordinate transformation software library] (mandatory for real world data. Can be omitted for simulation data)</td>
+<td>
+<p>str [PROJ coordinate transformation software library]</p>
+<p>Mandatory for real world data; Can be omitted for simulation data.</p>
+</td>
 <td></td>
 </tr>
 <tr>
@@ -256,13 +279,23 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 <td></td>
 </tr>
 <tr>
-<td>. val</td>
-<td>Int [default = -1]</td>
+<td>. value</td>
+<td>int</td>
 <td></td>
 </tr>
 <tr>
 <td>moving_object</td>
 <td>list[MovingObject]</td>
+<td></td>
+</tr>
+<tr>
+<td>. id</td>
+<td>Identifier</td>
+<td></td>
+</tr>
+<tr>
+<td>. . value</td>
+<td>int</td>
 <td></td>
 </tr>
 <tr>
@@ -342,12 +375,10 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 </tr>
 <tr>
 <td>. type</td>
-<td>MovingObjectType (Other, Vehicle, Pedestrian, Animal)</td>
-<td></td>
-</tr>
-<tr>
-<td><i>. vehicle_attributes</i></td>
-<td><i>MovingObjectVehicleAttributes # mandatory from osi but not from SSD perspective (description of where axles are ..., vehicle lights,)</i></td>
+<td>
+<p>MovingObjectType</p>
+<p>(Other, Vehicle, Pedestrian, Animal)</p>
+</td>
 <td></td>
 </tr>
 <tr>
@@ -357,18 +388,18 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 </tr>
 <tr>
 <td>. . type</td>
-<td><p>MovingObjectVehicleClassificationType</p>
-<p>(Other, Small car, compact car, car, medium car, luxuray car, delivery van, semitrailer, trailer, motorbike, bicycle, bus, tram, train, wheelchair, standup scooter)</p></td>
+<td>
+<p>MovingObjectVehicleClassificationType</p>
+<p>(Other, car, delivery van, semitrailer, trailer, motorbike, bicycle, bus, tram, train, wheelchair, standup scooter)</p>
+</td>
 <td></td>
 </tr>
 <tr>
 <td>. . role</td>
-<td>MovingObjectVehicleClassificationRole (Other, civiel, ambulance, fire, police, public transport, road assistance, garbage  collectin, road construction, military)</td>
-<td></td>
-</tr>
-<tr>
-<td><i>. pedestrian_attributes</i></td>
-<td><i>MovingObjectPedestrianAttributes # mandatory from osi but not from SSD perspective (skeleton description)</i></td>
+<td>
+<p>MovingObjectVehicleClassificationRole</p>
+<p>(Other, civil, ambulance, fire, police, public transport, road assistance, garbage  collectin, road construction, military)</p>
+</td>
 <td></td>
 </tr>
 <tr>
@@ -377,8 +408,25 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 <td></td>
 </tr>
 <tr>
-<td><i>. base</i></td>
-<td><i>BaseStationary</i></td>
+<td>. id</td>
+<td>Identifier</td>
+<td></td>
+</tr>
+<tr>
+<td>. . value</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>. base (optional)</td>
+<td>
+<p>BaseStationary</p>
+<p>
+The position of traffic lights is given in the associated OpenDRIVE map file.
+If optionally given in the OSI message, it must match the corresponding data in the map file.
+The association between OSI and OpenDRIVE objects is established using the 'source_reference' field.
+</p>
+</td>
 <td></td>
 </tr>
 <tr>
@@ -388,17 +436,26 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 </tr>
 <tr>
 <td>. . color</td>
-<td>TrafficLightClassificationColor (other, red, yellow, green, blue, white)</td>
+<td>
+<p>TrafficLightClassificationColor</p>
+<p>(Other, red, yellow, green, blue, white)</p>
+</td>
 <td></td>
 </tr>
 <tr>
 <td>. . icon</td>
-<td>TrafficLightClassificationIcon (other, none, arrow_straight_ahead, arrow_left, arrow_diag_left, arrow_straight_ahead_left, arrow_right, ...)</td>
+<td>
+<p>TrafficLightClassificationIcon</p>
+<p>(Other, none, arrow_straight_ahead, arrow_left, arrow_diag_left, arrow_straight_ahead_left, arrow_right, ...)</p>
+</td>
 <td></td>
 </tr>
 <tr>
 <td>. . mode</td>
-<td>TrafficLightClassificationMode (other, off, constant, flashing, counting)</td>
+<td>
+<p>TrafficLightClassificationMode</p>
+<p>(Other, off, constant, flashing, counting)</p>
+</td>
 <td></td>
 </tr>
 <tr>
@@ -412,102 +469,50 @@ The column minimal accuracy indicates the desired accuracy of the signal in rela
 <td></td>
 </tr>
 <tr>
-<td><i>. model_reference</i></td>
-<td><i>str</i></td>
-<td></td>
-</tr>
-<tr>
 <td>. source_reference</td>
-<td>list[ExternalReference]</td>
-<td></td>
-</tr>
-<tr>
-<td><i>environmental_conditions</i></td>
-<td><i>EnvironmentalConditions</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. ambient_illumination</i></td>
-<td><i>EnvironmentalConditionsAmbientIllumination</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. time_of_day</i></td>
-<td><i>EnvironmentalConditionsTimeOfDay</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. unix_timestamp</i></td>
-<td><i>int</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. atmospheric_pressure</i></td>
-<td><i>Float[PA]</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. temperature</i></td>
-<td><i>Float[K]</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. relative_humidity</i></td>
-<td><i>float</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. precipitation</i></td>
-<td><i>EnvironmentalConditionsPrecipitation</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. fog</i></td>
-<td><i>EnvironmentalConditionsFog</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. clouds</i></td>
-<td><i>EnvironmentalConditionsCloudLayer</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. wind</i></td>
-<td><i>EnvironmentalConditionsWind</i></td>
-<td></td>
-</tr>
-<tr>
-<td><i>. sun</i></td>
-<td><i>EnvironmentalConditionsSun</i></td>
+<td>
+<p>list[ExternalReference]</p>
+<p>The source reference maps the dynamic OSI traffic light information to the static traffic light information in the OpenDRIVE map.</p>
+</td>
 <td></td>
 </tr>
 </tbody>
 </table>
 
-A sequence of those ground truth messages defines a traffic observation.
-For the encapsulation of serialized messages of OSI, OMEGA-PRIME uses MCAP.
-The sequence of *GroundTruth message* should be stored under the topic `/ground_truth` in an MCAP file.
-The `log_time` and `publish_time` of each message should correspond to `GroundTruth.seconds x 1_000_000_000 + GroundTruth.nanos`.
-The frequency of *GroundTruth messages* should be at least 10 Hz.
-
-### Map information
+### Static Information
 
 The static map information is defined through ASAM OpenDRIVE 1.8.1.
 The map should contain information on the roads all observed traffic participants are moving on and the respective lanes.
 This includes information on the junction and road object positions defined by ASAM OpenDRIVE.
-See the ASAM [OpenDRIVE specification](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html) on data model and format definitions.
+See the [ASAM OpenDRIVE specification](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html) on data model and format definitions.
 When real-world data is represented, the deviation of the modelled geometries to the real-world counterparts should not be larger than 0.2m.
 
-### Data-Format
+### OMEGA-PRIME Format Specification
 
-The data format of OMEGA-PRIME consists of a sequence of OSI 3.7.0 GroundTruth messages and an OpenDRIVE 1.8.1 file.
-The OSI GroundTruth messages are stored in an MCAP file (see Figure 1) und the topic `/ground_turth`.
-The OpenDRIVE map is either stored inside the MCAP under `/ground_truth_map` (see 1.2.4.1) or in the same folder as an OpenDRIVE XML (see 1.2.4.2).
+The OMEGA-PRIME MCAP multi-channel trace file format is a binary file format that allows for storing a serialized specified subset of an OSI GroundTruth message stream, along with additional meta-data, OpenDRIVE map data and other related data streams.
 
-<img src="./omega_prime/omega_specification.svg"
-style="width:6.69306in;height:3.32491in" />
+OMEGA-PRIME is based on the [OSI MCAP multi-channel trace file format](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/current/interface/architecture/trace_file_formats.html#_multi_channel_trace_file_format) and therefore is a specialization with additional constraints and requirements.
+Hence, any valid OMEGA-PRIME multi-channel trace file is also a valid OSI MCAP file, but not the other way around.
+This means that an OMEGA-PRIME MCAP file must comply with all constraints and requirements defined in the OSI MCAP format specification.
+This includes general file writing requirements (e.g. chunk indexing), mandatory file-global metadata definitions (e.g., OSI version, zero time, authors, data sources) as well as mandatory channel-specific metadata for the OSI GroundTruth channel.
 
-Figure : file structure of OMEGA-PRIME self-contained package - scenario source data file.
+The following rules apply to OMEGA-PRIME multi-channel trace files:
+
+-	The OMEGA-PRIME OSI GroundTruth message stream must be stored as a compliant OSI channel as specified by the OSI MCAP format specification.
+-	The channel name of the OMEGA-PRIME OSI GroundTruth data must be `\ground_truth`.
+-	The OMEGA-PRIME OSI GroundTruth message interface must comply with the required subset as defined in the table in section 'Dynamic Information'.
+-	The version of the OMEGA-PRIME OSI GroundTruth messages must be >=3.7.0.
+-	The message frequency of consecutive OMEGA-PRIME OSI GroundTruth messages must be 10Hz or higher.
+
+The OMEGA-PRIME format specifies two options to store the associated ASAM OpenDRIVE map data:
+
+-	**Option A**: Additional MCAP channel which holds a protobuf-encoded message containing a map reference string and the associated ASAM OpenDRIVE map data as specified in the section 'Option A'. 
+-	**Option B**: Additional ASAM OpenDRIVE XML file located in the same folder as the OSI GroundTruth MCAP file as specified in the section 'Option B'.
+
+The following rules apply independent of the chosen option:
+-	The version of the OpenDRIVE map data must be 1.8.1.
+
+The following sections specify the rules depending on the chosen option.
 
 #### Option A: Self-contained Package
 
@@ -528,6 +533,11 @@ message MapAsamOpenDrive
     required string open_drive_xml_content = 2;
 }
 ```
+
+<img src="./omega_prime/omega_specification.svg" style="width:6.69306in;height:3.32491in" />
+
+Figure 2: File structure of OMEGA-PRIME self-contained package - scenario source data file.
+
 #### Option B: One Map – Multiple Recordings
 
 On the data provider side, it could be useful to just store an instance of the map once, when you have multiple recordings of the same map.
