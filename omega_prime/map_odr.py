@@ -399,6 +399,7 @@ class LaneXodr(Lane):
 
     @classmethod
     def create(cls, lane: PyxodrLane, road: PyxodrRoad, lane_section_id: int, lane_idx: int = None):
+        idx = XodrLaneId(road.id, lane.id, lane_section_id)
         centre_line = getattr(lane, "centre_line", None)
         if centre_line is None or not len(centre_line):
             raise ValueError(f"Lane {lane.id} has no centre_line")
@@ -406,9 +407,11 @@ class LaneXodr(Lane):
         centerline = LineString(centre_line[:, :2])
         if not centerline.is_valid:
             centerline = make_valid(centerline)
+            warnings.warn(
+                f"Needed to make centerline of lane {idx} valid. Most likely, because the OpenDRIVE geometry is translated to a zero length polyline. Try to decrease `step_size`."
+            )
 
         lane_type, lane_subtype = cls._determine_lane_type_and_subtype(lane, road)
-        idx = XodrLaneId(road.id, lane.id, lane_section_id)
         return cls(
             _xodr=lane,
             idx=idx,
