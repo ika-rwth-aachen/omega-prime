@@ -386,7 +386,7 @@ class Recording:
             )
         self.projections = projections if projections is not None else []
         self.traffic_light_states = traffic_light_states if traffic_light_states is not None else {}
-        
+
         self._df = df
         self.map = map
         self._moving_objects = None
@@ -479,7 +479,7 @@ class Recording:
                 )
 
                 traffic_light_states[total_nanos] = gt.traffic_light
-                
+
                 for mv in gt.moving_object:
                     yield dict(
                         total_nanos=total_nanos,
@@ -509,7 +509,13 @@ class Recording:
                     )
 
         df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
-        return cls(df_mv, projections=projs, host_vehicle_idx=host_vehicle_idx, traffic_light_states=traffic_light_states, **kwargs)
+        return cls(
+            df_mv,
+            projections=projs,
+            host_vehicle_idx=host_vehicle_idx,
+            traffic_light_states=traffic_light_states,
+            **kwargs,
+        )
 
     @classmethod
     def from_file(
@@ -702,7 +708,15 @@ class Recording:
         pq.write_table(t, filename)
 
     def plot_altair(
-        self, start_frame=0, end_frame=-1, plot_map=True, plot_map_polys=True, metric_column=None, idx=None, height=None,width=None
+        self,
+        start_frame=0,
+        end_frame=-1,
+        plot_map=True,
+        plot_map_polys=True,
+        metric_column=None,
+        idx=None,
+        height=None,
+        width=None,
     ):
         if "polygon" not in self._df.columns:
             self._df = self._add_polygons(self._df)
