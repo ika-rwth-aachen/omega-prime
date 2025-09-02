@@ -27,6 +27,8 @@ see [./docs/omega_prime_specification.md](https://github.com/ika-rwth-aachen/ome
   - ✅ **Validation** of data: check if your data conforms to the omega-prime specification (e.g., correct yaw) using [pandera](https://pandera.readthedocs.io/en/stable/)
   - 📐 **Interpolation** of data: bring your data into a fixed frequency
   - 📈 **Metrics**: compute interaction metrics like PET, TTC, THW (see [tutorial_metrics.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/tutorial_metrics.ipynb))
+        - Predicted and observed timegaps based on driving tubes (see [./omega_prime/metrics.py](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_prime/metrics.py))
+        - 2D-birds-eye-view visibility with [omega-prime-visibility](https://github.com/ika-rwth-aachen/omega-prime-visibility)
   - 🚀 **Fast Processing** directly on DataFrames using [polars](https://pola.rs/), [polars-st](https://oreilles.github.io/polars-st/)
 
 The data model and format utilize [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) and [ASAM Open-Simulation-Interface GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html). omega-prime sets requirements on presence and quality of ASAM OSI GroundTruth messages and ASAM OpenDRIVE files and defines a file format for the exchange and storage of these.
