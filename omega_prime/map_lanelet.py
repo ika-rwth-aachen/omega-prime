@@ -1,4 +1,3 @@
-from typing import Self
 import omega_prime
 import betterosi
 from warnings import warn
@@ -87,7 +86,7 @@ class MapLanelet(omega_prime.map.Map):
         self._lanelet_routing = RoutingGraph(self.lanelet_map)
 
     @classmethod
-    def create(cls, path: str) -> Self:
+    def create(cls, path: str) -> "MapLanelet":
         proj = lanelet2.projection.UtmProjector(lanelet2.io.Origin(0, 0))
         lanelet_map = lanelet2.io.load(path, proj)
 
@@ -108,7 +107,7 @@ class LaneBoundaryLanelet(omega_prime.map.LaneBoundary):
     type: str
 
     @classmethod
-    def create(cls, map: MapLanelet, leftrightBound: lanelet2.core.LineString3d) -> Self:
+    def create(cls, map: MapLanelet, leftrightBound: lanelet2.core.LineString3d) -> "LaneBoundaryLanelet":
         if leftrightBound.id in map.lane_boundaries:
             return map.lane_boundaries[leftrightBound.id]
         else:
@@ -131,7 +130,7 @@ class LaneLanelet(omega_prime.map.Lane):
     right_boundary: LaneBoundaryLanelet
 
     @classmethod
-    def create(cls, map: MapLanelet, obj: lanelet2.core.Area | lanelet2.core.Lanelet) -> Self:
+    def create(cls, map: MapLanelet, obj: lanelet2.core.Area | lanelet2.core.Lanelet) -> "LaneLanelet":
         rb = None
         lb = None
         polygon = None
