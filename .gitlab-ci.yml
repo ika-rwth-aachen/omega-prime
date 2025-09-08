@@ -48,7 +48,7 @@ create_doc:
   stage: test
   before_script:
     - apt-get update -q -y && apt-get install -y libgl1-mesa-dev
-    - uv pip install --system -e .[test]
+    - uv pip install --system -e .[test,lanelet2]
   script:
     - pdoc ./omega_prime --html -o docs --force
   artifacts:
