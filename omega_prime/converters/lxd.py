@@ -6,6 +6,7 @@ import betterosi
 import numpy as np
 from lxd_io import Dataset
 import polars as pl
+from warnings import warn
 
 vct = betterosi.MovingObjectVehicleClassificationType
 vehicles = {
@@ -125,4 +126,9 @@ class LxdConverter(DatasetConverter):
         )
 
         xodr_path = recording.opendrive_map_file
-        return Recording(df=tracks, map=MapOdr.from_file(xodr_path), validate=False)
+        if xodr_path is not None:
+            map = MapOdr.from_file(xodr_path)
+        else:
+            map = None
+            warn(f"No map associated with recording {recording}")
+        return Recording(df=tracks, map=map, validate=False)

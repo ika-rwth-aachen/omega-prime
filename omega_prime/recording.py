@@ -752,7 +752,9 @@ class Recording:
                 *[
                     o
                     for o in [
-                        None if not plot_map else self.map.plot_altair(recording=self, plot_polys=plot_map_polys),
+                        None
+                        if not plot_map or self.map is None
+                        else self.map.plot_altair(recording=self, plot_polys=plot_map_polys),
                         alt.Chart(mv_dict)
                         .mark_geoshape()
                         .encode(
