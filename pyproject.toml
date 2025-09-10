@@ -43,7 +43,8 @@ dependencies = [
     'lxd-io>=0.4.6',
     'pyxodr-omega-prime',
     'joblib',
-    'tqdm_joblib'
+    'tqdm_joblib',
+    'filelock>=3.18.0'
 ]
 version = "0.1.17"
 
