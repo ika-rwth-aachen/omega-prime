@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Any
-
+from collections import namedtuple
 import betterosi
 import numpy as np
 import shapely
@@ -9,6 +9,9 @@ from matplotlib.patches import Polygon as PltPolygon
 import polars as pl
 import altair as alt
 import polars_st as st
+
+
+OsiLaneId = namedtuple("OsiLaneId", ["road_id", "lane_id"])
 
 
 @dataclass
@@ -67,9 +70,12 @@ class LaneBase:
     subtype: betterosi.LaneClassificationSubtype
     successor_ids: list[Any]
     predecessor_ids: list[Any]
+    trafficlight: Any = field(init=False, default=None)
+    on_intersection: bool = field(init=False, default=None)
+    is_approaching: bool = field(init=False, default=None)
 
     @property
-    def on_intersection(self):
+    def get_on_intersection(self):
         return self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION
 
     def plot(self, ax: plt.Axes | None = None):
@@ -133,6 +139,8 @@ class Lane(LaneBase):
 @dataclass(repr=False)
 class LaneOsiCenterline(LaneBase):
     _osi: betterosi.Lane
+    left_boundary = None
+    right_boundary = None
 
     @staticmethod
     def _get_centerline(lane: betterosi.Lane):
@@ -143,14 +151,21 @@ class LaneOsiCenterline(LaneBase):
 
     @classmethod
     def create(cls, lane: betterosi.Lane):
+        successor_ids = [
+            p.successor_lane_id.value for p in lane.classification.lane_pairing if p.successor_lane_id is not None
+        ]
+        predecessor_ids = [
+            p.antecessor_lane_id.value for p in lane.classification.lane_pairing if p.antecessor_lane_id is not None
+        ]
+        lid = lane.id.value
         return cls(
             _osi=lane,
-            idx=lane.id.value,
+            idx=OsiLaneId(road_id=lid, lane_id=lid),
             centerline=cls._get_centerline(lane),
             type=betterosi.LaneClassificationType(lane.classification.type),
             subtype=betterosi.LaneClassificationSubtype(lane.classification.subtype),
-            successor_ids=[],
-            predecessor_ids=[],
+            successor_ids=np.array(list(set(successor_ids))),
+            predecessor_ids=np.array(list(set(predecessor_ids))),
         )
 
 
@@ -162,9 +177,10 @@ class LaneOsi(Lane, LaneOsiCenterline):
 
     @classmethod
     def create(cls, lane: betterosi.Lane):
+        lid = int(lane.id.value)
         return cls(
             _osi=lane,
-            idx=int(lane.id.value),
+            idx=OsiLaneId(road_id=lid, lane_id=lid),
             centerline=cls._get_centerline(lane),
             type=betterosi.LaneClassificationType(lane.classification.type),
             subtype=betterosi.LaneClassificationSubtype(lane.classification.subtype),
@@ -296,7 +312,10 @@ class MapOsi(Map):
         return cls(
             _osi=gt,
             lane_boundaries={b.id.value: LaneBoundaryOsi.create(b) for b in gt.lane_boundary},
-            lanes={l.id.value: LaneOsi.create(l) for l in gt.lane if len(l.classification.right_lane_boundary_id) > 0},
+            lanes={
+                l.idx: l
+                for l in [LaneOsi.create(l) for l in gt.lane if len(l.classification.right_lane_boundary_id) > 0]
+            },
         )
 
     def __post_init__(self):
@@ -305,7 +324,10 @@ class MapOsi(Map):
     def setup_lanes_and_boundaries(self):
         for b in self.lane_boundaries.values():
             b._map = self
+        map_osi_id2idx = {l._osi.id.value: l.idx for l in self.lanes.values()}
         for l in self.lanes.values():
+            l.successor_ids = [map_osi_id2idx[i] for i in l.successor_ids if i in map_osi_id2idx]
+            l.predecessor_ids = [map_osi_id2idx[i] for i in l.predecessor_ids if i in map_osi_id2idx]
             l._map = self
             l.set_boundaries()
             l.set_polygon()
@@ -320,12 +342,17 @@ class MapOsiCenterline(Map):
     def create(cls, gt: betterosi.GroundTruth):
         if len(gt.lane) == 0:
             raise RuntimeError("No Map")
-        return cls(
+        c = cls(
             _osi=gt,
-            lanes={l.id.value: LaneOsiCenterline.create(l) for l in gt.lane},
+            lanes={l.idx: l for l in [LaneOsiCenterline.create(l) for l in gt.lane]},
             lane_boundaries={},
         )
+        return c
 
     def setup_lanes_and_boundaries(self):
+        map_osi_id2idx = {l._osi.id.value: l.idx for l in self.lanes.values()}
+        for l in self.lanes.values():
+            l.successor_ids = [map_osi_id2idx[int(i)] for i in l.successor_ids if int(i) in map_osi_id2idx]
+            l.predecessor_ids = [map_osi_id2idx[int(i)] for i in l.predecessor_ids if int(i) in map_osi_id2idx]
         for l in self.lanes.values():
             l._map = self

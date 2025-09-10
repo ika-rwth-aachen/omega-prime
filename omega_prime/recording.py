@@ -19,7 +19,6 @@ import polars as pl
 from .map_odr import MapOdr
 from .map import MapOsi, ProjectionOffset, MapOsiCenterline
 import itertools
-from functools import partial
 import altair as alt
 import polars as pl
 import polars_st as st
@@ -69,6 +68,20 @@ def other_column_unset_on_column_value(
     return polars_obj.lazyframe.select(
         ~(pl.col(column_name) != column_value).and_(pl.col(other_column_name) != other_column_unset_value)
     )
+
+
+def has_no_frame_skip(df):
+    return (
+        df.group_by("idx")
+        .agg(((pl.col("frame").sort().diff().drop_nulls() == 1).all()).alias("no_skip"))
+        .select(pl.col("no_skip").all())
+        .row(0)[0]
+    )
+
+
+@extensions.register_check_method()
+def check_has_no_frame_skip(polars_obj):
+    return polars_obj.lazyframe.select(pl.col("frame").sort().diff().fill_null(1).over("idx") == 1)
 
 
 recording_moving_object_schema = pa.DataFrameSchema(
@@ -194,6 +207,7 @@ recording_moving_object_schema = pa.DataFrameSchema(
             -1,
             error="`subtype` is set despite type not beeing `TYPE_VEHICLE`",
         ),
+        pa.Check.check_has_no_frame_skip(error="Some objects skip frames during their etistence."),
     ],
 )
 
@@ -357,33 +371,33 @@ class Recording:
         compute_polygons=False,
         traffic_light_states: dict | None = None,
     ):
-        if not isinstance(df, pl.DataFrame):
+        # Convert pandas DataFrame to polars DataFrame if necessary
+        if isinstance(df, pd.DataFrame):
             df = pl.DataFrame(df, schema_overrides=polars_schema)
-        if validate:
-            recording_moving_object_schema.validate(df, lazy=True)
-        super().__init__()
-        self.nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
+        if "total_nanos" not in df.columns:
+            raise ValueError("df must contain column `total_nanos`.")
+        nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
         mapping = pl.DataFrame(
-            {"total_nanos": list(self.nanos2frame.keys()), "frame": list(self.nanos2frame.values())},
+            {"total_nanos": list(nanos2frame.keys()), "frame": list(nanos2frame.values())},
             schema=dict(total_nanos=polars_schema["total_nanos"], frame=pl.UInt32),
         )
         if "frame" in df.columns:
             df = df.drop("frame")
         df = df.join(mapping, on="total_nanos", how="left")
+        if not isinstance(df, pl.DataFrame):
+            df = pl.DataFrame(df, schema_overrides=polars_schema)
+        if validate:
+            recording_moving_object_schema.validate(df, lazy=True)
+
+        super().__init__()
+        self.nanos2frame = nanos2frame
+
         if "polygon" not in df.columns and compute_polygons:
             df = self._add_polygons(df)
         if "vel" not in df.columns:
-            df = df.with_columns(
-                pl.struct(["vel_x", "vel_y"])
-                .map_batches(partial(np.linalg.norm, axis=1), is_elementwise=True)
-                .alias("vel")
-            )
+            df = df.with_columns((pl.col("vel_x") ** 2 + pl.col("vel_y") ** 2).sqrt().alias("vel"))
         if "acc" not in df.columns:
-            df = df.with_columns(
-                pl.struct(["acc_x", "acc_y"])
-                .map_batches(partial(np.linalg.norm, axis=1), is_elementwise=True)
-                .alias("acc")
-            )
+            df = df.with_columns((pl.col("acc_x") ** 2 + pl.col("acc_y") ** 2).sqrt().alias("acc"))
         self.projections = projections if projections is not None else []
         self.traffic_light_states = traffic_light_states if traffic_light_states is not None else {}
 
@@ -606,9 +620,10 @@ class Recording:
                     track_new_nanos, track_df["total_nanos"].to_numpy(), track_df[c].to_numpy()
                 )
             for c in ["roll", "pitch", "yaw"]:
-                track_data[c] = np.mod(
-                    np.interp(track_new_nanos, track_df["total_nanos"], np.unwrap(track_df[c], period=np.pi)), np.pi
-                )
+                # Unwrap angles to handle discontinuities, then interpolate, then wrap back to [-π, π]
+                unwrapped_angles = np.unwrap(track_df[c])
+                interpolated = np.interp(track_new_nanos, track_df["total_nanos"], unwrapped_angles)
+                track_data[c] = np.mod(interpolated + np.pi, 2 * np.pi) - np.pi
             new_track_df = pl.DataFrame(track_data)
             new_track_df = new_track_df.with_columns(
                 pl.Series(name="idx", values=np.ones_like(track_new_nanos) * idx, dtype=polars_schema["idx"]),
@@ -625,6 +640,7 @@ class Recording:
         if self.map:
             self.map.plot(ax)
         self.plot_mvs(ax=ax)
+        self.plot_tl(ax=ax)
         if legend:
             ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         return ax
@@ -637,6 +653,28 @@ class Recording:
             ax.plot(*mv["x", "y"], c="red", alpha=0.5, label=str(idx))
         if legend:
             ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+        return ax
+
+    def plot_tl(self, ax=None):
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+            ax.set_aspect(1)
+        tl_dict = {}
+        for tl_states in self.traffic_light_states:
+            for tl in self.traffic_light_states[tl_states]:
+                if tl.id.value not in tl_dict.keys():
+                    tl_dict[tl.id.value] = tl
+
+        for tl in tl_dict:
+            try:
+                x = tl_dict[tl].base.position.x
+                y = tl_dict[tl].base.position.y
+                ax.plot(
+                    x, y, marker="o", label=f"Traffic Light {tl_dict[tl].id.value}", c="blue", alpha=0.7, markersize=2
+                )
+            except AttributeError as e:
+                print(f"Warning: Skipping traffic light {tl.id.value} due to missing position data: {e}")
+                continue
         return ax
 
     def plot_frame(self, frame: int, ax=None):
@@ -737,10 +775,10 @@ class Recording:
 
         df = df.with_columns(
             pl.concat_str(
-                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name[5:], return_dtype=str),
+                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name[5:], return_dtype=pl.String),
                 pl.col("subtype").map_elements(
                     lambda x: betterosi.MovingObjectVehicleClassificationType(x).name[5:],
-                    return_dtype=str,
+                    return_dtype=pl.String,
                 ),
                 separator="-",
             ).alias("type")
@@ -774,7 +812,11 @@ class Recording:
                     if o is not None
                 ]
             )
-            .properties(title="Map", height=height, width=width)
+            .properties(
+                title="Map",
+                **({"height": height} if height is not None else {}),
+                **({"width": width} if width is not None else {}),
+            )
             .project("identity", reflectY=True)
         )
 

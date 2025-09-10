@@ -10,3 +10,4 @@ omegadoc
 *.parquet
 *.xodr
 *.png
+*.mcap

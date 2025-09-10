@@ -181,7 +181,7 @@ class LaneRelation(StrEnum):
     neighbour_left = "left neighbour"
 
 
-@dataclass
+@dataclass(repr=False)
 class Locator:
     all_lanes: Any  # array of all lanes
     external2internal_laneid: dict[Any, int] = field(init=False)
@@ -198,6 +198,7 @@ class Locator:
         return cls(all_lanes=all_lanes)
 
     def __post_init__(self):
+        # Create mapping with lane_id as key
         self.external2internal_laneid = {l.idx: i for i, l in enumerate(self.all_lanes)}
         self.internal2external_laneid = [l.idx for l in self.all_lanes]
 
@@ -292,7 +293,7 @@ class Locator:
                     # Returns the indxes of all centerlines that are in range
                     nearby_idx = self.query_centerlines(poly, range_percentage=0.1)
                     # Connect the no_assosciation_idxs with the intersection_lane_ids
-                    no_asscociation_idxs = np.append(no_asscociation_idxs, [no_associations[idx]] * len(nearby_idx))
+                    no_asscociation_idxs = np.append(no_asscociation_idxs, [idx] * len(nearby_idx))
                     intersection_lane_ids = np.append(intersection_lane_ids, nearby_idx)
 
         # Need a convertion from float values to int values. This is because the shapely STRtree query_nearest returns float values
@@ -358,6 +359,7 @@ class Locator:
         external2internal_laneid = self.external2internal_laneid
         g = nx.DiGraph()
         for lid, lane in enumerate(all_lanes):
+            g.add_node(lid, lane=lane)
             for external_pid in lane.predecessor_ids:
                 try:
                     g.add_edge(lid, external2internal_laneid[external_pid], label=LaneRelation.predecessor)
@@ -368,6 +370,8 @@ class Locator:
                     g.add_edge(lid, external2internal_laneid[external_sid], label=LaneRelation.successor)
                 except KeyError:
                     pass
+            if lane.right_boundary is None or lane.left_boundary is None:
+                continue
             right_neigbours = [
                 int(i) for i in str_tree.query(lane.right_boundary.polyline, predicate="covered_by") if int(i) != lid
             ]
@@ -442,3 +446,7 @@ class Locator:
 
     def __repr__(self):
         return f"Locator({len(self.all_lanes)} lanes)<{id(self)}>"
+
+    def update_lane_ids_dict(self):
+        self.external2internal_laneid = {l.idx: i for i, l in enumerate(self.all_lanes)}
+        self.internal2external_laneid = [l.idx for l in self.all_lanes]
