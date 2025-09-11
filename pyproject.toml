@@ -19,7 +19,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
 
@@ -39,7 +38,8 @@ dependencies = [
     'altair',
     'xarray',
     'pyproj',
-    'betterosi>=0.3.4',
+    'betterosi (>=0.8, <1)',
+    'betterproto2-rust-codec',
     'lxd-io>=0.4.6',
     'pyxodr-omega-prime',
     'joblib',
