@@ -44,7 +44,7 @@ class Status:
     def write(self, file: str):
         with open(file, "a", newline="") as csvfile:
             d = asdict(self)
-            w = csv.DictWriter(csvfile, fieldnames=['file_path_input', 'file_path_output','status','error_message'])
+            w = csv.DictWriter(csvfile, fieldnames=["file_path_input", "file_path_output", "status", "error_message"])
             w.writerow(d)
 
 
