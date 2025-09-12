@@ -118,10 +118,6 @@ class DatasetConverter(ABC):
                         logger.error(f"Error converting recording {self.get_recording_name(recording)}: {e}")
                         rec = None
                         status.set_error(str(e))
-                    if rec is None:
-                        logger.error(f"error during map conversion in the source_recording: {source_recording}")
-                        if status.is_successful():  # Only update if not already marked as error
-                            status.set_error("Map conversion failed")
                     else:
                         try:
                             if save_as_parquet:
