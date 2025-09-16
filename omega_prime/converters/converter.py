@@ -53,6 +53,7 @@ class DatasetConverter(ABC):
         self._dataset_path = Path(dataset_path)
         self._out_path = Path(out_path)
         self.n_workers = n_workers
+        self.len = None
 
     @abstractmethod
     def get_source_recordings(self) -> list:
@@ -160,7 +161,11 @@ class DatasetConverter(ABC):
                 fieldnames = ["file_path_input", "status", "file_path_output", "error_message"]
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
-
+        if self.len is None:
+            try:
+                self.len = len(recordings)
+            except TypeError:
+                pass
         if n_workers > 1:
             partial_fct = partial(
                 self.convert_source_recording,
@@ -168,10 +173,10 @@ class DatasetConverter(ABC):
                 skip_existing=skip_existing,
                 log_file=log_file,
             )
-            with tqdm_joblib(desc="Source Recordings", total=len(recordings)):
+            with tqdm_joblib(desc="Source Recordings", total=self.len):
                 jb.Parallel(n_jobs=n_workers)(jb.delayed(partial_fct)(rec) for rec in recordings)
         else:
-            for rec in tqdm(recordings, total=len(recordings)):
+            for rec in tqdm(recordings, total=self.len):
                 self.convert_source_recording(
                     rec, save_as_parquet=save_as_parquet, skip_existing=skip_existing, log_file=log_file
                 )

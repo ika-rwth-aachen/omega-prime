@@ -775,9 +775,9 @@ class Recording:
 
         df = df.with_columns(
             pl.concat_str(
-                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name[5:], return_dtype=pl.String),
+                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name, return_dtype=pl.String),
                 pl.col("subtype").map_elements(
-                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name[5:],
+                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name,
                     return_dtype=pl.String,
                 ),
                 separator="-",
