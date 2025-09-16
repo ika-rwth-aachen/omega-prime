@@ -1,6 +1,6 @@
-# ROS 2 + ros2_unbag Docker Image for omega-prime Export
+# ROS 2 Bag -> omega-prime Docker Image
 
-This image bundles ROS 2, ros2_unbag, omega-prime (via PyPI), and builds perception_interfaces (messages + Python utils) from GitHub, so you can export ObjectList topics to omega-prime MCAP using the built-in routine.
+This image bundles ROS 2, rosbag2 Python bindings, omega-prime (via PyPI), and builds perception_interfaces (messages + Python utils) from GitHub so you can export ObjectList topics to omega-prime MCAP using the built-in converter.
 
 ## Build Args
 - `ROS_DISTRO` (default `humble`)
@@ -14,7 +14,7 @@ docker build -t omega-op-unbag \
     --build-arg ROS_DISTRO=humble \
     --build-arg OMEGA_PRIME_VERSION=latest \
     --build-arg PERCEPTION_INTERFACES_REF=<commit-or-branch> \
--f omega-prime/tools/ros2_unbag/Dockerfile .
+    -f omega-prime/tools/ros2_conversion/Dockerfile .
 ```
 
 ## Run (simple)
@@ -33,18 +33,18 @@ docker run --rm -it \
 
 ## Notes
 - The image builds and installs `perception_interfaces` packages needed for Python APIs and messages (`perception_msgs`, `perception_msgs_utils`, `tf2_perception_msgs`).
-- The routine writes a single omega-prime `.mcap` without OpenDRIVE. If you later want to embed a map, extend the routine to set `Recording.map`.
+- The converter scans `/data` (or `OP_DATA`) for rosbag2 directories containing a `metadata.yaml` and writes one omega-prime `.mcap` per bag into `/out` (or `OP_OUT`).
+- Provide `OP_ODR` (or `--map`) to embed an OpenDRIVE map in the outputs.
 - For large bags, write to a mounted folder and ensure sufficient RAM.
 
 ## Advanced
-- Env vars:
-  - `OP_DATA` (default `/data`), `OP_OUT` (default `/out`)
-  - `OP_TOPIC` (required): ObjectList topic
-  - `OP_GLOB` (default `"*.mcap *.db3"`): filename patterns in `/data`
-  - `OP_FORMAT` (default `omega-prime/MCAP`)
-  - `OP_ROUTINE` (default `/opt/routines/object_list_to_omega_prime.py`)
-  - `OP_EXTRA_ARGS`: forwarded to `ros2 unbag`
-  - `OP_ODR`: optional path to a `.xodr` inside the container (e.g., `/data/map.xodr`) to embed the map in the output MCAP
+- Env vars / CLI flags:
+  - `OP_DATA` / `--data-dir` (default `/data`)
+  - `OP_OUT` / `--output-dir` (default `/out`)
+  - `OP_TOPIC` / `--topic` (required)
+  - `OP_ODR` / `--map`
+  - `OP_VALIDATE` / `--validate`
+  - `--bag` to process explicit bag directories in addition to auto-discovery
 
 ## OpenDRIVE Map Integration
 
