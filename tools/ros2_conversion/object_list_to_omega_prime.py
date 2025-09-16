@@ -14,10 +14,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List
 
-import yaml
-from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
-from rosidl_runtime_py.utilities import get_message
-from rclpy.serialization import deserialize_message
+from rosbags.highlevel import AnyReader
 from rclpy.time import Time
 
 import numpy as np
@@ -25,10 +22,14 @@ import polars as pl
 import omega_prime
 import betterosi
 
-import perception_msgs_utils as pmu
-
 if not hasattr(np, "float"):
     np.float = float  # type: ignore[attr-defined]
+if not hasattr(np, "maximum_sctype"):
+    def _np_maximum_sctype(dtype):
+        return np.dtype(np.float64).type
+    np.maximum_sctype = _np_maximum_sctype  # type: ignore[attr-defined]
+
+import perception_msgs_utils as pmu
 
 _VCT = betterosi.MovingObjectVehicleClassificationType
 _ROLE = betterosi.MovingObjectVehicleClassificationRole
@@ -138,43 +139,15 @@ def _olist_to_rows(msg) -> List[Dict[str, Any]]:
     return [_object_to_row(obj) for obj in msg.objects]
 
 
-def _load_metadata(bag_dir: Path) -> Dict[str, Any]:
-    metadata_path = bag_dir / "metadata.yaml"
-    if not metadata_path.exists():
-        raise FileNotFoundError(f"metadata.yaml not found in {bag_dir}")
-    with metadata_path.open("r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
-
-
-def _storage_id(meta: Dict[str, Any]) -> str:
-    return meta["rosbag2_bagfile_information"]["storage_identifier"]
-
-
-def _topic_type_map(reader: SequentialReader) -> Dict[str, str]:
-    return {topic.name: topic.type for topic in reader.get_all_topics_and_types()}
-
-
 def iter_object_list_messages(bag_dir: Path, topic: str) -> Iterator[Any]:
-    meta = _load_metadata(bag_dir)
-    storage_id = _storage_id(meta)
-
-    reader = SequentialReader()
-    storage_options = StorageOptions(uri=str(bag_dir), storage_id=storage_id)
-    converter_options = ConverterOptions("", "")
-    reader.open(storage_options, converter_options)
-
-    type_map = _topic_type_map(reader)
-    if topic not in type_map:
-        available = ", ".join(sorted(type_map))
-        raise RuntimeError(f"Topic {topic} not found. Available topics: {available}")
-
-    msg_cls = get_message(type_map[topic])
-
-    while reader.has_next():
-        topic_name, data, _ = reader.read_next()
-        if topic_name != topic:
-            continue
-        yield deserialize_message(data, msg_cls)
+    bag_path = bag_dir if bag_dir.is_file() else bag_dir.resolve()
+    with AnyReader([bag_path]) as reader:
+        connections = [c for c in reader.connections if c.topic == topic]
+        if not connections:
+            available = ", ".join(sorted({c.topic for c in reader.connections}))
+            raise RuntimeError(f"Topic {topic} not found. Available topics: {available}")
+        for connection, timestamp, rawdata in reader.messages(connections=connections):
+            yield reader.deserialize(rawdata, connection.msgtype)
 
 
 def convert_bag_to_omega_prime(

@@ -54,6 +54,7 @@ RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
 # Python deps: omega-prime from PyPI
 WORKDIR /opt
 RUN pip3 install --upgrade pip && \
+    pip3 install --no-cache-dir numpy==1.26.4 scipy==1.10.1 rosbags && \
     if [ "${OMEGA_PRIME_VERSION}" = "latest" ]; then \
       pip3 install omega-prime; \
     else \
