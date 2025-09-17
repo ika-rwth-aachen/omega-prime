@@ -71,11 +71,11 @@ class LaneBase:
     successor_ids: list[Any]
     predecessor_ids: list[Any]
     trafficlight: Any = field(init=False, default=None)
-    on_intersection: bool = field(init=False, default=None)
-    is_approaching: bool = field(init=False, default=None)
+    #    on_intersection: bool = field(init=False, default=None)
+    #    is_approaching: bool = field(init=False, default=None)
 
     @property
-    def get_on_intersection(self):
+    def on_intersection(self):
         return self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION
 
     def plot(self, ax: plt.Axes | None = None):
