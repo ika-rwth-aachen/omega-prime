@@ -1,18 +1,16 @@
-ARG ROS_DISTRO=humble
 ARG OMEGA_PRIME_VERSION=latest
 ARG PERCEPTION_INTERFACES_REPO=https://github.com/ika-rwth-aachen/perception_interfaces.git
 ARG PERCEPTION_INTERFACES_REF=
 
-FROM osrf/ros:${ROS_DISTRO}-desktop
+FROM osrf/ros:jazzy-desktop
 
-ARG ROS_DISTRO
 ARG OMEGA_PRIME_VERSION
 ARG PERCEPTION_INTERFACES_REPO
 ARG PERCEPTION_INTERFACES_REF
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    ROS_DISTRO=${ROS_DISTRO}
+    ROS_DISTRO=jazzy
 
 # System deps and ROS packages needed to build/use perception_msgs and utils
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -20,13 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     git \
     python3-pip \
+    python3-venv \
     python3-colcon-common-extensions \
-    python3-yaml \
-    ros-${ROS_DISTRO}-rosidl-default-generators \
-    ros-${ROS_DISTRO}-tf2-geometry-msgs \
-    ros-${ROS_DISTRO}-tf-transformations \
-    ros-${ROS_DISTRO}-rosbag2-py \
-    ros-${ROS_DISTRO}-rosbag2-storage-mcap \
+    ros-jazzy-rosidl-default-generators \
+    ros-jazzy-tf2-geometry-msgs \
+    ros-jazzy-tf-transformations \
+    ros-jazzy-rosbag2-py \
+    ros-jazzy-rosbag2-storage-mcap \
     && rm -rf /var/lib/apt/lists/*
 
 # Workspace for ROS Python messages and utils
@@ -51,14 +49,17 @@ RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
         perception_msgs_utils \
         tf2_perception_msgs
 
-# Python deps: omega-prime from PyPI
+# Python deps: omega-prime from PyPI inside isolated venv
 WORKDIR /opt
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir numpy==1.26.4 scipy==1.10.1 rosbags && \
+RUN python3 -m venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
+RUN python -m pip install --upgrade pip && \
+    python -m pip install --upgrade scipy pyyaml transforms3d && \
     if [ "${OMEGA_PRIME_VERSION}" = "latest" ]; then \
-      pip3 install omega-prime; \
+      python -m pip install omega-prime; \
     else \
-      pip3 install "omega-prime==${OMEGA_PRIME_VERSION}"; \
+      python -m pip install "omega-prime==${OMEGA_PRIME_VERSION}"; \
     fi
 
 # Include the converter inside the image
