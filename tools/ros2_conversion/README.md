@@ -9,10 +9,11 @@ This image bundles ROS 2 Jazzy, its rosbag2 Python bindings, omega-prime (via Py
 
 ## Build
 ```bash
+# Run from omega-prime root directory
 docker build -t omega-op-unbag \
     --build-arg OMEGA_PRIME_VERSION=latest \
     --build-arg PERCEPTION_INTERFACES_REF=<commit-or-branch> \
-    -f omega-prime/tools/ros2_conversion/Dockerfile .
+    -f tools/ros2_conversion/Dockerfile .
 ```
 
 ## Run (simple)
@@ -23,8 +24,8 @@ docker build -t omega-op-unbag \
 ```bash
 docker run --rm -it \
     -e OP_TOPIC=/your/object_list_topic \
-    -e OP_ODR=/data/map.xodr \
-    -v /path/to/bags:/data \
+    -v /path/to/bags:/data:ro \
+    -v /path/to/map.xodr:/map/map.xodr:ro \
     -v "$PWD"/out:/out \
     omega-op-unbag
 ```
@@ -32,7 +33,6 @@ docker run --rm -it \
 ## Notes
 - The image builds and installs `perception_interfaces` packages needed for Python APIs and messages (`perception_msgs`, `perception_msgs_utils`, `tf2_perception_msgs`).
 - The converter scans `/data` (or `OP_DATA`) for rosbag2 directories containing a `metadata.yaml` and writes one omega-prime `.mcap` per bag into `/out` (or `OP_OUT`).
-- Provide `OP_ODR` (or `--map`) to embed an OpenDRIVE map in the outputs.
 - For large bags, write to a mounted folder and ensure sufficient RAM.
 
 ## Advanced
@@ -40,16 +40,15 @@ docker run --rm -it \
   - `OP_DATA` / `--data-dir` (default `/data`)
   - `OP_OUT` / `--output-dir` (default `/out`)
   - `OP_TOPIC` / `--topic` (required)
-  - `OP_ODR` / `--map`
   - `OP_VALIDATE` / `--validate`
   - `--bag` to process explicit bag directories in addition to auto-discovery
 
 ## OpenDRIVE Map Integration
 
 ### During export (recommended)
-- Place your `.xodr` file under the mounted `/data` (or another mounted path) and set `-e OP_ODR=/data/your_map.xodr`.
+- Place your `.xodr` file under the mounted `/data/map.xodr`
 - The export routine embeds the map in each generated omega-prime `.mcap`.
 
 ### Notes
-- If `OP_ODR` is not set and you don’t post-process, outputs won’t include a map.
+- If `/data/map.xodr` does not exist, outputs won’t include a map.
 - Map parsing uses a default geometry sampling step size of 0.01 m.

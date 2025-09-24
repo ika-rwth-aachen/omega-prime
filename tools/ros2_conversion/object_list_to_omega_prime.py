@@ -215,7 +215,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--topic", default=os.environ.get("OP_TOPIC"), help="ObjectList topic to export")
     parser.add_argument("--output-dir", default=os.environ.get("OP_OUT", "/out"), help="Directory to write omega-prime MCAPs")
     parser.add_argument("--bag", action="append", default=[], help="Explicit bag directory to convert (repeatable)")
-    parser.add_argument("--map", dest="map_path", default=os.environ.get("OP_ODR"), help="Optional OpenDRIVE map to embed")
+    parser.add_argument("--map", dest="map_path", default="/map/map.xodr", help="Optional OpenDRIVE map to embed")
     parser.add_argument("--validate", action="store_true", default=env_validate, help="Enable omega-prime schema validation")
     return parser.parse_args()
 
@@ -246,6 +246,10 @@ def main() -> None:
     map_path = Path(args.map_path).resolve() if args.map_path else None
 
     for bag in bags:
+        if map_path.exists():
+            print(f"[object_list_to_omega_prime] Processing bag: {bag} with openDRIVE File: {map_path}")
+        else:
+            print(f"[object_list_to_omega_prime] Processing bag: {bag} without openDRIVE File")
         out_file = convert_bag_to_omega_prime(bag, args.topic, out_dir, map_path, args.validate)
         print(f"[object_list_to_omega_prime] Wrote {out_file}")
 
