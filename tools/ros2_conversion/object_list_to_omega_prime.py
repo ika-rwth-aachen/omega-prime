@@ -80,25 +80,6 @@ def _class_to_osi(obj) -> tuple[int, int, int]:
 
     return mot, role, subtype
 
-
-def _quat_to_euler(qx: float, qy: float, qz: float, qw: float) -> tuple[float, float, float]:
-    sinr_cosp = 2.0 * (qw * qx + qy * qz)
-    cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
-    roll = math.atan2(sinr_cosp, cosr_cosp)
-
-    sinp = 2.0 * (qw * qy - qz * qx)
-    if abs(sinp) >= 1.0:
-        pitch = math.copysign(math.pi / 2.0, sinp)
-    else:
-        pitch = math.asin(sinp)
-
-    siny_cosp = 2.0 * (qw * qz + qx * qy)
-    cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
-    yaw = math.atan2(siny_cosp, cosy_cosp)
-
-    return roll, pitch, yaw
-
-
 def _object_to_row(obj) -> dict[str, Any]:
     total_nanos = Time.from_msg(obj.state.header.stamp).nanoseconds
 
@@ -107,8 +88,21 @@ def _object_to_row(obj) -> dict[str, Any]:
     length = pmu.get_length(obj)
     height = pmu.get_height(obj)
 
-    q = pmu.get_orientation(obj)
-    roll, pitch, yaw = _quat_to_euler(float(q.x), float(q.y), float(q.z), float(q.w))
+    try:
+        if pmu.index_roll(obj.state.model_id) is not None:
+            roll = pmu.get_roll(obj)
+    except pmu.UnknownStateEntryError:
+        roll = 0.0
+    try:
+        if pmu.index_pitch(obj.state.model_id) is not None:
+            pitch = pmu.get_pitch(obj)
+    except pmu.UnknownStateEntryError:
+        pitch = 0.0
+    try:
+        if pmu.index_yaw(obj.state.model_id) is not None:
+            yaw = pmu.get_yaw(obj)
+    except pmu.UnknownStateEntryError:
+        yaw = 0.0
 
     vel_x = pmu.get_vel_x(obj)
     vel_y = pmu.get_vel_y(obj)
