@@ -50,5 +50,5 @@ docker run --rm -it \
 - The export routine embeds the map in each generated omega-prime `.mcap`.
 
 ### Notes
-- If `/data/map.xodr` does not exist, outputs won’t include a map.
+- If `/map/map.xodr` does not exist, outputs won’t include a map.
 - Map parsing uses a default geometry sampling step size of 0.01 m.

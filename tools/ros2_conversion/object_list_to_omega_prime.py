@@ -247,7 +247,7 @@ def main() -> None:
     map_path = Path(args.map_path).resolve() if args.map_path else None
 
     for bag in bags:
-        if map_path.exists():
+        if map_path and map_path.exists():
             print(f"[object_list_to_omega_prime] Processing bag: {bag} with openDRIVE File: {map_path}")
         else:
             print(f"[object_list_to_omega_prime] Processing bag: {bag} without openDRIVE File")
