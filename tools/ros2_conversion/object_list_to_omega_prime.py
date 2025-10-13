@@ -10,7 +10,6 @@ folders (identified via metadata.yaml).
 from __future__ import annotations
 
 import argparse
-import math
 import os
 from pathlib import Path
 from typing import Any
