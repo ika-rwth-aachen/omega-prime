@@ -10,30 +10,30 @@ This image bundles ROS 2 Jazzy, its rosbag2 Python bindings, omega-prime (via Py
 ## Build
 ```bash
 # Run from omega-prime root directory
-docker build -t omega-op-unbag \
+docker build -t ros2omegaprime \
     --build-arg OMEGA_PRIME_VERSION=latest \
     --build-arg PERCEPTION_INTERFACES_REF=<commit-or-branch> \
     -f tools/ros2_conversion/Dockerfile .
 ```
 
-## Run (simple)
+## Run
 - Mount your bag directory to `/data` and an output directory to `/out`.
 - Set the topic via `OP_TOPIC` (ObjectList topic); the container runs the export automatically.
 
 ### Example:
 ```bash
 docker run --rm -it \
-    -e OP_TOPIC=/your/object_list_topic \
-    -v /path/to/bags:/data:ro \
-    -v /path/to/map.xodr:/map/map.xodr:ro \
+    -e OP_TOPIC=</your/object_list_topic> \
+    -v <path/to/bags>:/data:ro \
+    -v </path/to/map.xodr>:/map/map.xodr:ro \
     -v "$PWD"/out:/out \
-    omega-op-unbag
+    ros2omegaprime
 ```
 
 ## Notes
 - The image builds and installs `perception_interfaces` packages needed for Python APIs and messages (`perception_msgs`, `perception_msgs_utils`, `tf2_perception_msgs`).
-- The converter scans `/data` (or `OP_DATA`) for rosbag2 directories containing a `metadata.yaml` and writes one omega-prime `.mcap` per bag into `/out` (or `OP_OUT`).
-- For large bags, write to a mounted folder and ensure sufficient RAM.
+- The converter scans `/data` for rosbag2 directories containing a `metadata.yaml` and writes one omega-prime `.mcap` per bag into `/out` per default.
+- For large bags ensure sufficient RAM.
 
 ## Advanced
 - Env vars / CLI flags:
