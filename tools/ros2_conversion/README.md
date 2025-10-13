@@ -46,7 +46,7 @@ docker run --rm -it \
 ## OpenDRIVE Map Integration
 
 ### During export (recommended)
-- Place your `.xodr` file under the mounted `/data/map.xodr`
+- Place your `.xodr` file under the mounted `/map/map.xodr`
 - The export routine embeds the map in each generated omega-prime `.mcap`.
 
 ### Notes
