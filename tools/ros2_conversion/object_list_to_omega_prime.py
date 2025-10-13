@@ -203,7 +203,7 @@ def convert_bag_to_omega_prime(
     return out_path
 
 
-def _discover_bags(data_dir: Path) -> List[Path]:
+def _discover_bags(data_dir: Path) -> list[Path]:
     bags = {path.parent for path in data_dir.rglob("metadata.yaml")}
     return sorted(bags)
 
