@@ -88,6 +88,7 @@ def _object_to_row(obj) -> dict[str, Any]:
     length = pmu.get_length(obj)
     height = pmu.get_height(obj)
 
+    # pitch and roll might not be available
     try:
         if pmu.index_roll(obj.state.model_id) is not None:
             roll = pmu.get_roll(obj)
@@ -98,12 +99,8 @@ def _object_to_row(obj) -> dict[str, Any]:
             pitch = pmu.get_pitch(obj)
     except pmu.UnknownStateEntryError:
         pitch = 0.0
-    try:
-        if pmu.index_yaw(obj.state.model_id) is not None:
-            yaw = pmu.get_yaw(obj)
-    except pmu.UnknownStateEntryError:
-        yaw = 0.0
 
+    yaw = pmu.get_yaw(obj)
     vel_x = pmu.get_vel_x(obj)
     vel_y = pmu.get_vel_y(obj)
     acc_x = pmu.get_acc_x(obj)
