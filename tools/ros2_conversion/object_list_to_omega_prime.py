@@ -1,7 +1,7 @@
 
 """
 Standalone converter: read perception_msgs/ObjectList messages from ROS 2 bags
-and emit omega-prime MCAP files without relying on ros2_unbag.
+and emit omega-prime MCAP files.
 
 The CLI can process specific bag directories or scan a data root for rosbag2
 folders (identified via metadata.yaml).
@@ -13,7 +13,8 @@ import argparse
 import math
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List
+from typing import Any
+from collections.abc import Iterable, Iterator
 
 import yaml
 import numpy as np
@@ -98,7 +99,7 @@ def _quat_to_euler(qx: float, qy: float, qz: float, qw: float) -> tuple[float, f
     return roll, pitch, yaw
 
 
-def _object_to_row(obj) -> Dict[str, Any]:
+def _object_to_row(obj) -> dict[str, Any]:
     total_nanos = Time.from_msg(obj.state.header.stamp).nanoseconds
 
     pos = pmu.get_position(obj)
@@ -140,11 +141,11 @@ def _object_to_row(obj) -> Dict[str, Any]:
     }
 
 
-def _olist_to_rows(msg) -> List[Dict[str, Any]]:
+def _olist_to_rows(msg) -> list[dict[str, Any]]:
     return [_object_to_row(obj) for obj in msg.objects]
 
 
-def _load_metadata(bag_dir: Path) -> Dict[str, Any]:
+def _load_metadata(bag_dir: Path) -> dict[str, Any]:
     metadata_path = bag_dir / "metadata.yaml"
     if not metadata_path.exists():
         raise FileNotFoundError(f"metadata.yaml not found in {bag_dir}")
@@ -152,7 +153,7 @@ def _load_metadata(bag_dir: Path) -> Dict[str, Any]:
         return yaml.safe_load(fh)
 
 
-def _storage_id(meta: Dict[str, Any]) -> str:
+def _storage_id(meta: dict[str, Any]) -> str:
     return meta["rosbag2_bagfile_information"]["storage_identifier"]
 
 
@@ -186,7 +187,7 @@ def convert_bag_to_omega_prime(
     map_path: Path | None = None,
     validate: bool = False,
 ) -> Path:
-    def row_iter() -> Iterable[Dict[str, Any]]:
+    def row_iter() -> Iterable[dict[str, Any]]:
         for msg in iter_object_list_messages(bag_dir, topic):
             yield from _olist_to_rows(msg)
 
