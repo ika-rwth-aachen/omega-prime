@@ -112,6 +112,31 @@ def visualize(
     r.plot_altair(start_frame=start_frame, end_frame=end_frame, height=height, width=width, plot_map=plot_map).show()
 
 
+@app.command(help="Attach an ASAM OpenDRIVE (.xodr) map to an existing omega-prime recording and write a new file.")
+def attach_odr(
+    input: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=False, help="Path to existing omega-prime file (.mcap or .parquet)")
+    ],
+    odr: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Path to ASAM OpenDRIVE .xodr file")],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            help="Output path (.mcap or .parquet). If not provided, uses '<input>_with_odr.<ext>' in the same directory."
+        ),
+    ] = None,
+):
+    r = omega_prime.Recording.from_file(input, validate=False, parse_map=False)
+    r.map = omega_prime.MapOdr.from_file(odr)
+
+    if output is None:
+        output = input.parent / f"{input.stem}_with_odr{input.suffix}"
+
+    if Path(output).suffix == ".parquet":
+        r.to_parquet(output)
+    else:
+        r.to_mcap(output)
+
+
 def main():
     load_converters_into_cli(app)
     app()
