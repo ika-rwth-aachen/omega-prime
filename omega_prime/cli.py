@@ -114,11 +114,15 @@ def visualize(
 
 @app.command(help="Attach an ASAM OpenDRIVE (.xodr) map to an existing omega-prime recording and write a new file.")
 def attach_odr(
-    input: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Path to existing omega-prime file (.mcap or .parquet)")],
+    input: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=False, help="Path to existing omega-prime file (.mcap or .parquet)")
+    ],
     odr: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Path to ASAM OpenDRIVE .xodr file")],
     output: Annotated[
         Path | None,
-        typer.Option(help="Output path (.mcap or .parquet). If not provided, uses '<input>_with_odr.<ext>' in the same directory."),
+        typer.Option(
+            help="Output path (.mcap or .parquet). If not provided, uses '<input>_with_odr.<ext>' in the same directory."
+        ),
     ] = None,
 ):
     r = omega_prime.Recording.from_file(input, validate=False, parse_map=False)

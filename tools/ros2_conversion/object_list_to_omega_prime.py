@@ -1,4 +1,3 @@
-
 """
 Standalone converter: read perception_msgs/ObjectList messages from ROS 2 bags
 and emit omega-prime MCAP files.
@@ -32,8 +31,10 @@ import perception_msgs_utils as pmu
 if not hasattr(np, "float"):
     np.float = float  # type: ignore[attr-defined]
 if not hasattr(np, "maximum_sctype"):
+
     def _np_maximum_sctype(dtype):
         return np.dtype(np.float64).type
+
     np.maximum_sctype = _np_maximum_sctype  # type: ignore[attr-defined]
 
 _VCT = betterosi.MovingObjectVehicleClassificationType
@@ -78,6 +79,7 @@ def _class_to_osi(obj) -> tuple[int, int, int]:
         mot = int(_MOT.TYPE_OTHER)
 
     return mot, role, subtype
+
 
 def _object_to_row(obj) -> dict[str, Any]:
     total_nanos = Time.from_msg(obj.state.header.stamp).nanoseconds
@@ -202,12 +204,18 @@ def _parse_args() -> argparse.Namespace:
     env_validate = os.environ.get("OP_VALIDATE", "").lower() in {"1", "true", "yes"}
 
     parser = argparse.ArgumentParser(description="Convert ROS 2 ObjectList bags to omega-prime MCAP")
-    parser.add_argument("--data-dir", default=os.environ.get("OP_DATA", "/data"), help="Directory containing rosbag2 folders")
+    parser.add_argument(
+        "--data-dir", default=os.environ.get("OP_DATA", "/data"), help="Directory containing rosbag2 folders"
+    )
     parser.add_argument("--topic", default=os.environ.get("OP_TOPIC"), help="ObjectList topic to export")
-    parser.add_argument("--output-dir", default=os.environ.get("OP_OUT", "/out"), help="Directory to write omega-prime MCAPs")
+    parser.add_argument(
+        "--output-dir", default=os.environ.get("OP_OUT", "/out"), help="Directory to write omega-prime MCAPs"
+    )
     parser.add_argument("--bag", action="append", default=[], help="Explicit bag directory to convert (repeatable)")
     parser.add_argument("--map", dest="map_path", default="/map/map.xodr", help="Optional OpenDRIVE map to embed")
-    parser.add_argument("--validate", action="store_true", default=env_validate, help="Enable omega-prime schema validation")
+    parser.add_argument(
+        "--validate", action="store_true", default=env_validate, help="Enable omega-prime schema validation"
+    )
     return parser.parse_args()
 
 
