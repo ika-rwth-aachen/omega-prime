@@ -1,4 +1,6 @@
 
+<img src="https://github.com/ika-rwth-aachen/omega-prime/blob/main/docs/logo/omega_prime_text.png" height=150 align="right">
+
 [![](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](https://github.com/ika-rwth-aachen/omega-prime/blob/master/LICENSE) 
 [![](https://img.shields.io/pypi/v/omega-prime.svg)](https://pypi.python.org/pypi/omega-prime)
 [![](https://github.com/ika-rwth-aachen/omega-prime/workflows/CI/badge.svg)](https://github.com/ika-rwth-aachen/omega-prime/actions)
@@ -21,7 +23,8 @@ see [./docs/omega_prime_specification.md](https://github.com/ika-rwth-aachen/ome
       - Table of moving object data (e.g., csv data)
       - ASAM OpenDRIVE map
       - [LevelXData datasets](https://levelxdata.com/) through [lxd-io](https://github.com/lenvt/lxd-io)
-      - extend yourself by subclassing [DatasetConverter](omega_prime/converters/converter.py)
+      - Extend yourself by subclassing [DatasetConverter](omega_prime/converters/converter.py)
+      - Use [omega-prime-trajdata](https://github.com/ika-rwth-aachen/omega-prime-trajdata) to convert motion prediction datasets into omega-prime 
   - 🗺️ **Map Association**: Associate Object Location with Lanes from OpenDRIVE or OSI Maps (see [tutorial_locator.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/tutorial_locatory.ipynb))
   - 📺 **Plotting** of data: interactive top view plots using [altair](https://altair-viz.github.io/)
   - ✅ **Validation** of data: check if your data conforms to the omega-prime specification (e.g., correct yaw) using [pandera](https://pandera.readthedocs.io/en/stable/)
