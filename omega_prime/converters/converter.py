@@ -14,6 +14,7 @@ import typer
 import csv
 from filelock import FileLock
 from dataclasses import dataclass, asdict
+import traceback
 
 logger.configure(handlers=[{"sink": sys.stdout, "level": "WARNING"}])
 
@@ -116,7 +117,9 @@ class DatasetConverter(ABC):
                         rec = self.to_omega_prime_recording(recording)
                         status.set_success()
                     except Exception as e:
-                        logger.error(f"Error converting recording {self.get_recording_name(recording)}: {e}")
+                        logger.error(
+                            f"Error converting recording {self.get_recording_name(recording)}: {traceback.format_exc()}"
+                        )
                         rec = None
                         status.set_error(str(e))
                     else:
@@ -126,8 +129,10 @@ class DatasetConverter(ABC):
                             else:
                                 rec.to_mcap(out_filename)
                         except Exception as e:
-                            logger.error(f"Error saving recording {self.get_recording_name(recording)}: {e}")
-                            status.set_error(str(e))
+                            logger.error(
+                                f"Error saving recording {self.get_recording_name(recording)}: {traceback.format_exc()}"
+                            )
+                            status.set_error(e)
                 else:
                     status.set_skip()
 
@@ -136,7 +141,7 @@ class DatasetConverter(ABC):
                         status.write(log_file)
 
         except Exception as e:
-            logger.error(f"Error processing source recording {source_recording}: {e}")
+            logger.error(f"Error processing source recording {source_recording}: {e} - {traceback.format_exc()}")
             raise e
 
     def convert(

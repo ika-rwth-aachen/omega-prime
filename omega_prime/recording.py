@@ -752,6 +752,7 @@ class Recording:
         plot_map=True,
         plot_map_polys=True,
         metric_column=None,
+        plot_wedges=True,
         idx=None,
         height=None,
         width=None,
@@ -783,8 +784,122 @@ class Recording:
                 separator="-",
             ).alias("type")
         )
-        mv_dict = {"values": df["geometry", "idx", "frame", "type"].st.to_dicts()}
+        buffer = pl.col("length").max()
+        xmin, xmax, ymin, ymax = df.select(
+            (pl.col("x").min() - buffer).alias("xmin"),
+            (pl.col("x").max() + buffer).alias("xmax"),
+            (pl.col("y").min() - buffer).alias("ymin"),
+            (pl.col("y").max() + buffer).alias("ymax"),
+        ).row(0)
+        pov_df = pl.DataFrame({"polygon": [shapely.Polygon([[xmax, ymax], [xmax, ymin], [xmin, ymin], [xmin, ymax]])]})
+        pov_df = pov_df.select(geometry=st.from_shapely("polygon"))
+        pov = alt.Chart({"values": pov_df.st.to_dicts()}).mark_geoshape(fillOpacity=0, filled=False, opacity=0)
 
+        plots = [pov]
+        if plot_map and self.map is not None:
+            plots.append(self.map.plot_altair(recording=self, plot_polys=plot_map_polys))
+
+        mv_dict = {"values": df["geometry", "idx", "frame", "type"].st.to_dicts()}
+        plots.append(
+            alt.Chart(mv_dict)
+            .mark_geoshape()
+            .encode(
+                color=(
+                    alt.when(alt.FieldEqualPredicate(equal=self.host_vehicle_idx or -1, field="properties.idx"))
+                    .then(alt.value("red"))
+                    .when(alt.FieldEqualPredicate(equal=-1 if idx is None else idx, field="properties.idx"))
+                    .then(alt.value("red"))
+                    .otherwise(alt.value("blue"))
+                ),
+                tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
+            )
+            .transform_filter(alt.FieldEqualPredicate(field="properties.frame", equal=op_var))
+        )
+        if plot_wedges:
+            wedges_df = df["idx", "frame", "type", "x", "y", "yaw", "length"].with_columns(
+                pl.col("yaw").degrees().alias("deg"), (pl.col("length") / 4).alias("size")
+            )
+            plots.append(
+                alt.Chart(wedges_df)
+                .mark_point(shape="wedge", color="white", strokeWidth=2)
+                .encode(
+                    alt.Longitude("x:Q"),
+                    alt.Latitude("y:Q"),
+                    alt.Angle("deg").scale(domain=[180, -180], range=[-90, 270]),
+                    alt.Size("size", legend=None),
+                    tooltip=["idx:N", "frame:N", "type:O"],
+                )
+                .transform_filter(alt.FieldEqualPredicate(field="frame", equal=op_var))
+            )
+
+        view = (
+            alt.layer(*plots)
+            .properties(
+                title="Map",
+                **({"height": height} if height is not None else {}),
+                **({"width": width} if width is not None else {}),
+            )
+            .project("identity", reflectY=True)
+        )
+
+        if metric_column is not None and idx is not None:
+            metric = (
+                df["idx", metric_column, "frame"]
+                .filter(idx=idx)
+                .plot.line(x="frame", y=metric_column, color=alt.value("red"))
+                .properties(title=f"{metric_column} of object {idx}")
+            )
+            vertline = (
+                alt.Chart()
+                .mark_rule()
+                .encode(x=alt.datum(op_var, type="quantitative", scale=alt.Scale(domain=[frame_min, frame_max])))
+            )
+            view = view | (metric + vertline)
+        return view.add_params(op_var)
+        if "polygon" not in self._df.columns:
+            self._df = self._add_polygons(self._df)
+        if "geometry" not in self._df.columns:
+            self._df = self._df.with_columns(geometry=st.from_shapely("polygon"))
+
+        if end_frame != -1:
+            df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)
+        else:
+            df = self._df.filter(pl.col("frame") >= start_frame)
+
+        [frame_min], [frame_max] = df.select(
+            pl.col("frame").min().alias("min"),
+            pl.col("frame").max().alias("max"),
+        )[0]
+        slider = alt.binding_range(min=frame_min, max=frame_max, step=1, name="frame")
+        op_var = alt.param(value=0, bind=slider)
+
+        df = df.with_columns(
+            pl.concat_str(
+                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name, return_dtype=pl.String),
+                pl.col("subtype").map_elements(
+                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name,
+                    return_dtype=pl.String,
+                ),
+                separator="-",
+            ).alias("type")
+        )
+        mv_dict = {"values": df["geometry", "idx", "frame", "type"].st.to_dicts()}
+        if plot_wedges:
+            wedges_df = df["idx", "frame", "type", "x", "y", "yaw", "length"].with_columns(
+                pl.col("yaw").degrees().alias("deg"), (pl.col("length") / 4).alias("size")
+            )
+            plots.append(
+                alt.Chart(wedges_df)
+                .mark_point(shape="wedge", color="white", strokeWidth=2)
+                .encode(
+                    alt.Longitude("x:Q"),
+                    alt.Latitude("y:Q"),
+                    alt.Angle("deg").scale(domain=[180, -180], range=[-90, 270]),
+                    alt.Size("size", legend=None),
+                    tooltip=["idx:N", "frame:N", "type:O"],
+                )
+                .transform_filter(alt.FieldEqualPredicate(field="frame", equal=op_var))
+            )
         view = (
             alt.layer(
                 *[

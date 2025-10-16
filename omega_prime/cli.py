@@ -8,7 +8,7 @@ from mcap_protobuf.decoder import DecoderFactory
 from mcap.reader import make_reader
 import omega_prime
 from omega_prime.converters import load_converters_into_cli
-
+import altair as alt
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
@@ -104,9 +104,10 @@ def visualize(
     start_frame: int = 0,
     end_frame: int = -1,
     plot_map: bool = True,
+    use_vegafusion: bool = False,
 ):
-    import altair as alt
-
+    if use_vegafusion:
+        alt.data_transformers.enable("vegafusion")
     alt.renderers.enable("browser")
     r = omega_prime.Recording.from_file(input, validate=False, parse_map=True)
     r.plot_altair(start_frame=start_frame, end_frame=end_frame, height=height, width=width, plot_map=plot_map).show()
