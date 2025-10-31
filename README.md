@@ -87,7 +87,7 @@ Tested with exiD-v2.0, inD-v1.1, highD-v1.0 (highD does not provide an ASAM Open
 
 ## File Format
 Based on [MCAP](https://mcap.dev/), [ASAM OSI](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/specification/index.html) and [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) the ASAM OSI GroundTruth messages and ASAM OpenDRIVE map are packaged as shown in the following figure.
-![](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_specification.svg)
+![](https://github.com/ika-rwth-aachen/omega-prime/blob/main/docs/omega_prime/omega_specification.svg)
 
 
 # Acknowledgements
