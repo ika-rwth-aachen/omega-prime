@@ -2,6 +2,7 @@ import omega_prime
 import betterosi
 from warnings import warn
 import lanelet2
+import lanelet2.core as ltc
 from tqdm.auto import tqdm
 import shapely
 import numpy as np
@@ -24,7 +25,28 @@ lanelet2lst = {
     "freespace": lst.SUBTYPE_NORMAL,
     "exit": lst.SUBTYPE_EXIT,
     "keepout": lst.SUBTYPE_RESTRICTED,
+    "crosswalk": lst.SUBTYPE_NORMAL
+
 }
+
+lst2lanelet = {
+    lst.SUBTYPE_UNKNOWN: 'road',
+    lst.SUBTYPE_OTHER: 'road',
+    lst.SUBTYPE_NORMAL: 'road',
+    lst.SUBTYPE_BIKING: 'bicycle_lane',
+    lst.SUBTYPE_SIDEWALK: 'walkway',
+    lst.SUBTYPE_PARKING: 'parking',
+    lst.SUBTYPE_STOP: 'road',
+    lst.SUBTYPE_RESTRICTED: 'keepout',
+    #lst.SUBTYPE_BORDER: ''
+    #lst.SUBTYPE_SHOULDER: ''
+    lst.SUBTYPE_EXIT: 'exit',
+    lst.SUBTYPE_ENTRY: 'road',
+    lst.SUBTYPE_ONRAMP: 'road',
+    lst.SUBTYPE_OFFRAMP: 'road',
+    lst.SUBTYPE_CONNECTINGRAMP: 'road'
+}
+
 
 lanelet2lt = {
     "road": lt.TYPE_DRIVING,
@@ -39,10 +61,12 @@ lanelet2lt = {
     "freespace": lt.TYPE_DRIVING,
     "exit": lt.TYPE_DRIVING,
     "keepout": lt.TYPE_NONDRIVING,
+    "virtual": lt.TYPE_DRIVING,
+    "crosswalk": lt.TYPE_DRIVING
 }
 
+
 not_lane_subtypes = [
-    "crosswalk",
     "bicycle_parking",
     "pedestrian_seat",
     "vegetation",
@@ -175,3 +199,68 @@ class LaneLanelet(omega_prime.map.Lane):
             successor_ids=successor_ids,
             predecessor_ids=predecessor_ids,
         )
+
+def save_lanelet(ll_map, file_dir, projection=None):
+    if projection != None:
+        raise NotImplementedError
+    projection = lanelet2.projection.UtmProjector(lanelet2.io.Origin(0, 0))
+    lanelet2.io.write(file_dir, ll_map, projection)
+
+def map_to_lanelet(map):
+    """
+    Converts omega prime map to a Lanelet2 map.
+    :return: A lanelet2 map
+    """
+
+    # Create a new Lanelet2 map
+    lanelet_map = ltc.LaneletMap()
+
+    # Create a point layer for storing all map points
+    point_layer = {}
+
+    def get_or_create_point(x, y, z=0.0):
+        """Returns an existing point or creates a new one"""
+        coord = (x, y, z)
+        if coord not in point_layer:
+            point_layer[coord] = ltc.Point3d(len(point_layer) + 1, *coord)
+        return point_layer[coord], coord
+
+    boundary_layer = {}
+
+    def get_or_create_boundary(points):
+        points_and_idxs = [get_or_create_point(p[0], p[1]) for p in points]
+        idx = tuple([idx for _, idx in points_and_idxs])
+        points = tuple([p for p, _ in points_and_idxs])
+        if idx not in boundary_layer:
+            boundary_layer[idx] = ltc.LineString3d(len(boundary_layer) + 1, points)
+        return boundary_layer[idx], idx
+
+    lanelets = []
+
+    laneid2laneletid = {}
+    for lane in map.lanes.values():
+        
+        lb = lane.left_boundary
+        rb = lane.right_boundary
+        # Create left and right boundaries as Lanelet2 LineStrings
+        left_boundary, _ = get_or_create_boundary([(a, b) for a, b in shapely.simplify(lb.polyline, 1).coords])
+        right_boundary, _ = get_or_create_boundary([(a, b) for a, b in shapely.simplify(rb.polyline, 1).coords])
+
+        # Create a lanelet using the boundaries
+        lanelet_id = len(lanelets) + 1
+        laneid2laneletid[lane.idx] = lanelet_id
+        lanelet = ltc.Lanelet(
+            lanelet_id,
+            left_boundary, 
+            right_boundary,
+            attributes={
+                'subtype': lst2lanelet.get(lane.type, 'virtual')
+            }
+        )
+        lanelets.append(lanelet)
+
+        # Add to the map
+        lanelet_map.add(lanelet)
+
+    return lanelet_map
+    
