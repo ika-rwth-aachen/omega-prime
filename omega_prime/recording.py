@@ -1,215 +1,24 @@
+import itertools
+import json
 import typing
 from pathlib import Path
 from warnings import warn
 
+import altair as alt
 import betterosi
 import numpy as np
+import pandas as pd
+import polars as pl
+import polars_st as st
+import pyarrow
+import pyarrow.parquet as pq
 import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
-import pandas as pd
-import polars as pl
-import altair as alt
-import json
-import pandera.polars as pa
-import pandera.extensions as extensions
-import pyarrow
-import pyarrow.parquet as pq
-import polars as pl
+
+from .map import MapOsi, MapOsiCenterline, ProjectionOffset
 from .map_odr import MapOdr
-from .map import MapOsi, ProjectionOffset, MapOsiCenterline
-import itertools
-import altair as alt
-import polars as pl
-import polars_st as st
-
-pi_valued = pa.Check.between(-np.pi, np.pi)
-polars_schema = {
-    "total_nanos": pl.Int64,
-    "idx": pl.Int64,
-    "x": pl.Float64,
-    "y": pl.Float64,
-    "z": pl.Float64,
-    "vel_x": pl.Float64,
-    "vel_y": pl.Float64,
-    "vel_z": pl.Float64,
-    "acc_x": pl.Float64,
-    "acc_y": pl.Float64,
-    "acc_z": pl.Float64,
-    "length": pl.Float64,
-    "width": pl.Float64,
-    "height": pl.Float64,
-    "roll": pl.Float64,
-    "pitch": pl.Float64,
-    "yaw": pl.Float64,
-    "type": pl.Int64,
-    "role": pl.Int64,
-    "subtype": pl.Int64,
-}
-
-
-@extensions.register_check_method(
-    statistics=["column_name", "column_value", "other_column_name", "other_column_unset_value"]
-)
-def other_column_set_on_column_value(
-    polars_obj, *, column_name: str, column_value, other_column_name: str, other_column_unset_value
-):
-    return polars_obj.lazyframe.select(
-        ~(pl.col(column_name) == column_value).and_(pl.col(other_column_name) == other_column_unset_value)
-    )
-
-
-@extensions.register_check_method(
-    statistics=["column_name", "column_value", "other_column_name", "other_column_unset_value"]
-)
-def other_column_unset_on_column_value(
-    polars_obj, *, column_name, column_value, other_column_name: str, other_column_unset_value: int
-):
-    return polars_obj.lazyframe.select(
-        ~(pl.col(column_name) != column_value).and_(pl.col(other_column_name) != other_column_unset_value)
-    )
-
-
-def has_no_frame_skip(df):
-    return (
-        df.group_by("idx")
-        .agg(((pl.col("frame").sort().diff().drop_nulls() == 1).all()).alias("no_skip"))
-        .select(pl.col("no_skip").all())
-        .row(0)[0]
-    )
-
-
-@extensions.register_check_method()
-def check_has_no_frame_skip(polars_obj):
-    return polars_obj.lazyframe.select(pl.col("frame").sort().diff().fill_null(1).over("idx") == 1)
-
-
-recording_moving_object_schema = pa.DataFrameSchema(
-    title="DataFrame Schema for ASAM OSI GroundTruth of MovingObjects",
-    description="",
-    columns={
-        "x": pa.Column(polars_schema["x"], title="MovingObject.base.position.x", description="osi3.Vector3d.x"),
-        "y": pa.Column(polars_schema["y"], title="MovingObject.base.position.y", description="osi3.Vector3d.y"),
-        "z": pa.Column(polars_schema["z"], title="MovingObject.base.position.z", description="osi3.Vector3d.z"),
-        "vel_x": pa.Column(polars_schema["vel_x"], title="MovingObject.base.velocity.x", description="osi3.Vector3d.x"),
-        "vel_y": pa.Column(polars_schema["vel_y"], title="MovingObject.base.velocity.y", description="osi3.Vector3d.y"),
-        "vel_z": pa.Column(polars_schema["vel_z"], title="MovingObject.base.velocity.z", description="osi3.Vector3d.z"),
-        "acc_x": pa.Column(
-            polars_schema["acc_x"], title="MovingObject.base.acceleration.x", description="osi3.Vector3d.x"
-        ),
-        "acc_y": pa.Column(
-            polars_schema["acc_y"], title="MovingObject.base.acceleration.y", description="osi3.Vector3d.y"
-        ),
-        "acc_z": pa.Column(
-            polars_schema["acc_z"], title="MovingObject.base.acceleration.z", description="osi3.Vector3d.z"
-        ),
-        "length": pa.Column(
-            polars_schema["length"],
-            pa.Check.gt(0),
-            title="MovingObject.base.dimesion.length",
-            description="osi3.Dimenstion3d.length",
-        ),
-        "width": pa.Column(
-            polars_schema["width"],
-            pa.Check.gt(0),
-            title="MovingObject.base.dimesion.width",
-            description="osi3.Dimenstion3d.width",
-        ),
-        "height": pa.Column(
-            polars_schema["height"],
-            pa.Check.ge(0),
-            title="MovingObject.base.dimesion.height",
-            description="osi3.Dimenstion3d.height",
-        ),
-        "type": pa.Column(
-            polars_schema["type"],
-            pa.Check.between(
-                0, 4, error=f"Type must be one of { ({o.name: o.value for o in betterosi.MovingObjectType}) }"
-            ),
-            title="MovingObject.type",
-            description="osi3.MovingObject.Type",
-        ),
-        "role": pa.Column(
-            polars_schema["role"],
-            pa.Check.between(
-                -1,
-                10,
-                error=f"Type must be one of { ({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationRole}) }",
-            ),
-            title="MovingObject.vehicle_classification.role",
-            description="osi3.MovingObject.VehicleClassification.Role",
-        ),
-        "subtype": pa.Column(
-            polars_schema["subtype"],
-            pa.Check.between(
-                -1,
-                17,
-                error=f"Subtype must be one of { ({o.name: o.value for o in betterosi.MovingObjectVehicleClassificationType}) }",
-            ),
-            title="MovingObject.vehicle_classification.type",
-            description="osi3.MovingObject.VehicleClassification.Type",
-        ),
-        "roll": pa.Column(
-            polars_schema["roll"],
-            pi_valued,
-            title="MovingObject.base.orientation.roll",
-            description="osi3.Orientation3d.roll",
-        ),
-        "pitch": pa.Column(
-            polars_schema["pitch"],
-            pi_valued,
-            title="MovingObject.base.orientation.pitch",
-            description="osi3.Orientation3d.pitch",
-        ),
-        "yaw": pa.Column(
-            polars_schema["yaw"],
-            pi_valued,
-            title="MovingObject.base.orientation.yaw",
-            description="osi3.Orientation3d.yaw",
-        ),
-        "idx": pa.Column(
-            polars_schema["idx"], pa.Check.ge(0), title="MovingObject.id.value", description="osi3.Identifier.value"
-        ),
-        "total_nanos": pa.Column(
-            polars_schema["total_nanos"],
-            pa.Check.ge(0),
-            title="GroundTruth.timestamp.nanos+1e9*GroundTruth.timestamp.seconds",
-            description="osi3.Timestamp.nanos, osi3.Timestamp.seconds",
-        ),
-    },
-    unique=["idx", "total_nanos"],
-    checks=[
-        pa.Check.other_column_set_on_column_value(
-            "type",
-            int(betterosi.MovingObjectType.TYPE_VEHICLE),
-            "role",
-            -1,
-            error="`role` is `-1` despite type beeing `TYPE_VEHICLE`",
-        ),
-        pa.Check.other_column_unset_on_column_value(
-            "type",
-            int(betterosi.MovingObjectType.TYPE_VEHICLE),
-            "role",
-            -1,
-            error="`role` is set despite type not beeing `TYPE_VEHICLE`",
-        ),
-        pa.Check.other_column_set_on_column_value(
-            "type",
-            int(betterosi.MovingObjectType.TYPE_VEHICLE),
-            "subtype",
-            -1,
-            error="`subtype` is `-1` despite type beeing `TYPE_VEHICLE`",
-        ),
-        pa.Check.other_column_unset_on_column_value(
-            "type",
-            int(betterosi.MovingObjectType.TYPE_VEHICLE),
-            "subtype",
-            -1,
-            error="`subtype` is set despite type not beeing `TYPE_VEHICLE`",
-        ),
-        pa.Check.check_has_no_frame_skip(error="Some objects skip frames during their etistence."),
-    ],
-)
+from .schemas import polars_schema, recording_moving_object_schema
 
 
 def timestamp2ts(timestamp: betterosi.Timestamp):
@@ -236,9 +45,6 @@ class MovingObject:
 
     @property
     def polygon(self):
-        if "polygon" not in self._df.columns:
-            self._recording._add_polygons_to_df()
-            self._df = self._recording._df.filter(pl.col("idx") == self.idx)
         return self._df["polygon"]
 
     @property
@@ -252,8 +58,6 @@ class MovingObject:
         ax.plot(self.x, self.y, label=str(self.idx), c="red", alpha=0.5)
 
     def plot_mv_frame(self, ax: plt.Axes, frame: int):
-        if "polygon" not in self._df.columns:
-            self._recording._add_polygons_to_df()
         polys = self._df.filter(pl.col("frame") == frame)["polygon"]
         for p in polys:
             ax.add_patch(PltPolygon(p.exterior.coords, fc="red", alpha=0.2))
@@ -268,64 +72,39 @@ class MovingObject:
                 return self._df[k[:-1]]
 
 
+MAP_CLASSES = [
+    MapOdr,
+    MapOsi,
+    MapOsiCenterline,
+]
+
+
+def bbx_to_polygon(df):
+    dxl = (pl.col("length") / 2) * pl.col("yaw").cos()
+    dxw = (pl.col("width") / 2) * pl.col("yaw").sin()
+    dyl = (pl.col("length") / 2) * pl.col("yaw").sin()
+    dyw = (pl.col("width") / 2) * pl.col("yaw").cos()
+    df = df.with_columns(
+        pl.concat_list(
+            pl.concat_list(pl.col("x") + dx, pl.col("y") + dy)
+            for dx, dy in [
+                (dxl - dxw, dyl + dyw),
+                (dxl + dxw, dyl - dyw),
+                (-dxl + dxw, -dyl - dyw),
+                (-dxl - dxw, -dyl + dyw),
+                (dxl - dxw, dyl + dyw),
+            ]
+        )
+        .reshape((df.height, 1, 5, 2))
+        .alias("coords")
+    )
+    df = df.with_columns(st.polygon(pl.col("coords")).alias("geometry"))
+    df = df.with_columns(pl.col("geometry").st.to_shapely().alias("polygon"))
+    return df
+
+
 class Recording:
     _MovingObjectClass: typing.ClassVar = MovingObject
-
-    @staticmethod
-    def _add_polygons(df):
-        if "polygon" not in df.columns:
-            ar = (
-                df[:]
-                .select(
-                    (
-                        pl.col("x")
-                        + (+pl.col("length") / 2) * pl.col("yaw").cos()
-                        - (+pl.col("width") / 2) * pl.col("yaw").sin()
-                    ).alias("x1"),
-                    (
-                        pl.col("x")
-                        + (+pl.col("length") / 2) * pl.col("yaw").cos()
-                        - (-pl.col("width") / 2) * pl.col("yaw").sin()
-                    ).alias("x2"),
-                    (
-                        pl.col("x")
-                        + (-pl.col("length") / 2) * pl.col("yaw").cos()
-                        - (-pl.col("width") / 2) * pl.col("yaw").sin()
-                    ).alias("x3"),
-                    (
-                        pl.col("x")
-                        + (-pl.col("length") / 2) * pl.col("yaw").cos()
-                        - (+pl.col("width") / 2) * pl.col("yaw").sin()
-                    ).alias("x4"),
-                    (
-                        pl.col("y")
-                        + (+pl.col("length") / 2) * pl.col("yaw").sin()
-                        + (+pl.col("width") / 2) * pl.col("yaw").cos()
-                    ).alias("y1"),
-                    (
-                        pl.col("y")
-                        + (+pl.col("length") / 2) * pl.col("yaw").sin()
-                        + (-pl.col("width") / 2) * pl.col("yaw").cos()
-                    ).alias("y2"),
-                    (
-                        pl.col("y")
-                        + (-pl.col("length") / 2) * pl.col("yaw").sin()
-                        + (-pl.col("width") / 2) * pl.col("yaw").cos()
-                    ).alias("y3"),
-                    (
-                        pl.col("y")
-                        + (-pl.col("length") / 2) * pl.col("yaw").sin()
-                        + (+pl.col("width") / 2) * pl.col("yaw").cos()
-                    ).alias("y4"),
-                )
-                .to_numpy()
-            )
-            polys = shapely.polygons(np.stack([ar[:, :4], ar[:, 4:]], axis=2))
-            df = df.with_columns(pl.Series(name="polygon", values=polys))
-        return df
-
-    def _add_polygons_to_df(self):
-        self._df = self._add_polygons(self._df)
 
     @staticmethod
     def get_moving_object_ground_truth(
@@ -368,7 +147,6 @@ class Recording:
         projections=None,
         host_vehicle_idx: int | None = None,
         validate=False,
-        compute_polygons=False,
         traffic_light_states: dict | None = None,
     ):
         # Convert pandas DataFrame to polars DataFrame if necessary
@@ -392,14 +170,14 @@ class Recording:
         super().__init__()
         self.nanos2frame = nanos2frame
 
-        if "polygon" not in df.columns and compute_polygons:
-            df = self._add_polygons(df)
         if "vel" not in df.columns:
             df = df.with_columns((pl.col("vel_x") ** 2 + pl.col("vel_y") ** 2).sqrt().alias("vel"))
         if "acc" not in df.columns:
             df = df.with_columns((pl.col("acc_x") ** 2 + pl.col("acc_y") ** 2).sqrt().alias("acc"))
         self.projections = projections if projections is not None else []
         self.traffic_light_states = traffic_light_states if traffic_light_states is not None else {}
+
+        df = bbx_to_polygon(df)
 
         self._df = df
         self.map = map
@@ -439,7 +217,6 @@ class Recording:
                     ),
                 )
             )
-
             self._moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
 
         return self._moving_objects
@@ -535,40 +312,34 @@ class Recording:
     def from_file(
         cls,
         filepath,
-        xodr_path: str | None = None,
+        map_path: str | None = None,
         validate: bool = False,
         parse_map: bool = False,
-        compute_polygons: bool = False,
         step_size: float = 0.01,
     ):
         if Path(filepath).suffix == ".parquet":
-            return cls.from_parquet(
-                filepath, parse_map=parse_map, validate=validate, compute_polygons=compute_polygons, step_size=step_size
-            )
+            r = cls.from_parquet(filepath, parse_map=parse_map, validate=validate, step_size=step_size)
+        else:
+            gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
+            r = cls.from_osi_gts(gts, validate=validate)
+        if map_path is None and r.map is not None:
+            return r
 
-        gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
-        gts, tmp_gts = itertools.tee(gts, 2)
-        first_gt = next(tmp_gts)
-        r = cls.from_osi_gts(gts, validate=validate, compute_polygons=compute_polygons)
-        if xodr_path is not None:
-            r.map = MapOdr.from_file(xodr_path, parse=parse_map)
-        elif Path(filepath).suffix == ".mcap":
-            try:
-                r.map = MapOdr.from_file(filepath, parse=parse_map)
-            except StopIteration:
-                pass
-        if r.map is None:
-            try:
-                r.map = MapOsi.create(first_gt)
-                warn("No map provided in mcap. OSI GroundTruth map is used!")
-            except RuntimeError:
+        map_path = Path(map_path if map_path is not None else filepath)
+        map_parsing = {}
+        map = None
+        for MC in MAP_CLASSES:
+            if map_path.suffix in MC._supported_file_suffixes:
                 try:
-                    r.map = MapOsiCenterline.create(first_gt)
-                    warn("No map provided in mcap. OSI GroundTruth (Centerline) map is used!")
-                except RuntimeError:
-                    pass
-        if r.map is None:
-            warn("No xodr map provided in MCAP nor OSI map in GroundTruth!")
+                    map = MC.from_file(map_path, parse=parse_map)
+                except Exception as e:
+                    map_parsing[MC.__name__] = str(e)
+                else:
+                    break
+        if map is not None:
+            r.map = map
+        elif r.map is None:
+            warn(f"No map could be found: {map_parsing}")
         return r
 
     def to_mcap(self, filepath):
@@ -579,6 +350,10 @@ class Recording:
                 w.add(gt)
             if isinstance(self.map, MapOdr):
                 w.add(self.map.to_osi(), topic="ground_truth_map", log_time=0)
+            elif (
+                self.map is not None and not isinstance(self.map, MapOsi) and not isinstance(self.map, MapOsiCenterline)
+            ):
+                warn(f"The map {self.map} could not be saved to `mcap`")
 
     def to_hdf(self, filename, key="moving_object"):
         #!pip install tables
@@ -683,8 +458,6 @@ class Recording:
         return ax
 
     def plot_mv_frame(self, ax: plt.Axes, frame: int):
-        if "polygon" not in self._df.columns:
-            self._add_polygons_to_df()
         polys = self._df.filter(pl.col("frame") == frame)["polygon"]
         for p in polys:
             ax.add_patch(PltPolygon(p.exterior.coords, fc="red"))
@@ -757,11 +530,6 @@ class Recording:
         height=None,
         width=None,
     ):
-        if "polygon" not in self._df.columns:
-            self._df = self._add_polygons(self._df)
-        if "geometry" not in self._df.columns:
-            self._df = self._df.with_columns(geometry=st.from_shapely("polygon"))
-
         if end_frame != -1:
             df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)
         else:
@@ -856,10 +624,6 @@ class Recording:
             )
             view = view | (metric + vertline)
         return view.add_params(op_var)
-        if "polygon" not in self._df.columns:
-            self._df = self._add_polygons(self._df)
-        if "geometry" not in self._df.columns:
-            self._df = self._df.with_columns(geometry=st.from_shapely("polygon"))
 
         if end_frame != -1:
             df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)

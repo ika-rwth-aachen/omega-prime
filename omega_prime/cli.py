@@ -21,12 +21,12 @@ def from_osi(
         Path, typer.Argument(exists=True, dir_okay=False, help="Path to ASAM OSI trace file (either `.osi` or `.mcap`)")
     ],
     output: Annotated[Path, typer.Argument(exists=False, dir_okay=False, help="Desired filename of omega file")],
-    odr: Annotated[
+    map_path: Annotated[
         Path | None, typer.Option(exists=True, dir_okay=False, help="Path to ASAM OpenDRIVE xml to use as map")
     ] = None,
     validate: bool = True,
 ):
-    r = omega_prime.Recording.from_file(input, xodr_path=odr, validate=validate)
+    r = omega_prime.Recording.from_file(input, map_path=map_path, validate=validate)
     r.to_mcap(output)
 
 

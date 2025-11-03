@@ -54,7 +54,7 @@ Create an omega-prime file from an OSI GroundTruth message trace and an OpenDRIV
 ```python
 import omega_prime
 
-r = omega_prime.Recording.from_file('example_files/pedestrian.osi', xodr_path='example_files/fabriksgatan.xodr')
+r = omega_prime.Recording.from_file('example_files/pedestrian.osi', map_path='example_files/fabriksgatan.xodr')
 r.to_mcap('example.mcap')
 ```
 

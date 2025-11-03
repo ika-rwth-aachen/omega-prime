@@ -71,8 +71,6 @@ class LaneBase:
     successor_ids: list[Any]
     predecessor_ids: list[Any]
     trafficlight: Any = field(init=False, default=None)
-    #    on_intersection: bool = field(init=False, default=None)
-    #    is_approaching: bool = field(init=False, default=None)
 
     @property
     def on_intersection(self):
@@ -222,6 +220,8 @@ class Map:
     lane_boundaries: dict[Any, LaneBoundary]
     lanes: dict[Any:Lane]
 
+    _supported_file_suffixes = [".osi", ".mcap"]
+
     def plot(self, ax: plt.Axes | None = None):
         if ax is None:
             fig, ax = plt.subplots(1, 1)
@@ -230,6 +230,11 @@ class Map:
             l.plot(ax)
         for b in self.lane_boundaries.values():
             b.plot(ax)
+
+    @classmethod
+    def from_file(cls, filepath, parse_map=True):
+        first_gt = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
+        return cls.create(first_gt)
 
     def plot_altair(self, recording=None, plot_polys=True):
         arbitrary_lane = next(iter(self.lanes.values()))

@@ -141,6 +141,7 @@ class MapOdr(Map):
     proj_string: str | None = None
     proj_offset: ProjectionOffset | None = None
     projection: pyproj.CRS | None = None
+    _supported_file_suffixes = [".xodr", ".mcap", ".odr"]
 
     @property
     def xodr_map(self):
