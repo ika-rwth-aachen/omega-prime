@@ -142,6 +142,7 @@ class MapOdr(Map):
     proj_offset: ProjectionOffset | None = None
     projection: pyproj.CRS | None = None
     _supported_file_suffixes = [".xodr", ".mcap", ".odr"]
+    _binary_json_identifier = b"xodr"
 
     @property
     def xodr_map(self):
@@ -218,7 +219,7 @@ class MapOdr(Map):
         projection = None
 
         # Get the header element from XML
-        header = rn.tree.find(".//header")
+        header = rn.tree.find("header")
         if header is not None:
             # Get geoReference if it exists
             geo_ref = header.find("geoReference")
@@ -314,27 +315,17 @@ class MapOdr(Map):
     def to_osi(self):
         return MapAsamOpenDrive(map_reference=self.name, open_drive_xml_content=self.odr_xml)
 
-    def to_hdf(self, filename: Path | str):
-        import tables
+    def _to_binary_json(self):
+        return {b"xodr": self.odr_xml.encode(), b"xodr_name": self.name.encode()}
 
-        # Ensure we have a path to the HDF5 file
-        with tables.open_file(filename, mode="a") as h5file:
-            # Ensure we have a /map group in the HDF5 file
-            try:
-                gmap = h5file.get_node("/map")
-            except tables.NoSuchNodeError:
-                gmap = h5file.create_group("/", "map")
-
-            atom = tables.StringAtom(itemsize=len(self.odr_xml))
-            ds = h5file.create_carray(gmap, "odr_xml", atom, shape=(1,))
-            ds[0] = self.odr_xml.encode("utf-8")
-
-    def from_hdf(cls, filename: Path | str):
-        import tables
-
-        with tables.open_file(filename, mode="r") as h5file:
-            odr_xml = h5file.get_node("/map/odr_xml")[0].decode()
-        return cls.create(odr_xml, str(filename))
+    @classmethod
+    def _from_binary_json(cls, d, parse_map: bool = False, step_size: float = 0.01):
+        return cls.create(
+            odr_xml=d[b"xodr"].decode(),
+            name=d[b"xodr_name"].decode(),
+            parse=parse_map,
+            step_size=step_size,
+        )
 
 
 @dataclass(repr=False)

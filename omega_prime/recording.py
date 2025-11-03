@@ -1,5 +1,4 @@
 import itertools
-import json
 import typing
 from pathlib import Path
 from warnings import warn
@@ -355,17 +354,6 @@ class Recording:
             ):
                 warn(f"The map {self.map} could not be saved to `mcap`")
 
-    def to_hdf(self, filename, key="moving_object"):
-        #!pip install tables
-        to_drop = [] if "polygon" not in self._df.columns else ["polygon"]
-        to_drop += ["frame"]
-        self._df.drop(columns=to_drop).to_pandas().to_hdf(filename, key=key)
-
-    @classmethod
-    def from_hdf(cls, filename, key="moving_object"):
-        df = pl.DataFrame(pd.read_hdf(filename, key=key), schema_overrides=polars_schema)
-        return cls(df, map=None, host_vehicle_idx=None)
-
     def interpolate(self, new_nanos: list[int] | None = None, hz: float | None = None):
         df = self._df
         nanos_min, nanos_max, frame_min, frame_max = df.select(
@@ -466,25 +454,28 @@ class Recording:
     def from_parquet(cls, filename, parse_map: bool = False, step_size: float = 0.01, **kwargs):
         t = pq.read_table(filename)
         df = pl.DataFrame(t, schema_overrides=polars_schema)
-        m = None
         host_vehicle_idx = None
         if t.schema.metadata is not None:
             if b"host_vehicle_idx" in t.schema.metadata:
                 host_vehicle_idx = int(t.schema.metadata[b"host_vehicle_idx"].decode())
-            if b"xodr" in t.schema.metadata:
-                m = MapOdr.create(
-                    odr_xml=t.schema.metadata[b"xodr"].decode(),
-                    name=t.schema.metadata[b"xodr_name"].decode(),
-                    parse=parse_map,
-                    step_size=step_size,
-                )
-            elif b"osi" in t.schema.metadata:
-                gt = betterosi.GroundTruth().from_json(t.schema.metadata[b"osi"].decode())
-                if len(gt.lane_boundary) > 0:
-                    m = MapOsi.create(gt)
-                else:
-                    m = MapOsiCenterline.create(gt)
-        return cls(df, map=m, host_vehicle_idx=host_vehicle_idx, **kwargs)
+
+            map_parsing = {}
+            map = None
+            for MC in MAP_CLASSES:
+                if MC._binary_json_identifier in t.schema.metadata:
+                    try:
+                        map = MC._from_binary_json(
+                            t.schema.metadata,
+                            parse_map=parse_map,
+                            step_size=step_size,
+                        )
+                    except Exception as e:
+                        map_parsing[MC.__name__] = str(e)
+                    else:
+                        if map is not None:
+                            break
+
+        return cls(df, map=map, host_vehicle_idx=host_vehicle_idx, **kwargs)
 
     def to_parquet(self, filename):
         metadata = {}
@@ -506,14 +497,7 @@ class Recording:
         if "polygon" in self._df.columns:
             to_drop.append("polygon")
         t = pyarrow.table(self._df.drop(*to_drop))
-        map_meta = {}
-        if hasattr(self.map, "odr_xml"):
-            map_meta = {b"xodr": self.map.odr_xml.encode(), b"xodr_name": self.map.name.encode()}
-        elif hasattr(self.map, "_osi"):
-            d = json.loads(self.map._osi.to_json())
-            if "movingObject" in d:
-                del d["movingObject"]
-            map_meta = {b"osi": json.dumps(d).encode()}
+        map_meta = self.map._to_binary_json() if self.map is not None else {}
 
         t = t.cast(t.schema.with_metadata(metadata | proj_meta | map_meta))
         pq.write_table(t, filename)

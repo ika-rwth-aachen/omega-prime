@@ -9,6 +9,7 @@ from matplotlib.patches import Polygon as PltPolygon
 import polars as pl
 import altair as alt
 import polars_st as st
+import json
 
 
 OsiLaneId = namedtuple("OsiLaneId", ["road_id", "lane_id"])
@@ -221,6 +222,7 @@ class Map:
     lanes: dict[Any:Lane]
 
     _supported_file_suffixes = [".osi", ".mcap"]
+    _binary_json_identifier = b"osi"
 
     def plot(self, ax: plt.Axes | None = None):
         if ax is None:
@@ -311,6 +313,13 @@ class Map:
     def setup_lanes_and_boundaries(self):
         raise NotImplementedError()
 
+    def _to_binary_json(self):
+        raise NotImplementedError()
+
+    @classmethod
+    def _from_binary_json(cls, d, **kwargs):
+        raise NotImplementedError()
+
 
 @dataclass(repr=False)
 class MapOsi(Map):
@@ -343,6 +352,20 @@ class MapOsi(Map):
             l.set_boundaries()
             l.set_polygon()
 
+    def _to_binary_json(self):
+        d = json.loads(self._osi.to_json())
+        if "movingObject" in d:
+            del d["movingObject"]
+        return {b"osi": json.dumps(d).encode()}
+
+    @classmethod
+    def _from_binary_json(cls, d, **kwargs):
+        gt = betterosi.GroundTruth().from_json(d[b"osi"].decode())
+        if len(gt.lane_boundary) > 0:
+            return cls.create(gt)
+        else:
+            return None
+
 
 @dataclass(repr=False)
 class MapOsiCenterline(Map):
@@ -367,3 +390,14 @@ class MapOsiCenterline(Map):
             l.predecessor_ids = [map_osi_id2idx[int(i)] for i in l.predecessor_ids if int(i) in map_osi_id2idx]
         for l in self.lanes.values():
             l._map = self
+
+    def _to_binary_json(self):
+        d = json.loads(self._osi.to_json())
+        if "movingObject" in d:
+            del d["movingObject"]
+        return {b"osi": json.dumps(d).encode()}
+
+    @classmethod
+    def _from_binary_json(cls, d, **kwargs):
+        gt = betterosi.GroundTruth().from_json(d[b"osi"].decode())
+        return cls.create(gt)
