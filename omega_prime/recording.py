@@ -475,7 +475,11 @@ class Recording:
                         if map is not None:
                             break
 
+<<<<<<< HEAD
         return cls(df, map=map, host_vehicle_idx=host_vehicle_idx, **kwargs)
+=======
+        return cls(df, map=m, host_vehicle_idx=host_vehicle_idx, **kwargs)
+>>>>>>> 04adba9 (simplify to_parquet map storing)
 
     def to_parquet(self, filename):
         metadata = {}
