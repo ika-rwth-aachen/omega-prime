@@ -17,7 +17,9 @@ betterproto2==0.9.1
 betterproto2-compiler==0.9.0
     # via betterosi
 betterproto2-rust-codec==0.1.3
-    # via betterosi
+    # via
+    #   omega-prime (./pyproject.toml)
+    #   betterosi
 certifi==2025.10.5
     # via
     #   pyogrio
@@ -37,7 +39,7 @@ filelock==3.20.0
     # via omega-prime (./pyproject.toml)
 fonttools==4.60.1
     # via matplotlib
-grpcio==1.75.1
+grpcio==1.76.0
     # via betterproto2
 grpclib==0.4.8
     # via betterproto2
@@ -67,7 +69,7 @@ lxml==6.0.2
     # via
     #   omega-prime (./pyproject.toml)
     #   pyxodr-omega-prime
-lz4==4.4.4
+lz4==4.4.5
     # via mcap
 markdown-it-py==4.0.0
     # via rich
@@ -91,7 +93,7 @@ multidict==6.7.0
     # via grpclib
 mypy-extensions==1.1.0
     # via typing-inspect
-narwhals==2.8.0
+narwhals==2.10.1
     # via altair
 networkx==3.5
     # via omega-prime (./pyproject.toml)
@@ -123,13 +125,13 @@ pandera==0.26.1
     # via omega-prime (./pyproject.toml)
 pillow==12.0.0
     # via matplotlib
-polars==1.34.0
+polars==1.35.1
     # via
     #   omega-prime (./pyproject.toml)
     #   lxd-io
     #   pandera
     #   polars-st
-polars-runtime-32==1.34.0
+polars-runtime-32==1.35.1
     # via polars
 polars-st==0.4.0
     # via omega-prime (./pyproject.toml)
@@ -137,11 +139,11 @@ protobuf==6.33.0
     # via
     #   betterproto2
     #   mcap-protobuf-support
-pyarrow==21.0.0
+pyarrow==22.0.0
     # via
     #   pandas
     #   polars-st
-pydantic==2.12.2
+pydantic==2.12.3
     # via
     #   betterproto2
     #   pandera
@@ -172,13 +174,13 @@ rich==14.2.0
     # via
     #   pyxodr-omega-prime
     #   typer
-rpds-py==0.27.1
+rpds-py==0.28.0
     # via
     #   jsonschema
     #   referencing
 ruff==0.9.10
     # via betterproto2-compiler
-scipy==1.16.2
+scipy==1.16.3
     # via
     #   omega-prime (./pyproject.toml)
     #   pyxodr-omega-prime
@@ -200,7 +202,7 @@ tqdm-joblib==0.0.5
     # via omega-prime (./pyproject.toml)
 typeguard==4.4.4
     # via pandera
-typer==0.19.2
+typer==0.20.0
     # via
     #   omega-prime (./pyproject.toml)
     #   betterosi

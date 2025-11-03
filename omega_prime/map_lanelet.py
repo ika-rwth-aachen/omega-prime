@@ -7,6 +7,8 @@ from tqdm.auto import tqdm
 import shapely
 import numpy as np
 from dataclasses import dataclass, field
+import tempfile
+from pathlib import Path
 
 
 lst = betterosi.LaneClassificationSubtype
@@ -25,26 +27,25 @@ lanelet2lst = {
     "freespace": lst.SUBTYPE_NORMAL,
     "exit": lst.SUBTYPE_EXIT,
     "keepout": lst.SUBTYPE_RESTRICTED,
-    "crosswalk": lst.SUBTYPE_NORMAL
-
+    "crosswalk": lst.SUBTYPE_NORMAL,
 }
 
 lst2lanelet = {
-    lst.SUBTYPE_UNKNOWN: 'road',
-    lst.SUBTYPE_OTHER: 'road',
-    lst.SUBTYPE_NORMAL: 'road',
-    lst.SUBTYPE_BIKING: 'bicycle_lane',
-    lst.SUBTYPE_SIDEWALK: 'walkway',
-    lst.SUBTYPE_PARKING: 'parking',
-    lst.SUBTYPE_STOP: 'road',
-    lst.SUBTYPE_RESTRICTED: 'keepout',
-    #lst.SUBTYPE_BORDER: ''
-    #lst.SUBTYPE_SHOULDER: ''
-    lst.SUBTYPE_EXIT: 'exit',
-    lst.SUBTYPE_ENTRY: 'road',
-    lst.SUBTYPE_ONRAMP: 'road',
-    lst.SUBTYPE_OFFRAMP: 'road',
-    lst.SUBTYPE_CONNECTINGRAMP: 'road'
+    lst.SUBTYPE_UNKNOWN: "road",
+    lst.SUBTYPE_OTHER: "road",
+    lst.SUBTYPE_NORMAL: "road",
+    lst.SUBTYPE_BIKING: "bicycle_lane",
+    lst.SUBTYPE_SIDEWALK: "walkway",
+    lst.SUBTYPE_PARKING: "parking",
+    lst.SUBTYPE_STOP: "road",
+    lst.SUBTYPE_RESTRICTED: "keepout",
+    # lst.SUBTYPE_BORDER: ''
+    # lst.SUBTYPE_SHOULDER: ''
+    lst.SUBTYPE_EXIT: "exit",
+    lst.SUBTYPE_ENTRY: "road",
+    lst.SUBTYPE_ONRAMP: "road",
+    lst.SUBTYPE_OFFRAMP: "road",
+    lst.SUBTYPE_CONNECTINGRAMP: "road",
 }
 
 
@@ -54,7 +55,7 @@ lanelet2lt = {
     "play_street": lt.TYPE_DRIVING,
     "emergency_lane": lt.TYPE_NONDRIVING,
     "bus_lane": lt.TYPE_NONDRIVING,
-    "bicycle_lane": lt.TYPE_NONDRIVING,
+    "bicycle_lane": lt.TYPE_DRIVING,
     "walkway": lt.TYPE_NONDRIVING,
     "shared_walkway": lt.TYPE_NONDRIVING,
     "parking": lt.TYPE_DRIVING,
@@ -62,7 +63,7 @@ lanelet2lt = {
     "exit": lt.TYPE_DRIVING,
     "keepout": lt.TYPE_NONDRIVING,
     "virtual": lt.TYPE_DRIVING,
-    "crosswalk": lt.TYPE_DRIVING
+    "crosswalk": lt.TYPE_DRIVING,
 }
 
 
@@ -102,6 +103,8 @@ class MapLanelet(omega_prime.map.Map):
     lane_boundaries: dict[int, "LaneBoundaryLanelet"]
     lanelet_map: lanelet2.core.LaneletMap
     _lanelet_routing: RoutingGraph = field(init=False)
+    _supported_file_suffixes = [".osm"]
+    _binary_json_identifier = b"osm"
 
     def setup_lanes_and_boundaries(self):
         pass
@@ -124,6 +127,24 @@ class MapLanelet(omega_prime.map.Map):
             if a is not None:
                 map.lanes[a.idx] = a
         return map
+
+    def _to_binary_json(self, **kwargs):
+        file_name = tempfile.NamedTemporaryFile(suffix=".osm", delete=True).name
+        lanelet_map = map_to_lanelet(self)
+        save_lanelet(lanelet_map, file_name)
+        with open(file_name, "rb") as f:
+            osm = f.read()
+        Path(file_name).unlink()
+        return {b"osm": osm}
+
+    @classmethod
+    def _from_binary_json(cls, d, **kwargs):
+        tf = tempfile.NamedTemporaryFile(suffix=".osm", mode="wb", delete=False)
+        tf.write(d[b"osm"])
+        tf.close()
+        self = cls.create(tf.name)
+        Path(tf.name).unlink()
+        return self
 
 
 class LaneBoundaryLanelet(omega_prime.map.LaneBoundary):
@@ -200,13 +221,15 @@ class LaneLanelet(omega_prime.map.Lane):
             predecessor_ids=predecessor_ids,
         )
 
+
 def save_lanelet(ll_map, file_dir, projection=None):
     if projection != None:
         raise NotImplementedError
     projection = lanelet2.projection.UtmProjector(lanelet2.io.Origin(0, 0))
     lanelet2.io.write(file_dir, ll_map, projection)
 
-def map_to_lanelet(map):
+
+def map_to_lanelet(map) -> ltc.LaneletMap:
     """
     Converts omega prime map to a Lanelet2 map.
     :return: A lanelet2 map
@@ -239,23 +262,17 @@ def map_to_lanelet(map):
 
     laneid2laneletid = {}
     for lane in map.lanes.values():
-        
         lb = lane.left_boundary
         rb = lane.right_boundary
         # Create left and right boundaries as Lanelet2 LineStrings
-        left_boundary, _ = get_or_create_boundary([(a, b) for a, b in shapely.simplify(lb.polyline, 1).coords])
-        right_boundary, _ = get_or_create_boundary([(a, b) for a, b in shapely.simplify(rb.polyline, 1).coords])
+        left_boundary, _ = get_or_create_boundary([(c[0], c[1]) for c in shapely.simplify(lb.polyline, 1).coords])
+        right_boundary, _ = get_or_create_boundary([(c[0], c[1]) for c in shapely.simplify(rb.polyline, 1).coords])
 
         # Create a lanelet using the boundaries
         lanelet_id = len(lanelets) + 1
         laneid2laneletid[lane.idx] = lanelet_id
         lanelet = ltc.Lanelet(
-            lanelet_id,
-            left_boundary, 
-            right_boundary,
-            attributes={
-                'subtype': lst2lanelet.get(lane.type, 'virtual')
-            }
+            lanelet_id, left_boundary, right_boundary, attributes={"subtype": lst2lanelet.get(lane.type, "virtual")}
         )
         lanelets.append(lanelet)
 
@@ -263,4 +280,6 @@ def map_to_lanelet(map):
         lanelet_map.add(lanelet)
 
     return lanelet_map
-    
+
+
+omega_prime.recording.MAP_CLASSES += [MapLanelet]
