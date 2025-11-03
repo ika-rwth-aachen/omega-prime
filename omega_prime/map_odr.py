@@ -289,11 +289,13 @@ class MapOdr(Map):
             lane._map = self
             lane._set_boundaries()
             lane._set_polygon()
+        for b in self._lane_boundaries.values():
+            b._map = self
+
         return self
 
     def setup_lanes_and_boundaries(self):
-        for b in self.lane_boundaries.values():
-            b._map = self
+        pass
 
     def to_file(self, filename: str | Path):
         """Export the current MapOdr to a .xodr file."""
@@ -449,8 +451,8 @@ class LaneXodr(Lane):
         return lane_type, lane_subtype
 
     def _set_boundaries(self):
-        self.left_boundary = self._map.lane_boundaries[self.left_boundary_id]
-        self.right_boundary = self._map.lane_boundaries[self.right_boundary_id]
+        self.left_boundary = self._map._lane_boundaries[self.left_boundary_id]
+        self.right_boundary = self._map._lane_boundaries[self.right_boundary_id]
         return self
 
     def _set_polygon(self):

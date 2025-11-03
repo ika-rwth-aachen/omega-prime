@@ -255,6 +255,7 @@ class Map:
                     shapely_series,
                     pl.Series(name="idx", values=[i for i, _ in enumerate(self.lanes.keys())]),
                     pl.Series(name="type", values=[o.type.name for o in self.lanes.values()]),
+                    pl.Series(name="subtype", values=[o.subtype.name for o in self.lanes.values()]),
                     pl.Series(name="on_intersection", values=[o.on_intersection for o in self.lanes.values()]),
                 ]
             )
@@ -282,7 +283,12 @@ class Map:
             alt.Chart(self._plot_dict)
             .mark_geoshape(fillOpacity=0.4, filled=True if plot_polys else False)
             .encode(
-                tooltip=["properties.idx:N", "properties.type:O", "properties.on_intersection:O"],
+                tooltip=[
+                    "properties.idx:N",
+                    "properties.type:O",
+                    "properties.subtype:O",
+                    "properties.on_intersection:O",
+                ],
                 color=(
                     alt.when(alt.FieldEqualPredicate(equal=True, field="properties.on_intersection"))
                     .then(alt.value("black"))
