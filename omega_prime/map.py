@@ -234,8 +234,8 @@ class Map:
             b.plot(ax)
 
     @classmethod
-    def from_file(cls, filepath, parse_map=True):
-        first_gt = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
+    def from_file(cls, filepath, parse_map=True, **kwargs):
+        first_gt = next(betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True))
         return cls.create(first_gt)
 
     def plot_altair(self, recording=None, plot_polys=True):

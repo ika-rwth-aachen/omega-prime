@@ -155,11 +155,12 @@ class MapOdr(Map):
         cls,
         filename,
         topics: list[str] = ["/ground_truth_map", "ground_truth_map"],
-        parse: bool = False,
+        parse_map: bool = False,
         is_odr_xml: bool = False,
         is_mcap: bool = False,
         step_size=0.01,
         ignored_lane_types: set[str] = set([]),
+        **kwargs,
     ):
         if Path(filename).suffix in [".xodr", ".odr"] or is_odr_xml:
             with open(filename) as f:
@@ -168,13 +169,13 @@ class MapOdr(Map):
                 odr_xml=odr_xml,
                 name=Path(filename).stem,
                 step_size=step_size,
-                parse=parse,
+                parse_map=parse_map,
                 ignored_lane_types=ignored_lane_types,
             )
         if Path(filename).suffix in [".mcap"] or is_mcap:
             map = next(iter(betterosi.read(filename, mcap_topics=topics, mcap_return_betterosi=False)))
             return cls.create(
-                odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, parse=parse
+                odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, parse_map=parse_map
             )
 
     @property
@@ -198,12 +199,12 @@ class MapOdr(Map):
         self._lane_boundaries = val
 
     @classmethod
-    def create(cls, odr_xml, name, step_size=0.01, parse: bool = False, ignored_lane_types: set[str] = set([])):
+    def create(cls, odr_xml, name, step_size=0.01, parse_map: bool = False, ignored_lane_types: set[str] = set([])):
         self = cls(odr_xml=odr_xml, name=name, step_size=step_size, lanes={}, lane_boundaries={})
         self._lane_boundaries = None
         self._lanes = None
         self.ignored_lane_types = ignored_lane_types
-        if parse:
+        if parse_map:
             self.parse()
         return self
 
@@ -323,7 +324,7 @@ class MapOdr(Map):
         return cls.create(
             odr_xml=d[b"xodr"].decode(),
             name=d[b"xodr_name"].decode(),
-            parse=parse_map,
+            parse_map=parse_map,
             step_size=step_size,
         )
 

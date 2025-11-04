@@ -315,6 +315,7 @@ class Recording:
         validate: bool = False,
         parse_map: bool = False,
         step_size: float = 0.01,
+        **kwargs,
     ):
         if Path(filepath).suffix == ".parquet":
             r = cls.from_parquet(filepath, parse_map=parse_map, validate=validate, step_size=step_size)
@@ -330,7 +331,7 @@ class Recording:
         for MC in MAP_CLASSES:
             if map_path.suffix in MC._supported_file_suffixes:
                 try:
-                    map = MC.from_file(map_path, parse=parse_map)
+                    map = MC.from_file(map_path, parse_map=parse_map)
                 except Exception as e:
                     map_parsing[MC.__name__] = str(e)
                 else:
