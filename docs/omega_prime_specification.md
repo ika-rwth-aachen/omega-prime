@@ -1,11 +1,6 @@
-Scenario Source Data –  
-Specification of Data Model and Format (OMEGA-PRIME)
-===
-Michael Schuldes, Clément Val, Carlo van Driesten
+## Introduction
 
-# Introduction
-
-In the context of SYNERGIES, Scenario Source Data (SSD) corresponds to the data that is provided to WP5 for scenario identification and extraction.
+In the context of [SYNERGIES](https://synergies-ccam.eu/), Scenario Source Data (SSD) corresponds to the data that is provided to WP5 for scenario identification and extraction.
 Such data can stem from multiple sources: in-traffic-vehicle data collection, fixed or mobile (e.g., drones) roadside observations, dynamic accident reconstruction, but also generative AI, traffic simulation...
 WP5 itself will also develop multiple approaches to generate scenarios from data.
 To facilitate interoperability between multiple data sources and multiple scenarios' creation approaches, a standardization of Scenario Source Data needs to be defined, both in terms of content and in terms of container, i.e., format.
@@ -28,7 +23,7 @@ Those standards also allow characterizing the same traffic situation in multiple
   Since the underlying standards allow representing and storing more information, users are free to use additional features at their discretion, for their own needs, as long as they respect the minimum set of rules herein defined.
 - In the event that the underlying standards are insufficient, either in terms of features or in terms of documentation (e.g., clarity), the intention of the authors is to collaborate with the standards' maintainers to upstream necessary changes and extensions, rather than inventing yet another incompletely compatible format.
 
-# Requirements on Scenario Source Data
+## Requirements on Scenario Source Data
 
 Scenario Source Data contains the following information:
 
@@ -52,9 +47,9 @@ Rather:
 
 The creation of such consolidated / ground truth data from raw observations requires complex processing and, in some instance, manual annotation, that depend on the nature of the original data.
 Such processing may include **sensor fusion**, **object detection and tracking, mapping, geo-referencing...** All those operations are out of the scope of this document but need to be performed before Scenario Source Data can be stored and exchanged using OMEGA-PRIME.
-# OMEGA-PRIME specification
+## OMEGA-PRIME specification
 
-## Rationale for the choice of the underlying standards
+### Rationale for the choice of the underlying standards
 
 There exists a multitude of data models and formats that cover the aforementioned information, a selection of established data models and formats is listed below:
 
@@ -132,7 +127,7 @@ The [OMEGAFormat](https://github.com/ika-rwth-aachen/omega_format), which has be
 Therefore, we propose to remodel the OMEGAFormat through usage of ASAM OSI and ASAM OpenDRIVE.
 In the following the resulting SSD Specification OMEGA-PRIME is presented.
 
-## OMEGA-PRIME Specification
+### OMEGA-PRIME Specification
 
 OMEGA-PRIME defines a data model and data format for scenario source data through an extension of ASAM OSI, under usage of ASAM OpenDRIVE.
 Especially for ASAM OSI it defines the exchange of such files and mandatory signals and quality for the use case of scenario identification and generation.
@@ -144,14 +139,14 @@ Then the representation of moving objects through ASAM OSI Ground Truth messages
 Lastly, the usage of ASAM OpenDRIVE for information on the map level is specified.
 Accuracy requirements of signals are derived from the [OMEGAFormat](https://github.com/ika-rwth-aachen/omega_format/blob/main/doc/signal_list_reference.md).
 
-### Coordinate Systems
+#### Coordinate Systems
 
 ASAM OSI and ASAM OpenDRIVE are harmonized in terms of their inertial coordinate system specification (handedness, axis directions and rotation order).
 The OpenDRIVE 'inertial coordinate system' is defined in the same way as OSI’s 'global coordinate system', relying on the ISO 8855 standard.
 Both OpenDRIVE and ASAM OSI define further context-related coordinate systems (e.g. road reference line coordinate system in OpenDRIVE, sensor or object coordinate system in OSI).
 Each standard's documentation must be consulted when working with data structures using these coordinate systems.
 
-#### Geo Reference
+##### Geo Reference
 
 For both OSI and OpenDRIVE the inertial coordinate system’s origin can be mapped to a geographic coordinate system using PROJ transformations in a harmonized way.
 Both standards allow the definition of a PROJ-string and a corresponding offset.
@@ -162,11 +157,11 @@ For OMEGA-PRIME real-world datasets, both PROJ-string and offset must be given i
 <u>Note:</u> Pay attention that even if it moves from one observation to the next, this coordinate system never encompasses velocity.
 Therefore, relative measurements of velocities from a moving observer must not be directly stored in the GroundTruth message but have to be processed first.
 
-<img src="./omega_prime/coordinate_system.svg" style="width:5.36121in;"/>
+![Geo-reference and coordinate system in ASAM OpenDRIVE and ASAM OSI](./omega_prime/coordinate_system.svg)
 
 Figure 1: Geo-reference and coordinate system in ASAM OpenDRIVE and ASAM OSI
 
-###  Dynamic Information
+####  Dynamic Information
 
 For representing object-list based trajectory information of moving elements and the dynamic information of traffic signs, OMEGA-PRIME utilizes [ASAM OSI GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html).
 Each GroundTruth message defines one point in time.
@@ -479,7 +474,7 @@ The association between OSI and OpenDRIVE objects is established using the 'sour
 </tbody>
 </table>
 
-### Static Information
+#### Static Information
 
 The static map information is defined through ASAM OpenDRIVE 1.8.1.
 The map should contain information on the roads all observed traffic participants are moving on and the respective lanes.
@@ -487,7 +482,7 @@ This includes information on the junction and road object positions defined by A
 See the [ASAM OpenDRIVE specification](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html) on data model and format definitions.
 When real-world data is represented, the deviation of the modelled geometries to the real-world counterparts should not be larger than 0.2m.
 
-### OMEGA-PRIME Format Specification
+#### OMEGA-PRIME Format Specification
 
 The OMEGA-PRIME MCAP multi-channel trace file format is a binary file format that allows for storing a serialized specified subset of an OSI GroundTruth message stream, along with additional meta-data, OpenDRIVE map data and other related data streams.
 
@@ -514,7 +509,7 @@ The following rules apply independent of the chosen option:
 
 The following sections specify the rules depending on the chosen option.
 
-#### Option A: Self-contained Package
+##### Option A: Self-contained Package
 
 Storing map data with object data in a single file has the benefit that there is no chance that the association gets lost or is unclear.
 This is especially relevant for the exchange of data between parties.
@@ -529,24 +524,22 @@ In `open_drive_xml` store the string content of an OpenDRIVE XML file.
 package osi3;
 message MapAsamOpenDrive
 {
-    required string map_reference = 1;
-    required string open_drive_xml_content = 2;
+    optional  string map_reference = 1;
+    optional  string open_drive_xml_content = 2;
 }
 ```
-
-<img src="./omega_prime/omega_specification.svg" style="width:6.69306in;height:3.32491in" />
-
+![File structure of OMEGA-PRIME self-contained package - scenario source data file.](./omega_prime/omega_specification.svg)
 Figure 2: File structure of OMEGA-PRIME self-contained package - scenario source data file.
 
-#### Option B: One Map – Multiple Recordings
+##### Option B: One Map – Multiple Recordings
 
 On the data provider side, it could be useful to just store an instance of the map once, when you have multiple recordings of the same map.
 This can be useful in settings where you are still iterating the map and do not want to update it in many places.
 If you use this option, the map file has to be in the same directory (or zip archive level) as the MCAP file and `map_reference` in the Ground Truth messages must be set to the filename of the ASAM OpenDRIVE file.
 
-# Technical Notes
+## Technical Notes
 
-## Why is ASAM OpenDRIVE used instead of OSI PhysicalLanes and LaneBoundaries directly?
+### Why is ASAM OpenDRIVE used instead of OSI PhysicalLanes and LaneBoundaries directly?
 
 OSI itself has the option to represent information on lanes and their boundaries.
 Unfortunately, creating map information in such a way is not widely known and used.
@@ -557,7 +550,7 @@ Therefore, we define OpenDRIVE as required.
 On Downstream Tasks of the Scenario Source Data Format, it could be useful to also have the map information directly in OSI.
 Since it is not useful for every partner to create tooling for this on their own and different interpretations of standards could cause discrepancy.
 
-## How does OSMP relate to OSI and OMEGA-PRIME?
+### How does OSMP relate to OSI and OMEGA-PRIME?
 
 [OSMP](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) is the OSI Sensor Model Packaging.
 It defines how Functional Mock-up Units (FMU) (e.g., Environmental effect model, sensor model, logical models, …) can communicate with the simulation.

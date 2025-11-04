@@ -1,3 +1,5 @@
+"""Command line interface for omega-prime conversions and utilities."""
+
 from pathlib import Path
 from typing import Annotated
 
@@ -96,7 +98,7 @@ def to_parquet(
     r.to_parquet(output)
 
 
-@app.command()
+@app.command(help="Visualize an omega-prime recording using Altair. Opens interactive plot in browser.")
 def visualize(
     input: Annotated[Path, typer.Argument(exists=True, dir_okay=False)],
     height: int = 500,

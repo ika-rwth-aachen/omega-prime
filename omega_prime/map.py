@@ -10,7 +10,7 @@ import polars as pl
 import altair as alt
 import polars_st as st
 import json
-
+from . import types
 
 OsiLaneId = namedtuple("OsiLaneId", ["road_id", "lane_id"])
 
@@ -27,7 +27,7 @@ class ProjectionOffset:
 class LaneBoundary:
     _map: "Map" = field(init=False)
     idx: Any
-    type: betterosi.LaneBoundaryClassificationType
+    type: types.LaneBoundaryType
     polyline: shapely.LineString
     # reference: Any = field(init=False, default=None)
 
@@ -218,6 +218,8 @@ class LaneOsi(Lane, LaneOsiCenterline):
 
 @dataclass(repr=False)
 class Map:
+    """Base class for Map representations"""
+
     lane_boundaries: dict[Any, LaneBoundary]
     lanes: dict[Any:Lane]
 
@@ -235,6 +237,7 @@ class Map:
 
     @classmethod
     def from_file(cls, filepath, parse_map=True, **kwargs):
+        "Create a Map instance from a file."
         first_gt = next(betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True))
         return cls.create(first_gt)
 
@@ -323,6 +326,8 @@ class Map:
 
 @dataclass(repr=False)
 class MapOsi(Map):
+    "Map representation based on ASAM OSI GroundTruth"
+
     _osi: betterosi.GroundTruth
 
     @classmethod
@@ -369,6 +374,8 @@ class MapOsi(Map):
 
 @dataclass(repr=False)
 class MapOsiCenterline(Map):
+    "Map representation based on ASAM OSI GroundTruth defining only the centerlines of lanes and nothing else. Does not conform to the omega-prime specification for Map."
+
     _osi: betterosi.GroundTruth
     lanes: dict[int, LaneOsiCenterline]
 

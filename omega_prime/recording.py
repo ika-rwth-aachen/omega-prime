@@ -6,7 +6,6 @@ from warnings import warn
 import altair as alt
 import betterosi
 import numpy as np
-import pandas as pd
 import polars as pl
 import polars_st as st
 import pyarrow
@@ -103,6 +102,18 @@ def bbx_to_polygon(df):
 
 
 class Recording:
+    """Class representing a continuous traffic observation. Usally corresponds to one omega-prime file.
+
+    Internally, the Reocrding uses a Polars DataFrame to store moving object data. Each row in the DataFrame represents the state of a moving object at a specific timestamp.
+
+    Attributes:
+        df (pl.DataFrame): Polars DataFrame containing the moving object data.
+        map (MapOsi | MapOsiCenterline | MapOdr | None): Map associated with the recording.
+        projections (list[dict]): List of projection information dictionaries.
+        traffic_light_states (dict): Dictionary mapping timestamps to traffic light states.
+        host_vehicle_idx (int | None): Index of the host vehicle, if applicable.
+    """
+
     _MovingObjectClass: typing.ClassVar = MovingObject
 
     @staticmethod
@@ -148,8 +159,9 @@ class Recording:
         validate=False,
         traffic_light_states: dict | None = None,
     ):
+        "Initialize a Recording instance."
         # Convert pandas DataFrame to polars DataFrame if necessary
-        if isinstance(df, pd.DataFrame):
+        if not isinstance(df, pl.DataFrame):
             df = pl.DataFrame(df, schema_overrides=polars_schema)
         if "total_nanos" not in df.columns:
             raise ValueError("df must contain column `total_nanos`.")
@@ -316,7 +328,19 @@ class Recording:
         parse_map: bool = False,
         step_size: float = 0.01,
         **kwargs,
-    ):
+    ) -> "Recording":
+        """Load a Recording from a file. Supports `.parquet`, `.osi` and `.mcap` files.
+
+        Parameters:
+            filepath (str): Path to the input file.
+            map_path (str | None): Optional path to a map file. If None, the map will be loaded from the recording if available.
+            validate (bool): Whether to validate the data against the schema.
+            parse_map (bool): Whether to create python objects from the map data or just load it.
+            step_size (float): Step size for map parsing, if applicable (Used for ASAM OpenDRIVE).
+
+        Returns:
+            Recording (Recording): The loaded Recording object.
+        """
         if Path(filepath).suffix == ".parquet":
             r = cls.from_parquet(filepath, parse_map=parse_map, validate=validate, step_size=step_size)
         else:
@@ -343,6 +367,7 @@ class Recording:
         return r
 
     def to_mcap(self, filepath):
+        "Store Recording as an MCAP file."
         if Path(filepath).suffix != ".mcap":
             raise ValueError()
         with betterosi.Writer(filepath) as w:
@@ -356,6 +381,7 @@ class Recording:
                 warn(f"The map {self.map} could not be saved to `mcap`")
 
     def interpolate(self, new_nanos: list[int] | None = None, hz: float | None = None):
+        "Interpolate the recording to new timestamps or a given frequency."
         df = self._df
         nanos_min, nanos_max, frame_min, frame_max = df.select(
             nanos_min=pl.col("total_nanos").min(),
@@ -479,6 +505,7 @@ class Recording:
         return cls(df, map=map, host_vehicle_idx=host_vehicle_idx, **kwargs)
 
     def to_parquet(self, filename):
+        "Store Recording as a Parquet file."
         metadata = {}
         if self.host_vehicle_idx is not None:
             metadata[b"host_vehicle_idx"] = str(self.host_vehicle_idx).encode()
@@ -505,16 +532,17 @@ class Recording:
 
     def plot_altair(
         self,
-        start_frame=0,
-        end_frame=-1,
-        plot_map=True,
-        plot_map_polys=True,
-        metric_column=None,
-        plot_wedges=True,
+        start_frame: int = 0,
+        end_frame: int = -1,
+        plot_map: bool = True,
+        plot_map_polys: bool = True,
+        metric_column: str | None = None,
+        plot_wedges: bool = True,
         idx=None,
-        height=None,
-        width=None,
-    ):
+        height: float | None = None,
+        width: float | None = None,
+    ) -> alt.Chart:
+        "Generate an interactive plot of the recording using Altair."
         if end_frame != -1:
             df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)
         else:

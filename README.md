@@ -6,30 +6,30 @@
 [![](https://github.com/ika-rwth-aachen/omega-prime/workflows/CI/badge.svg)](https://github.com/ika-rwth-aachen/omega-prime/actions)
 [![](https://img.shields.io/pypi/pyversions/omega-prime.svg)](https://pypi.python.org/pypi/omega-prime/)
 [![](https://img.shields.io/github/issues-raw/ika-rwth-aachen/omega-prime.svg)](https://github.com/ika-rwth-aachen/omega-prime/issues)
-
+[![](https://img.shields.io/badge/Documentation-2e8b57)](https://ika-rwth-aachen.github.io/omega-prime)
 
 # Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data 
 
 Data Model, Format and Python Library for ground truth data containing information on dynamic objects, map and environmental factors optimized for representing urban traffic. The repository contains:
 ### Data Model and Specification
-see [./docs/omega_prime_specification.md](https://github.com/ika-rwth-aachen/omega-prime/tree/main/docs/omega_prime_specification.md)
+see [Data Model & Specification](https://ika-rwth-aachen.github.io/omega-prime/omega_prime_specification/)
 
 - 🌍 **Data Model**: What signals exist and how these are defined.
 - 🧾 **Data Format Specification**: How to exchange and store those signals.
 
 ### Python Library
-  - 🔨 **Create** omega-prime files from many sources (see [./tutorial.ipynb](https://github.com/ika-rwth-aachen/omega-prime/blob/main/tutorial.ipynb)):
+  - 🔨 **Create** omega-prime files from many sources (see [./docs/notebooks/tutorial.ipynb](https://github.com/ika-rwth-aachen/omega-prime/blob/main/docs/notebooks/tutorial.ipynb)):
       - ASAM OSI GroundTruth trace (e.g., output of esmini)
       - Table of moving object data (e.g., csv data)
       - ASAM OpenDRIVE map
       - [LevelXData datasets](https://levelxdata.com/) through [lxd-io](https://github.com/lenvt/lxd-io)
       - Extend yourself by subclassing [DatasetConverter](omega_prime/converters/converter.py)
       - Use [omega-prime-trajdata](https://github.com/ika-rwth-aachen/omega-prime-trajdata) to convert motion prediction datasets into omega-prime 
-  - 🗺️ **Map Association**: Associate Object Location with Lanes from OpenDRIVE or OSI Maps (see [tutorial_locator.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/tutorial_locatory.ipynb))
+  - 🗺️ **Map Association**: Associate Object Location with Lanes from OpenDRIVE or OSI Maps (see [./docs/notebooks/tutorial_locator.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/docs/notebooks/tutorial_locatory.ipynb))
   - 📺 **Plotting** of data: interactive top view plots using [altair](https://altair-viz.github.io/)
   - ✅ **Validation** of data: check if your data conforms to the omega-prime specification (e.g., correct yaw) using [pandera](https://pandera.readthedocs.io/en/stable/)
   - 📐 **Interpolation** of data: bring your data into a fixed frequency
-  - 📈 **Metrics**: compute interaction metrics like PET, TTC, THW (see [tutorial_metrics.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/tutorial_metrics.ipynb))
+  - 📈 **Metrics**: compute interaction metrics like PET, TTC, THW (see [./docs/notebooks/tutorial_metrics.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/docs/notebooks/tutorial_metrics.ipynb))
     - Predicted and observed timegaps based on driving tubes (see [./omega_prime/metrics.py](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_prime/metrics.py))
     - 2D-birds-eye-view visibility with [omega-prime-visibility](https://github.com/ika-rwth-aachen/omega-prime-visibility)
   - 🚀 **Fast Processing** directly on DataFrames using [polars](https://pola.rs/), [polars-st](https://oreilles.github.io/polars-st/)
@@ -48,7 +48,7 @@ To learn more about the example data read [example_files/README.md](https://gith
 `pip install omega-prime`
 
 ## Usage
-> A detailed introduction to the features and usage can be found in [tutorial.ipynb](https://github.com/ika-rwth-aachen/omega-prime/blob/main/tutorial.ipynb)
+> A detailed introduction to the features and usage can be found in [./docs/notebooks/tutorial.ipynb](https://github.com/ika-rwth-aachen/omega-prime/blob/main/docs/notebooks/tutorial.ipynb)
 
 Create an omega-prime file from an OSI GroundTruth message trace and an OpenDRIVE map:
 ```python
