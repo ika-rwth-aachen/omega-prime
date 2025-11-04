@@ -61,7 +61,6 @@ class LaneBoundaryOsi(LaneBoundary):
     def get_osi(self) -> betterosi.LaneBoundary:
         return self._osi
 
-
 @dataclass(repr=False)
 class LaneBase:
     _map: "Map" = field(init=False)
@@ -218,6 +217,8 @@ class LaneOsi(Lane, LaneOsiCenterline):
 
 @dataclass(repr=False)
 class Map:
+    """Base class for Map representations"""
+
     lane_boundaries: dict[Any, LaneBoundary]
     lanes: dict[Any:Lane]
 
@@ -235,6 +236,7 @@ class Map:
 
     @classmethod
     def from_file(cls, filepath, parse_map=True, **kwargs):
+        "Create a Map instance from a file."
         first_gt = next(betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True))
         return cls.create(first_gt)
 
@@ -323,6 +325,7 @@ class Map:
 
 @dataclass(repr=False)
 class MapOsi(Map):
+    "Map representation based on ASAM OSI GroundTruth"
     _osi: betterosi.GroundTruth
 
     @classmethod
@@ -369,6 +372,7 @@ class MapOsi(Map):
 
 @dataclass(repr=False)
 class MapOsiCenterline(Map):
+    "Map representation based on ASAM OSI GroundTruth defining only the centerlines of lanes and nothing else. Does not conform to the omega-prime specification for Map."
     _osi: betterosi.GroundTruth
     lanes: dict[int, LaneOsiCenterline]
 

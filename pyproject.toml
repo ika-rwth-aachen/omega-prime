@@ -53,7 +53,7 @@ Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
 Repository = "https://github.com/ika-rwth-aachen/omega-prime"
 
 [project.optional-dependencies]
-test = ['ruff', 'pdoc3', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets']
+test = ['ruff', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets', 'mkdocs-jupyter', 'mkdocs-material', 'mkdocstrings[python]', 'mkdocs-typer2']
 
 [project.scripts]
 omega-prime = "omega_prime.cli:main"
