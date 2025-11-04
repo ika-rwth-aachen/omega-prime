@@ -105,6 +105,7 @@ class MapLanelet(omega_prime.map.Map):
     _lanelet_routing: RoutingGraph = field(init=False)
     _supported_file_suffixes = [".osm"]
     _binary_json_identifier = b"osm"
+    _osm: str | None = None
 
     def setup_lanes_and_boundaries(self):
         pass
@@ -114,10 +115,13 @@ class MapLanelet(omega_prime.map.Map):
 
     @classmethod
     def create(cls, path: str) -> "MapLanelet":
+        with open(path, "rb") as f:
+            osm = f.read()
+
         proj = lanelet2.projection.UtmProjector(lanelet2.io.Origin(0, 0))
         lanelet_map = lanelet2.io.load(path, proj)
 
-        map = cls({}, {}, lanelet_map=lanelet_map)
+        map = cls({}, {}, lanelet_map=lanelet_map, _osm=osm)
         for l in tqdm(lanelet_map.laneletLayer, desc="Lanes"):
             l = LaneLanelet.create(map, l)
             if l is not None:
@@ -129,6 +133,8 @@ class MapLanelet(omega_prime.map.Map):
         return map
 
     def _to_binary_json(self, **kwargs):
+        if self._osm is not None:
+            return {b"osm": self._osm}
         file_name = tempfile.NamedTemporaryFile(suffix=".osm", delete=True).name
         lanelet_map = map_to_lanelet(self)
         save_lanelet(lanelet_map, file_name)
