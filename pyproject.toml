@@ -44,7 +44,8 @@ dependencies = [
     'pyxodr-omega-prime',
     'joblib',
     'tqdm_joblib',
-    'filelock>=3.18.0'
+    'filelock>=3.18.0',
+    'betterproto2-rust-codec'
 ]
 version = "0.1.21"
 
@@ -54,6 +55,8 @@ Repository = "https://github.com/ika-rwth-aachen/omega-prime"
 
 [project.optional-dependencies]
 test = ['ruff', 'pdoc3', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets']
+lanelet2 = ['lanelet2']
+lanelet2x = ['lanelet2x']
 
 [project.scripts]
 omega-prime = "omega_prime.cli:main"

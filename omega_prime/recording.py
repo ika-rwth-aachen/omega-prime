@@ -474,7 +474,6 @@ class Recording:
                     else:
                         if map is not None:
                             break
-
         return cls(df, map=map, host_vehicle_idx=host_vehicle_idx, **kwargs)
 
     def to_parquet(self, filename):
