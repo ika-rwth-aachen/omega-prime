@@ -29,10 +29,17 @@ plugins:
           options:
             docstring_style: google
             show_submodules: true
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 nav:
-  - Introduction: index.md
+  - omega-prime: index.md
   - Data Model & Specification: omega_prime_specification.md
+  - Python Library: library.md
   - Tutorials:
     - Inroduction: notebooks/tutorial.ipynb
     - Locator: notebooks/tutorial_locator.ipynb

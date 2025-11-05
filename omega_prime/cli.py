@@ -113,7 +113,6 @@ def visualize(
     r = omega_prime.Recording.from_file(input, validate=False, parse_map=True)
     r.plot_altair(start_frame=start_frame, end_frame=end_frame, height=height, width=width, plot_map=plot_map).show()
 
-
 @app.command(help="Attach an ASAM OpenDRIVE (.xodr) map to an existing omega-prime recording and write a new file.")
 def attach_odr(
     input: Annotated[

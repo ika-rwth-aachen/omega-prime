@@ -10,7 +10,7 @@ import polars as pl
 import altair as alt
 import polars_st as st
 import json
-
+from . import types
 
 OsiLaneId = namedtuple("OsiLaneId", ["road_id", "lane_id"])
 
@@ -27,7 +27,7 @@ class ProjectionOffset:
 class LaneBoundary:
     _map: "Map" = field(init=False)
     idx: Any
-    type: betterosi.LaneBoundaryClassificationType
+    type: types.LaneBoundaryType
     polyline: shapely.LineString
     # reference: Any = field(init=False, default=None)
 
