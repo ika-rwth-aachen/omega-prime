@@ -50,9 +50,9 @@ create_doc:
     - apt-get update -q -y && apt-get install -y libgl1-mesa-dev
     - uv pip install --system -e .[test]
   script:
-    - pdoc ./omega_prime --html -o docs --force
+    - mkdocs build -d docs_build
   artifacts:
     when: always
     paths:
-     - "docs/**/*"
+     - "docs_build/**/*"
 

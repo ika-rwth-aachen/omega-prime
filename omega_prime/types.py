@@ -11,7 +11,7 @@ __all__ = [
 
 LaneBoundaryType = betterosi.LaneBoundaryClassificationType
 LaneType = betterosi.LaneClassificationType
-LaneSubtype = betterosi.LaneClassificationSubType
+LaneSubtype = betterosi.LaneClassificationSubtype
 MovingObjectType = betterosi.MovingObjectType
 MovingObjectSubtype = betterosi.MovingObjectVehicleClassificationType
 MovingObjectRole = betterosi.MovingObjectVehicleClassificationRole
