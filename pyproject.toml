@@ -88,9 +88,9 @@ zero = true
 addopts = "--nbval --codeblocks --cov=omega_prime --cov-report=xml --cov-report=html --cov-report=term-missing"
 testpaths = [
     "tests",
-    "tutorial.ipynb",
-    "tutorial_locator.ipynb",
-    "tutorial_metrics.ipynb",
+    "docs/notebooks/tutorial.ipynb",
+    "docs/notebooks/tutorial_locator.ipynb",
+    "docs/notebooks/tutorial_metrics.ipynb",
     "README.md"
 ]
 log_cli = true

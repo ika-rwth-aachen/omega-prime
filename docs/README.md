@@ -8,7 +8,7 @@
 `uv pip install -e .[test]`
 2. Create the documentation and start webserver serving them
 ```
-mkdocs server -a localhost:5555
+mkdocs serve -a localhost:5555
 ```
 or create the html pages with
 ```
@@ -18,3 +18,4 @@ mkdocs build -d docs_build
 ## Upload documentation to github-pages
 
 [Guide](https://www.mkdocs.org/user-guide/deploying-your-docs/)
+https://squidfunk.github.io/mkdocs-material/publishing-your-site/#with-github-actions
