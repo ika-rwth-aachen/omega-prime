@@ -15,6 +15,7 @@ from .types import (
     MovingObjectSubtype,
     MovingObjectType,
 )
+
 __version__ = version("omega_prime")
 
 __all__ = [

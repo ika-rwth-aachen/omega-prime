@@ -103,9 +103,9 @@ def bbx_to_polygon(df):
 
 class Recording:
     """Class representing a continuous traffic observation. Usally corresponds to one omega-prime file.
-    
+
     Internally, the Reocrding uses a Polars DataFrame to store moving object data. Each row in the DataFrame represents the state of a moving object at a specific timestamp.
-    
+
     Attributes:
         df (pl.DataFrame): Polars DataFrame containing the moving object data.
         map (MapOsi | MapOsiCenterline | MapOdr | None): Map associated with the recording.
@@ -113,6 +113,7 @@ class Recording:
         traffic_light_states (dict): Dictionary mapping timestamps to traffic light states.
         host_vehicle_idx (int | None): Index of the host vehicle, if applicable.
     """
+
     _MovingObjectClass: typing.ClassVar = MovingObject
 
     @staticmethod
@@ -329,14 +330,14 @@ class Recording:
         **kwargs,
     ) -> "Recording":
         """Load a Recording from a file. Supports `.parquet`, `.osi` and `.mcap` files.
-        
+
         Parameters:
             filepath (str): Path to the input file.
             map_path (str | None): Optional path to a map file. If None, the map will be loaded from the recording if available.
             validate (bool): Whether to validate the data against the schema.
             parse_map (bool): Whether to create python objects from the map data or just load it.
             step_size (float): Step size for map parsing, if applicable (Used for ASAM OpenDRIVE).
-            
+
         Returns:
             Recording (Recording): The loaded Recording object.
         """
@@ -531,15 +532,15 @@ class Recording:
 
     def plot_altair(
         self,
-        start_frame:int=0,
-        end_frame:int=-1,
-        plot_map:bool=True,
-        plot_map_polys:bool=True,
-        metric_column:str|None=None,
-        plot_wedges:bool=True,
+        start_frame: int = 0,
+        end_frame: int = -1,
+        plot_map: bool = True,
+        plot_map_polys: bool = True,
+        metric_column: str | None = None,
+        plot_wedges: bool = True,
         idx=None,
-        height:float|None=None,
-        width:float|None=None,
+        height: float | None = None,
+        width: float | None = None,
     ) -> alt.Chart:
         "Generate an interactive plot of the recording using Altair."
         if end_frame != -1:
