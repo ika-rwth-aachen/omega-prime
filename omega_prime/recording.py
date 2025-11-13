@@ -350,7 +350,7 @@ class Recording:
         """
         if filepath is None and map_path is None:
             raise ValueError("Either `filepath` or `map_path` must be provided.")
-        
+
         if filepath is not None and Path(filepath).suffix == ".parquet":
             r = cls.from_parquet(filepath, parse_map=parse_map, validate=validate, step_size=step_size)
         elif filepath is not None:
@@ -649,7 +649,6 @@ class Recording:
         return view.add_params(op_var)
 
     def create_mapsegments(self):
-        
         if isinstance(self.map, MapOsiCenterline):
             self.mapsegment = MapOsiCenterlineSegmentation(self)
             self.mapsegment.init_intersections()

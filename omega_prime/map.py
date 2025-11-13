@@ -457,13 +457,13 @@ class Map:
         else:
             # Convert string to Path if needed
             output_mcap_path = Path(output_mcap_path)
-            
+
             if output_mcap_path.is_dir():
                 output_mcap_path = output_mcap_path / "map_to_centerline.mcap"
             elif not output_mcap_path.suffix == ".mcap":
                 logging.warning(f"Output path must be a directory or .mcap file: {output_mcap_path}")
                 return ground_truth
-            
+
             with betterosi.Writer(output_mcap_path) as writer:
                 writer.add(ground_truth, topic="ground_truth_map", log_time=0)
             logging.info(f"Successfully saved map with {len(osi_lanes)} lanes to {output_mcap_path}")

@@ -13,8 +13,8 @@ class MapSegmentType(Enum):  # Added class for map segment from the scenario-dat
     RAMP_ON = "ramp_on"
     RAMP_OFF = "ramp_off"
     UNKNOWN = "unknown"
-    
-    
+
+
 class Segment(ABC):
     """A class that represents a segment of the map"""
 
@@ -52,7 +52,7 @@ class Segment(ABC):
 
     def _compute_segment_polygon(self):
         lane_centerline = [self._get_lane_geometry(lane) for lane in self.lanes]
-        multilinestring = shapely.MultiLineString(lane_centerline).buffer(.1)
+        multilinestring = shapely.MultiLineString(lane_centerline).buffer(0.1)
         combined = shapely.unary_union(multilinestring).buffer(0.1)
         try:
             hull = shapely.concave_hull(combined, self.concave_hull_ratio)

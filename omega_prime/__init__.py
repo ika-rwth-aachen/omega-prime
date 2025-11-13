@@ -42,5 +42,5 @@ __all__ = [
     "MovingObjectSubtype",
     "MovingObjectRole",
     "MapSegmentation",
-    "MapOsiCenterlineSegmentation"
+    "MapOsiCenterlineSegmentation",
 ]

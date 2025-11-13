@@ -19,10 +19,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-
-
-
-def add_lanexy_to_graph(G : nx.Graph, lanes):
+def add_lanexy_to_graph(G: nx.Graph, lanes):
     """
     Adds lane coordinates to the graph as node attributes.
 
@@ -40,7 +37,7 @@ def add_lanexy_to_graph(G : nx.Graph, lanes):
     return G
 
 
-def plot_graph(G : nx.Graph, output : Path):
+def plot_graph(G: nx.Graph, output: Path):
     """
     Plots the graph with lane coordinates.
 
@@ -71,7 +68,7 @@ class SegmentOsiCenterline(Segment):
     def set_trafficlight(self):
         trafficlight = []
         for lane in self.lanes:
-            if hasattr(lane, 'trafficlight') and lane.trafficlight:
+            if hasattr(lane, "trafficlight") and lane.trafficlight:
                 trafficlight.append(lane.trafficlight)
         self.trafficlights = trafficlight
 
@@ -90,7 +87,7 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
         self.lane_buffer = lane_buffer if lane_buffer is not None else 0.3
         self.intersection_overlap_buffer = intersection_overlap_buffer if intersection_overlap_buffer is not None else 1
         self.do_combine_intersections = True
-        
+
         for tl_state in recording.traffic_light_states.values():
             for tl in tl_state:
                 if tl.id.value not in self.trafficlight_ids:
@@ -108,17 +105,15 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
 
     def _get_lane_successors(self, lane) -> list:
         """Extract successor IDs from OSI centerline lane."""
-        return [succ_id.lane_id if hasattr(succ_id, "lane_id") else succ_id 
-                for succ_id in lane.successor_ids]
+        return [succ_id.lane_id if hasattr(succ_id, "lane_id") else succ_id for succ_id in lane.successor_ids]
 
     def _get_lane_predecessors(self, lane) -> list:
         """Extract predecessor IDs from OSI centerline lane."""
-        return [pred_id.lane_id if hasattr(pred_id, "lane_id") else pred_id 
-                for pred_id in lane.predecessor_ids]
+        return [pred_id.lane_id if hasattr(pred_id, "lane_id") else pred_id for pred_id in lane.predecessor_ids]
 
     def _has_traffic_light(self, lane) -> bool:
         """Check if OSI centerline lane has traffic light."""
-        return hasattr(lane, 'trafficlight') and lane.trafficlight is not None
+        return hasattr(lane, "trafficlight") and lane.trafficlight is not None
 
     def _get_traffic_light(self, lane):
         """Get traffic light object from OSI centerline lane."""
@@ -134,7 +129,7 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
 
     def _get_lane_on_intersection(self, lane) -> bool:
         """Get the on_intersection status of OSI centerline lane."""
-        return lane.on_intersection if hasattr(lane, 'on_intersection') else False
+        return lane.on_intersection if hasattr(lane, "on_intersection") else False
 
     def init_intersections(self):
         """
@@ -523,7 +518,9 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
         """
         if self.intersections_overlap(intersection1, intersection2):
             # Create a new intersection object with the lanes from both intersections
-            combined_intersection = Intersection(intersection1.lanes + intersection2.lanes, concave_hull_ratio=self.concave_hull_ratio)
+            combined_intersection = Intersection(
+                intersection1.lanes + intersection2.lanes, concave_hull_ratio=self.concave_hull_ratio
+            )
 
             return combined_intersection
         else:
@@ -652,7 +649,11 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
         new_connections = []
         for component in nx.connected_components(G):
             if len(component) > 0:
-                isolated_connections.append(ConnectionSegment([self.lane_dict[i] for i in component], concave_hull_ratio=self.concave_hull_ratio))
+                isolated_connections.append(
+                    ConnectionSegment(
+                        [self.lane_dict[i] for i in component], concave_hull_ratio=self.concave_hull_ratio
+                    )
+                )
         # Check if any of the lanes in the isolated connections are part of an intersection
         for connection in isolated_connections:
             pre = False
@@ -909,7 +910,7 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
                     plt.savefig(output_path)
         plt.close()
 
-    def plot_intersections(self, output_plot : Path):
+    def plot_intersections(self, output_plot: Path):
         """
         Plots all intersections and saves them to the output path.
         Args:
