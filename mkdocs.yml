@@ -2,8 +2,8 @@ site_name: Omega-Prime
 site_url: https://ika-rwth-aachen.github.io/omega-prime/
 
 theme:
-  logo: logo/omega_prime_without_text.png
-  favicon: logo/omega_prime_without_text.png
+  logo: logo/omega-prime-no-text.svg
+  favicon: logo/omega-prime-no-text.svg
   language: en
   name: material
   features:

@@ -1,5 +1,5 @@
 
-<img src="https://github.com/ika-rwth-aachen/omega-prime/blob/main/docs/logo/omega_prime_text.png" height=150 align="right">
+<img src="https://github.com/ika-rwth-aachen/omega-prime/blob/main/docs/logo/omega-prime.svg?raw=True" height=150px align="right" style="margin: 10px;">
 
 [![](https://img.shields.io/badge/license-MPL%202.0-blue.svg)](https://github.com/ika-rwth-aachen/omega-prime/blob/master/LICENSE) 
 [![](https://img.shields.io/pypi/v/omega-prime.svg)](https://pypi.python.org/pypi/omega-prime)
