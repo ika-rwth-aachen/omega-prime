@@ -34,7 +34,7 @@ flowchart TB
         left_boundary_id@{ shape: doc }
     end
 
-    subgraph lane_boundary [LaneBoudary]
+    subgraph lane_boundary [LaneBoundary]
         polyline
     end
     lanes --> lane
@@ -62,7 +62,7 @@ Additionally, this library provides subclasses for ASAM OSI maps through `MapOsi
 In the future, `MapLanelet` will provide support for Lanelet2 maps.
 Thus, a key benefit of using this library is the unified interface to work with different map formats.
 
-See [Tutorials / Introduction](notebooks/tutorial) for examples of how to use omega-prime.
+See [Tutorials / Introduction](notebooks/tutorial.ipynb) for examples of how to use omega-prime.
 
 ## Converters
 
@@ -81,7 +81,7 @@ These can be directly read in and analyzed with the omega-prime library.
 The `Locator` uses the `Map` object to locate `MovingObject`s or any polygon or coordinate onto the `Lane`s of the map.
 The `Locator` can assign lane occupancy to objects and derive s-t-coordinate (Frenet coordinates).
 
-See [Tutorials / Locator](notebooks/tutorial_locator) for examples of how to use the `Locator`.
+See [Tutorials / Locator](notebooks/tutorial_locator.ipynb) for examples of how to use the `Locator`.
 
 ## Metrics
 
@@ -90,4 +90,4 @@ The metrics computation can be defined by subclassing `Metric` or, more easily b
 Moreover, the `Metric` lets you define dependencies between metrics, e.g., `distance_traveled` needs to be computed to compute `timegaps`. 
 The `MetricsManager` then handles the dependencies automatically, and makes sure only the things you actually need are computed.
 
-See [Tutorials / Metrics](notebooks/tutorial_metrics) for examples of how to define and use the metric utilities.
+See [Tutorials / Metrics](notebooks/tutorial_metrics.ipynb) for examples of how to define and use the metric utilities.

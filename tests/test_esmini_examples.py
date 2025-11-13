@@ -100,6 +100,15 @@ def test_parquet():
     assert rec.map is not None
 
 
+def test_odr_to_osi():
+    odr_path = p / "fabriksgatan.xodr"
+    map_odr = omega_prime.MapOdr.from_file(odr_path, parse_map=True, step_size=0.1)
+    output_mcap_path = "test_odr_to_osi.mcap"
+    map_odr.map_to_centerline_mcap(output_mcap_path=output_mcap_path)
+    map_osi = omega_prime.map.MapOsiCenterline.from_file(output_mcap_path)
+    assert len(map_osi.lanes) > 0
+
+
 if __name__ == "__main__":
     test_centerline()
     # pass

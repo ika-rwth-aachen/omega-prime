@@ -17,6 +17,12 @@ from matplotlib.patches import Polygon as PltPolygon
 from .map import MapOsi, MapOsiCenterline, ProjectionOffset
 from .map_odr import MapOdr
 from .schemas import polars_schema, recording_moving_object_schema
+from .map import MapOsi, ProjectionOffset, MapOsiCenterline
+import itertools
+import altair as alt
+import polars as pl
+import polars_st as st
+from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
 
 
 def timestamp2ts(timestamp: betterosi.Timestamp):
@@ -194,6 +200,7 @@ class Recording:
         self.map = map
         self._moving_objects = None
         self.host_vehicle_idx = host_vehicle_idx
+        self.mapsegment = None
 
     @property
     def df(self):
@@ -341,9 +348,12 @@ class Recording:
         Returns:
             Recording (Recording): The loaded Recording object.
         """
-        if Path(filepath).suffix == ".parquet":
+        if filepath is None and map_path is None:
+            raise ValueError("Either `filepath` or `map_path` must be provided.")
+        
+        if filepath is not None and Path(filepath).suffix == ".parquet":
             r = cls.from_parquet(filepath, parse_map=parse_map, validate=validate, step_size=step_size)
-        else:
+        elif filepath is not None:
             gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
             r = cls.from_osi_gts(gts, validate=validate)
         if map_path is None and r.map is not None:
@@ -355,7 +365,7 @@ class Recording:
         for MC in MAP_CLASSES:
             if map_path.suffix in MC._supported_file_suffixes:
                 try:
-                    map = MC.from_file(map_path, parse_map=parse_map)
+                    map = MC.from_file(map_path, parse_map=parse_map, **kwargs)
                 except Exception as e:
                     map_parsing[MC.__name__] = str(e)
                 else:
@@ -638,91 +648,8 @@ class Recording:
             view = view | (metric + vertline)
         return view.add_params(op_var)
 
-        if end_frame != -1:
-            df = self._df.filter(pl.col("frame") < end_frame, pl.col("frame") >= start_frame)
-        else:
-            df = self._df.filter(pl.col("frame") >= start_frame)
-
-        [frame_min], [frame_max] = df.select(
-            pl.col("frame").min().alias("min"),
-            pl.col("frame").max().alias("max"),
-        )[0]
-        slider = alt.binding_range(min=frame_min, max=frame_max, step=1, name="frame")
-        op_var = alt.param(value=0, bind=slider)
-
-        df = df.with_columns(
-            pl.concat_str(
-                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name, return_dtype=pl.String),
-                pl.col("subtype").map_elements(
-                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name,
-                    return_dtype=pl.String,
-                ),
-                separator="-",
-            ).alias("type")
-        )
-        mv_dict = {"values": df["geometry", "idx", "frame", "type"].st.to_dicts()}
-        if plot_wedges:
-            wedges_df = df["idx", "frame", "type", "x", "y", "yaw", "length"].with_columns(
-                pl.col("yaw").degrees().alias("deg"), (pl.col("length") / 4).alias("size")
-            )
-            plots.append(
-                alt.Chart(wedges_df)
-                .mark_point(shape="wedge", color="white", strokeWidth=2)
-                .encode(
-                    alt.Longitude("x:Q"),
-                    alt.Latitude("y:Q"),
-                    alt.Angle("deg").scale(domain=[180, -180], range=[-90, 270]),
-                    alt.Size("size", legend=None),
-                    tooltip=["idx:N", "frame:N", "type:O"],
-                )
-                .transform_filter(alt.FieldEqualPredicate(field="frame", equal=op_var))
-            )
-        view = (
-            alt.layer(
-                *[
-                    o
-                    for o in [
-                        None
-                        if not plot_map or self.map is None
-                        else self.map.plot_altair(recording=self, plot_polys=plot_map_polys),
-                        alt.Chart(mv_dict)
-                        .mark_geoshape()
-                        .encode(
-                            color=(
-                                alt.when(
-                                    alt.FieldEqualPredicate(equal=self.host_vehicle_idx or -1, field="properties.idx")
-                                )
-                                .then(alt.value("red"))
-                                .when(alt.FieldEqualPredicate(equal=-1 if idx is None else idx, field="properties.idx"))
-                                .then(alt.value("red"))
-                                .otherwise(alt.value("blue"))
-                            ),
-                            tooltip=["properties.idx:N", "properties.frame:N", "properties.type:O"],
-                        )
-                        .transform_filter(alt.FieldEqualPredicate(field="properties.frame", equal=op_var)),
-                    ]
-                    if o is not None
-                ]
-            )
-            .properties(
-                title="Map",
-                **({"height": height} if height is not None else {}),
-                **({"width": width} if width is not None else {}),
-            )
-            .project("identity", reflectY=True)
-        )
-
-        if metric_column is not None and idx is not None:
-            metric = (
-                df["idx", metric_column, "frame"]
-                .filter(idx=idx)
-                .plot.line(x="frame", y=metric_column, color=alt.value("red"))
-                .properties(title=f"{metric_column} of object {idx}")
-            )
-            vertline = (
-                alt.Chart()
-                .mark_rule()
-                .encode(x=alt.datum(op_var, type="quantitative", scale=alt.Scale(domain=[frame_min, frame_max])))
-            )
-            view = view | (metric + vertline)
-        return view.add_params(op_var)
+    def create_mapsegments(self):
+        
+        if isinstance(self.map, MapOsiCenterline):
+            self.mapsegment = MapOsiCenterlineSegmentation(self)
+            self.mapsegment.init_intersections()

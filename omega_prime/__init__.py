@@ -6,6 +6,10 @@ from .map_odr import MapOdr
 from .locator import LaneRelation, Locator
 from .map import Lane, LaneBoundary, Map, MapOsi
 from .recording import MovingObject, Recording
+from .mapsegment import MapSegmentation
+from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
+
+
 from importlib.metadata import version
 from .types import (
     LaneBoundaryType,
@@ -17,6 +21,7 @@ from .types import (
 )
 
 __version__ = version("omega_prime")
+
 
 __all__ = [
     "Recording",
@@ -36,4 +41,6 @@ __all__ = [
     "MovingObjectType",
     "MovingObjectSubtype",
     "MovingObjectRole",
+    "MapSegmentation",
+    "MapOsiCenterlineSegmentation"
 ]

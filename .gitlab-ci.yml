@@ -40,6 +40,7 @@ test:
     paths:
       - "*.mcap"
       - "*.prof"
+      - "test_map_segmentation_output/*"
     expire_in: 2 week
 
 

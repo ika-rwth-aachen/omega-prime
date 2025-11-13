@@ -6,7 +6,9 @@ build-backend = "hatchling.build"
 [project]
 name = "omega-prime"
 authors = [
-    {name = "ika - RWTH Aachen", email = "michael.schuldes@ika.rwth-aachen.de"},
+    {name = "Michael Schuldes", email = "michael.schuldes@ika.rwth-aachen.de"},
+    {name = "Sven Tarlowski", email = "sven.tarlowski@ika.rwth-aachen.de"},
+    {name = "ika - RWTH Aachen University", email = "opensource@ika.rwth-aachen.de"}
 ]
 description = "Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data"
 readme = "README.md"

@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 from collections import namedtuple
@@ -9,10 +10,47 @@ from matplotlib.patches import Polygon as PltPolygon
 import polars as pl
 import altair as alt
 import polars_st as st
+from pathlib import Path
+from warnings import warn
+from tqdm.auto import tqdm
 import json
 from . import types
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 OsiLaneId = namedtuple("OsiLaneId", ["road_id", "lane_id"])
+
+
+def split_linestring(line, max_length):
+    """
+    Split a LineString into segments of maximum length.
+
+    Args:
+        line: shapely LineString to split
+        max_length: Maximum length of each segment
+
+    Returns:
+        List of LineString segments
+    """
+    segments = []
+
+    # If line is already short enough, return it as is
+    if line.length <= max_length:
+        return [line]
+
+    # Number of segments needed
+    n_segments = int(np.ceil(line.length / max_length))
+
+    # Get evenly spaced points along the line
+    points = [line.interpolate(i / n_segments, normalized=True) for i in range(n_segments + 1)]
+
+    # Create line segments
+    for i in range(n_segments):
+        segment_coords = [points[i].coords[0], points[i + 1].coords[0]]
+        segments.append(shapely.LineString(segment_coords))
+
+    return segments
 
 
 @dataclass
@@ -72,10 +110,18 @@ class LaneBase:
     successor_ids: list[Any]
     predecessor_ids: list[Any]
     trafficlight: Any = field(init=False, default=None)
+    is_approaching: bool = field(init=False, default=None)
 
     @property
     def on_intersection(self):
         return self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION
+
+    @on_intersection.setter
+    def on_intersection(self, value: bool):
+        if value:
+            self.type = betterosi.LaneClassificationType.TYPE_INTERSECTION
+        else:
+            self.type = betterosi.LaneClassificationType.DRIVING  # TODO: choose a better default?
 
     def plot(self, ax: plt.Axes | None = None):
         if ax is None:
@@ -239,7 +285,7 @@ class Map:
     def from_file(cls, filepath, parse_map=True, **kwargs):
         "Create a Map instance from a file."
         first_gt = next(betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True))
-        return cls.create(first_gt)
+        return cls.create(first_gt, **kwargs)
 
     def plot_altair(self, recording=None, plot_polys=True):
         arbitrary_lane = next(iter(self.lanes.values()))
@@ -305,6 +351,141 @@ class Map:
             return c.properties(title="Map").project("identity", reflectY=True)
         else:
             return c
+
+    def map_to_centerline_mcap(self, output_mcap_path: Path = None) -> betterosi.GroundTruth:
+        """
+        Convert an Map to a MapOsiCenterline and save it as an MCAP file if the output path is provided.
+        It returns the generated GroundTruth object from the generated MapOsiCenterline.
+
+        Args:
+            output_mcap_path: Path where the MCAP file will be saved
+        Returns:
+            betterosi.GroundTruth: The generated GroundTruth object
+        """
+
+        # Create a mapping from XodrLaneId to a simple integer ID
+        lane_id_mapping = {}
+        for idx, lane_idx in enumerate(self.lanes.keys()):
+            lane_id_mapping[lane_idx] = idx
+
+        # Create betterosi.Lane objects for each lane
+        osi_lanes = []
+        for lane in self.lanes.values():
+            if not lane.centerline.is_valid or lane.centerline.is_empty:
+                logging.warning(f"Warning: Skipping invalid lane {lane.idx}")
+                continue
+
+            # Check for NaN/inf coordinates
+            coords = np.array(lane.centerline.coords)
+            if not np.isfinite(coords).all():
+                logging.warning(f"Warning: Lane {lane.idx} has non-finite coordinates, skipping")
+                continue
+
+            if len(coords) < 2:
+                logging.warning(f"Warning: Lane {lane.idx} has insufficient points, skipping")
+                continue
+            # Get centerline coordinates
+            centerline_coords = list(shapely.simplify(lane.centerline, 0.1).coords)
+            if not len(centerline_coords) > 1:
+                centerline_coords = list(lane.centerline.coords)
+                if not len(centerline_coords) > 1:
+                    # skip lanes with insufficient centerline points
+                    logging.warning(f"Warning: Skipping lane {lane.idx} due to insufficient centerline points")
+                    continue
+
+            centerline = [betterosi.Vector3D(x=float(x), y=float(y), z=0.0) for x, y in centerline_coords]
+
+            assert len(centerline_coords) > 1
+            # Create lane pairing for successor/predecessor relationships
+            lane_pairings = []
+
+            # Get all unique combinations of predecessors and successors
+            predecessors = [pred_id for pred_id in lane.predecessor_ids if pred_id in lane_id_mapping]
+            successors = [succ_id for succ_id in lane.successor_ids if succ_id in lane_id_mapping]
+
+            # If there are no predecessors or successors, create a single pairing with None values
+            if predecessors or successors:
+                # Create pairings for all combinations
+                if not predecessors:
+                    predecessors = [None]
+                if not successors:
+                    successors = [None]
+
+                for pred_id in predecessors:
+                    for succ_id in successors:
+                        lane_pairings.append(
+                            betterosi.LaneClassificationLanePairing(
+                                antecessor_lane_id=betterosi.Identifier(value=lane_id_mapping[pred_id])
+                                if pred_id is not None
+                                else None,
+                                successor_lane_id=betterosi.Identifier(value=lane_id_mapping[succ_id])
+                                if succ_id is not None
+                                else None,
+                            )
+                        )
+
+            # Create the OSI lane
+            osi_lane = betterosi.Lane(
+                id=betterosi.Identifier(value=lane_id_mapping[lane.idx]),
+                classification=betterosi.LaneClassification(
+                    centerline=centerline,
+                    centerline_is_driving_direction=True,
+                    type=lane.type,
+                    subtype=lane.subtype,
+                    lane_pairing=lane_pairings,
+                ),
+            )
+            osi_lanes.append(osi_lane)
+
+        # Create a GroundTruth with only the lanes (no moving objects, no lane boundaries)
+        ground_truth = betterosi.GroundTruth(
+            version=betterosi.InterfaceVersion(
+                version_major=3,
+                version_minor=7,
+                version_patch=0,
+            ),
+            timestamp=betterosi.Timestamp(
+                seconds=0,
+                nanos=0,
+            ),
+            lane=osi_lanes,
+        )
+
+        # Save to MCAP file if output path is provided
+        if output_mcap_path is None:
+            logging.warning("No output path provided for MCAP file")
+        else:
+            # Convert string to Path if needed
+            output_mcap_path = Path(output_mcap_path)
+            
+            if output_mcap_path.is_dir():
+                output_mcap_path = output_mcap_path / "map_to_centerline.mcap"
+            elif not output_mcap_path.suffix == ".mcap":
+                logging.warning(f"Output path must be a directory or .mcap file: {output_mcap_path}")
+                return ground_truth
+            
+            with betterosi.Writer(output_mcap_path) as writer:
+                writer.add(ground_truth, topic="ground_truth_map", log_time=0)
+            logging.info(f"Successfully saved map with {len(osi_lanes)} lanes to {output_mcap_path}")
+
+        return ground_truth
+
+    def align_predecessor_and_successor_relations(self):
+        """
+        Ensure that predecessor and successor relationships between lanes are consistent.
+        If lane A lists lane B as a successor, then lane B should list lane A as a predecessor, and vice versa.
+        """
+        for lane in self.lanes.values():
+            for succ_id in lane.successor_ids:
+                if succ_id in self.lanes:
+                    succ_lane = self.lanes[succ_id]
+                    if lane.idx not in succ_lane.predecessor_ids:
+                        succ_lane.predecessor_ids.append(lane.idx)
+            for pred_id in lane.predecessor_ids:
+                if pred_id in self.lanes:
+                    pred_lane = self.lanes[pred_id]
+                    if lane.idx not in pred_lane.successor_ids:
+                        pred_lane.successor_ids.append(lane.idx)
 
     @classmethod
     def create(cls, *args, **kwargs):
@@ -380,7 +561,7 @@ class MapOsiCenterline(Map):
     lanes: dict[int, LaneOsiCenterline]
 
     @classmethod
-    def create(cls, gt: betterosi.GroundTruth):
+    def create(cls, gt: betterosi.GroundTruth, split_lanes: bool = False, split_lanes_length: float = 10, **kwargs):
         if len(gt.lane) == 0:
             raise RuntimeError("No Map")
         c = cls(
@@ -388,6 +569,8 @@ class MapOsiCenterline(Map):
             lanes={l.idx: l for l in [LaneOsiCenterline.create(l) for l in gt.lane]},
             lane_boundaries={},
         )
+        if split_lanes:
+            c._split(split_lanes_length)
         return c
 
     def setup_lanes_and_boundaries(self):
@@ -397,6 +580,121 @@ class MapOsiCenterline(Map):
             l.predecessor_ids = [map_osi_id2idx[int(i)] for i in l.predecessor_ids if int(i) in map_osi_id2idx]
         for l in self.lanes.values():
             l._map = self
+
+        # Sometimes a presuccessor lane is not set as a successor lane in the other lane, therefore we need to check where this is the case and add it
+        self.align_predecessor_and_successor_relations()
+
+    def _split(self, max_len: float):
+        """
+        Split lanes into segments of maximum length.
+
+        This method post-processes the map by splitting lane centerlines that exceed
+        the specified maximum length into smaller segments. It updates lane connections
+        accordingly and removes connections between segments that are too far apart.
+
+        Args:
+            max_len (float): Maximum length allowed for each lane segment.
+        """
+        warn("The Postprocessing is ACTIVE! The lanes will be split into segments!!!")
+        lanes_or = self.lanes
+        lanes_new = {}
+        idx_count = 0
+
+        for lane in tqdm(lanes_or.values()):
+            if lane.centerline.length > max_len:
+                # Split the lane's centerline into segments of maximum length
+                segments = split_linestring(lane.centerline, max_len)
+            else:
+                segments = [lane.centerline]
+
+            # Create new lane objects for each segment
+            segment_lanes = []
+            for i, segment in enumerate(segments):
+                # Create a copy of the lane with modified centerline
+                # new_lane = copy.deepcopy(lane)
+
+                new_lane = LaneOsiCenterline(
+                    _osi=lane._osi,
+                    idx=OsiLaneId(road_id=idx_count, lane_id=idx_count),
+                    centerline=segment,
+                    type=lane.type,
+                    subtype=lane.subtype,
+                    successor_ids=[],
+                    predecessor_ids=[],
+                )
+
+                segment_lanes.append(new_lane)
+                lanes_new[new_lane.idx.lane_id] = new_lane
+                idx_count += 1
+
+            for i, new_lane in enumerate(segment_lanes):
+                if len(segments) == 1:
+                    # If only one segment, keep original predecessors and successors
+                    new_lane.predecessor_ids = lane.predecessor_ids
+                    new_lane.successor_ids = lane.successor_ids
+                elif i == 0:
+                    # First segment: keep original predecessors, connect to next segment
+                    new_lane.predecessor_ids = lane.predecessor_ids
+                    new_lane.successor_ids = [segment_lanes[i + 1].idx]
+                elif i == len(segments) - 1:
+                    # Last segment: connect to previous segment, keep original successors
+                    new_lane.predecessor_ids = [segment_lanes[i - 1].idx]
+                    new_lane.successor_ids = lane.successor_ids
+                else:
+                    # Middle segments: connect to both neighbors
+                    new_lane.predecessor_ids = [segment_lanes[i - 1].idx]
+                    new_lane.successor_ids = [segment_lanes[i + 1].idx]
+
+            # Update references in other lanes' predecessors/successors
+            for other_lane in lanes_or.values():
+                if lane.idx in other_lane.successor_ids:
+                    # Replace reference to original lane with first segment
+                    idx = other_lane.successor_ids.index(lane.idx)
+                    other_lane.successor_ids[idx] = segment_lanes[0].idx
+                if lane.idx in other_lane.predecessor_ids:
+                    # Replace reference to original lane with last segment
+                    idx = other_lane.predecessor_ids.index(lane.idx)
+                    other_lane.predecessor_ids[idx] = segment_lanes[-1].idx
+
+        # Replace original lanes with segmented lanes
+
+        # Do a check for the predecessor and successor: Check if the distance between the centerlines is greater than the max_len --> if yes, then remove the connection
+        for lane in lanes_new.values():
+            if lane.predecessor_ids:
+                for pre in lane.predecessor_ids:
+                    pre_to_remove = []
+                    if lanes_new[pre.lane_id].centerline.distance(lane.centerline) > max_len:
+                        pre_to_remove.append(pre)
+                        try:
+                            lanes_new[pre.lane_id].successor_ids.remove(lane.idx)
+                        except ValueError:
+                            pass  # If the successor is not in the list, ignore
+
+                    for pre in pre_to_remove:
+                        try:
+                            lanes_new[lane.idx.lane_id].predecessor_ids.remove(pre)
+                        except ValueError:
+                            pass  # If the predecessor is not in the list, ignore
+            if lane.successor_ids:
+                for suc in lane.successor_ids:
+                    suc_to_remove = []
+                    if lanes_new[suc.lane_id].centerline.distance(lane.centerline) > max_len:
+                        suc_to_remove.append(suc)
+                        try:
+                            lanes_new[suc.lane_id].predecessor_ids.remove(lane.idx)
+                        except ValueError:
+                            pass  # If the predecessor is not in the list, ignore
+
+                    for suc in suc_to_remove:
+                        try:
+                            lanes_new[lane.idx.lane_id].successor_ids.remove(suc)
+                        except ValueError:
+                            pass
+
+        self.lanes = {lane.idx: lane for lane in lanes_new.values()}
+        for lane in self.lanes.values():
+            lane._map = self
+        return self
 
     def _to_binary_json(self):
         d = json.loads(self._osi.to_json())
