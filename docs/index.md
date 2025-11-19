@@ -21,6 +21,7 @@ see [Data Model & Specification](omega_prime_specification.md)
     - Predicted and observed timegaps based on driving tubes (see [./omega_prime/metrics.py](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_prime/metrics.py))
     - 2D-birds-eye-view visibility with [omega-prime-visibility](https://github.com/ika-rwth-aachen/omega-prime-visibility)
   - 🚀 **Fast Processing** directly on DataFrames using [polars](https://pola.rs/), [polars-st](https://oreilles.github.io/polars-st/)
+  - ⌨️ **CLI** to convert, validate and visualize omega-prime files
 
 
 ## Installation

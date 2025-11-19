@@ -6,7 +6,9 @@ import shapely
 import numpy as np
 
 
-class MapSegmentType(Enum):  # Added class for map segment from the scenario-database
+class MapSegmentType(Enum):
+    """Classification of MapSegments."""
+
     STRAIGHT = "straight"
     JUNCTION = "junction"
     ROUNDABOUT = "roundabout"
