@@ -1,0 +1,45 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  Omega-Prime: Data Model, Data Format and Python Library
+  for Handling Ground Truth Traffic Data
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Michael
+    family-names: Schuldes
+    orcid: 'https://orcid.org/0000-0003-2339-8157'
+  - given-names: Sven
+    family-names: Tarlowski
+  - given-names: Stamatios
+    family-names: Chrysanthidis
+  - given-names: Clément
+    family-names: Val
+  - given-names: Carlo
+    family-names: van Driesten
+identifiers:
+  - type: url
+    value: 'https://github.com/ika-rwth-aachen/omega-prime'
+repository-code: 'https://github.com/ika-rwth-aachen/omega-prime'
+url: 'https://ika-rwth-aachen.github.io/omega-prime/'
+abstract: >-
+  Data Model, Format and Python Library for ground truth
+  traffic data containing information on dynamic objects,
+  map and environmental factors optimized for representing
+  urban traffic.The data model and format utilize ASAM
+  OpenDRIVE and ASAM Open-Simulation-Interface GroundTruth
+  messages. omega-prime sets requirements on presence and
+  quality of ASAM OSI GroundTruth messages and ASAM
+  OpenDRIVE files and defines a file format for the exchange
+  and storage of these.Omega-Prime is the successor of the
+  OMEGAFormat. It has the benefit that its definition is
+  directly based on the established standards ASAM OSI and
+  ASAM OpenDRIVE and carries over the data quality
+  requirements and the data tooling from OMEGAFormat.
+  Therefore, it should be easier to incorporate omega-prime
+  into existing workflows and tooling.
+license: MPL-2.0

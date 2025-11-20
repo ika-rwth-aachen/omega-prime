@@ -1,6 +1,6 @@
-# Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Traffic Data 
+# Omega-Prime: Data Model, Data Format and Python Library for Handling Ground Truth Road Traffic Data 
 
-Data Model, Format and Python Library for ground truth data containing information on dynamic objects, map and environmental factors optimized for representing urban traffic. The repository contains:
+Data Model, Format and Python Library for ground truth road traffic data containing information on dynamic objects, map and environmental factors optimized for representing urban traffic. The repository contains:
 ## Data Model and Specification
 see [Data Model & Specification](omega_prime_specification.md)
 
