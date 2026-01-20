@@ -112,9 +112,10 @@ def bbx_to_polygon(df):
 
 
 class Recording:
-    """Class representing a continuous traffic observation. Usally corresponds to one omega-prime file.
+    """Class representing a continuous traffic observation. Usually corresponds to one omega-prime file.
 
-    Internally, the Reocrding uses a Polars DataFrame to store moving object data. Each row in the DataFrame represents the state of a moving object at a specific timestamp.
+    Internally, the Recording uses a Polars DataFrame to store moving object data. Each row in the DataFrame 
+    represents the state of a moving object at a specific timestamp.
 
     Attributes:
         df (pl.DataFrame): Polars DataFrame containing the moving object data.
@@ -618,6 +619,7 @@ class Recording:
             raise ValueError("No projection information available on the recording or attached map.")
 
         df = self._df
+        source_proj_string = None
         if per_frame:
             proj_df = pl.DataFrame(
                 per_frame,
@@ -631,8 +633,14 @@ class Recording:
                 },
             )
             df = df.join(proj_df, on="total_nanos", how="left")
+            proj_string_list = proj_df["proj_string"].unique().to_list()
+            for proj_string_entry in proj_string_list:
+                if source_proj_string:
+                    source_proj_string = proj_string_entry
+                    break
         else:
             ox, oy, oz, oyaw = self._offset_components(default_projection.get("offset"))
+            source_proj_string = default_projection.get("proj_string") 
             df = df.with_columns(
                 pl.lit(default_projection.get("proj_string")).alias("proj_string"),
                 pl.lit(ox).alias("offset_x"),
@@ -644,23 +652,58 @@ class Recording:
         if df.select(pl.col("proj_string").is_null().any()).item():
             raise ValueError("Some rows do not have a projection string assigned.")
 
+        # Store original values before applying offsets
         df = df.with_columns(
-            (pl.col("x") + pl.col("offset_x")).alias("x_global"),
-            (pl.col("y") + pl.col("offset_y")).alias("y_global"),
-            (pl.col("z") + pl.col("offset_z")).alias("z_global"),
-            (pl.col("yaw") + pl.col("offset_yaw")).alias("yaw_global"),
+            pl.col("x").alias("x_original"),
+            pl.col("y").alias("y_original"),
+            pl.col("z").alias("z_original"),
+            pl.col("yaw").alias("yaw_original"),
+        )
+        
+        # Update main columns with offset values
+        df = df.with_columns(
+            (pl.col("x_original") + pl.col("offset_x")).alias("x"),
+            (pl.col("y_original") + pl.col("offset_y")).alias("y"),
+            (pl.col("z_original") + pl.col("offset_z")).alias("z"),
+            (pl.col("yaw_original") + pl.col("offset_yaw")).alias("yaw"),
         )
         df = bbx_to_polygon(df)
 
         self.map.parse()
-        print(self.map.projection)
-        print(self.map.projection.to_epsg())
+        target_crs = self.map.projection
+        if not target_crs:
+            raise ValueError("Map does not have a valid projection defined.")
 
-        target_crs = 4326 #self.map.projection.to_epsg() if self.map is not None else 4326
+        # Use UTM_32N as default:
+        if not source_proj_string:
+            source_proj_string = "EPSG:32632"
+
+        #TODO: Hardcode CRS for debug reasons
+        target_crs = pyproj.CRS.from_proj4("+proj=tmerc +lat_0=50.9098472225444 +lon_0=6.22742895630397 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs")
+        source_crs = pyproj.CRS(source_proj_string)
+
+        # Apply 2D proj string transformation (x,y only)
+        try:
+            transformer = pyproj.Transformer.from_crs(source_crs, target_crs, always_xy=True)
+        except pyproj.exceptions.ProjError:
+            # Handle proj strings with unsupported parameters
+            proj4 = target_crs.to_proj4()
+            sanitized = " ".join(
+                part for part in proj4.split() 
+                if not part.startswith(("+geoidgrids=", "+vunits="))
+            )
+            transformer = pyproj.Transformer.from_crs(source_crs, pyproj.CRS.from_proj4(sanitized), always_xy=True)
+
+        x_tgt, y_tgt = transformer.transform(df["x"].to_numpy(), df["y"].to_numpy())
+
         df = df.with_columns(
-            pl.col('geometry').st.set_srid(self.map.projection.to_epsg()).st.to_srid(target_crs)
+            pl.Series(name="x", values=x_tgt),
+            pl.Series(name="y", values=y_tgt)
         )
-        print(df)
+        df = bbx_to_polygon(df)
+
+        self._df = df
+        return self
 
 
     def plot_altair(
