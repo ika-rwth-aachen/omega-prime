@@ -23,11 +23,13 @@ import betterosi
 
 from rclpy.serialization import deserialize_message
 from rclpy.time import Time
+from rclpy.duration import Duration
 from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
 from rosidl_runtime_py.utilities import get_message
 from omega_prime.map import ProjectionOffset
+from collections import deque
 
-import tf2_ros
+from tf2_ros import BufferCore, TransformException
 
 import perception_msgs_utils as pmu
 
@@ -228,24 +230,72 @@ def iter_object_list_messages(
         raise RuntimeError(f"Topic {topic} not found. Available topics: {available}")
 
     msg_cls = get_message(type_map[topic])
+
     tf_msg_cls = get_message(type_map["/tf"]) if "/tf" in type_map else None
+    static_tf_msg_cls = get_message(type_map["/tf_static"]) if "/tf_static" in type_map else None
+
+    # TF buffer for resolving transforms
+    buffer = BufferCore(cache_time=Duration(seconds=1000.0))
+
+    # Timestamps of object list messages not yet resolved
+    pending: deque[Time] = deque()
+
+    def try_resolve_and_store(stamp_time: Time) -> bool:
+        """Try to resolve transform at stamp_time and store projection; return success."""
+        try:
+            resolved = buffer.lookup_transform_core(frame, child_frame, stamp_time)
+        except TransformException:
+            return False
+
+        ts, proj = _extract_proj_offset(resolved)
+        projection_store[ts] = proj
+        return True
+
+    def retry_pending() -> None:
+        """Retry pending stamps after TF updates. Removes those that succeed."""
+        if not pending:
+            return
+
+        # Try in FIFO order; keep unresolved ones.
+        new_pending: deque[Time] = deque()
+        while pending:
+            st = pending.popleft()
+            if not try_resolve_and_store(st):
+                new_pending.append(st)
+        pending.extend(new_pending)
 
     while reader.has_next():
         topic_name, data, _ = reader.read_next()
+
+        if topic_name == "/tf_static" and static_tf_msg_cls is not None:
+            tf_msg = deserialize_message(data, static_tf_msg_cls)
+            for transform in tf_msg.transforms:
+                buffer.set_transform_static(transform, "bag")
+            retry_pending()
+            continue
+
         if topic_name == "/tf" and tf_msg_cls is not None:
             tf_msg = deserialize_message(data, tf_msg_cls)
             for transform in tf_msg.transforms:
-                if transform.header.frame_id != frame:
-                    continue
-                if transform.child_frame_id != child_frame:
-                    continue
-                ts, proj = _extract_proj_offset(transform)
-                projection_store[ts] = proj
+                buffer.set_transform(transform, "bag")
+            retry_pending()
             continue
+
         if topic_name != topic:
             continue
-        yield deserialize_message(data, msg_cls)
 
+        msg = deserialize_message(data, msg_cls)
+        
+        stamp = msg.header.stamp if hasattr(msg, "header") else None
+        if stamp is not None:
+            stamp_time = Time.from_msg(stamp)
+            if not try_resolve_and_store(stamp_time):
+                pending.append(stamp_time)
+
+        yield msg
+
+    # Final retry pass at end (in case TF arrived after last ObjectList)
+    retry_pending()
 
 def convert_bag_to_omega_prime(
     bag_dir: Path,
@@ -270,7 +320,10 @@ def convert_bag_to_omega_prime(
 
     df = pl.DataFrame(row_iter())
 
-    projections = _projection_store_to_projections(projection_store, frame)
+    # TODO: Remove hardcoded frame
+    EPSG_UTM_32N = "EPSG:25832"
+    projections = _projection_store_to_projections(projection_store, EPSG_UTM_32N)
+
     rec = omega_prime.Recording(df=df, projections=projections, validate=validate)
 
     if map_path and map_path.exists():
