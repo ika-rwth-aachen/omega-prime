@@ -9,6 +9,7 @@ folders (identified via metadata.yaml).
 from __future__ import annotations
 
 import argparse
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,9 @@ from rclpy.serialization import deserialize_message
 from rclpy.time import Time
 from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
 from rosidl_runtime_py.utilities import get_message
+from omega_prime.map import ProjectionOffset
+
+import tf2_ros
 
 import perception_msgs_utils as pmu
 
@@ -145,11 +149,70 @@ def _load_metadata(bag_dir: Path) -> dict[str, Any]:
         return yaml.safe_load(fh)
 
 
+def _extract_proj_offset(msg) -> tuple[int, dict[str, Any]]:
+    transformation = msg.transforms[0] if hasattr(msg, "transforms") else msg
+    translation = transformation.transform.translation
+    rotation = transformation.transform.rotation
+    ts = int(Time.from_msg(transformation.header.stamp).nanoseconds)
+    return ts, {
+        "translation": {
+            "x": translation.x,
+            "y": translation.y,
+            "z": translation.z,
+        },
+        "rotation": {
+            "x": rotation.x,
+            "y": rotation.y,
+            "z": rotation.z,
+            "w": rotation.w,
+        },
+    }
+
+
+def _yaw_from_quaternion(rotation: dict[str, float]) -> float:
+    x = float(rotation.get("x", 0.0))
+    y = float(rotation.get("y", 0.0))
+    z = float(rotation.get("z", 0.0))
+    w = float(rotation.get("w", 1.0))
+    siny_cosp = 2.0 * (w * z + x * y)
+    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+    return math.atan2(siny_cosp, cosy_cosp)
+
+
+def _projection_store_to_projections(
+    projection_store: dict[int, dict[str, Any]],
+    proj_string: str | None,
+) -> dict[int, dict[str, Any]]:
+    projections: dict[int, dict[str, Any]] = {}
+    # TODO: Handle project string
+    if proj_string == "":
+        proj_string = None
+    for ts, entry in projection_store.items():
+        translation = entry.get("translation") or {}
+        rotation = entry.get("rotation") or {}
+        projections[int(ts)] = {
+            "proj_string": proj_string,
+            "offset": ProjectionOffset(
+                x=float(translation.get("x", 0.0)),
+                y=float(translation.get("y", 0.0)),
+                z=float(translation.get("z", 0.0)),
+                yaw=_yaw_from_quaternion(rotation),
+            ),
+        }
+    return projections
+
+
 def _storage_id(meta: dict[str, Any]) -> str:
     return meta["rosbag2_bagfile_information"]["storage_identifier"]
 
 
-def iter_object_list_messages(bag_dir: Path, topic: str) -> Iterator[Any]:
+def iter_object_list_messages(
+    bag_dir: Path,
+    topic: str,
+    child_frame: str,
+    frame: str,
+    projection_store: dict[int, dict[str, Any]],
+) -> Iterator[Any]:
     metadata = _load_metadata(bag_dir)
     storage_id = _storage_id(metadata)
 
@@ -159,14 +222,26 @@ def iter_object_list_messages(bag_dir: Path, topic: str) -> Iterator[Any]:
     reader.open(storage_options, converter_options)
 
     type_map = {info.name: info.type for info in reader.get_all_topics_and_types()}
+
     if topic not in type_map:
         available = ", ".join(sorted(type_map))
         raise RuntimeError(f"Topic {topic} not found. Available topics: {available}")
 
     msg_cls = get_message(type_map[topic])
+    tf_msg_cls = get_message(type_map["/tf"]) if "/tf" in type_map else None
 
     while reader.has_next():
         topic_name, data, _ = reader.read_next()
+        if topic_name == "/tf" and tf_msg_cls is not None:
+            tf_msg = deserialize_message(data, tf_msg_cls)
+            for transform in tf_msg.transforms:
+                if transform.header.frame_id != frame:
+                    continue
+                if transform.child_frame_id != child_frame:
+                    continue
+                ts, proj = _extract_proj_offset(transform)
+                projection_store[ts] = proj
+            continue
         if topic_name != topic:
             continue
         yield deserialize_message(data, msg_cls)
@@ -176,15 +251,27 @@ def convert_bag_to_omega_prime(
     bag_dir: Path,
     topic: str,
     output_dir: Path,
+    child_frame: str,
+    frame: str,
     map_path: Path | None = None,
     validate: bool = False,
 ) -> Path:
+    projection_store: dict[int, dict[str, Any]] = {}
+
     def row_iter() -> Iterable[dict[str, Any]]:
-        for msg in iter_object_list_messages(bag_dir, topic):
+        for msg in iter_object_list_messages(
+            bag_dir,
+            topic,
+            child_frame,
+            frame,
+            projection_store=projection_store,
+        ):
             yield from _olist_to_rows(msg)
 
     df = pl.DataFrame(row_iter())
-    rec = omega_prime.Recording(df=df, validate=validate)
+
+    projections = _projection_store_to_projections(projection_store, frame)
+    rec = omega_prime.Recording(df=df, projections=projections, validate=validate)
 
     if map_path and map_path.exists():
         rec.map = omega_prime.MapOdr.from_file(str(map_path))
@@ -203,18 +290,49 @@ def _discover_bags(data_dir: Path) -> list[Path]:
 def _parse_args() -> argparse.Namespace:
     env_validate = os.environ.get("OP_VALIDATE", "").lower() in {"1", "true", "yes"}
 
-    parser = argparse.ArgumentParser(description="Convert ROS 2 ObjectList bags to omega-prime MCAP")
-    parser.add_argument(
-        "--data-dir", default=os.environ.get("OP_DATA", "/data"), help="Directory containing rosbag2 folders"
+    parser = argparse.ArgumentParser(
+        description="Convert ROS 2 ObjectList bags to omega-prime MCAP"
     )
-    parser.add_argument("--topic", default=os.environ.get("OP_TOPIC"), help="ObjectList topic to export")
     parser.add_argument(
-        "--output-dir", default=os.environ.get("OP_OUT", "/out"), help="Directory to write omega-prime MCAPs"
+        "--data-dir",
+        default=os.environ.get("OP_DATA", "/data"),
+        help="Directory containing rosbag2 folders",
     )
-    parser.add_argument("--bag", action="append", default=[], help="Explicit bag directory to convert (repeatable)")
-    parser.add_argument("--map", dest="map_path", default="/map/map.xodr", help="Optional OpenDRIVE map to embed")
     parser.add_argument(
-        "--validate", action="store_true", default=env_validate, help="Enable omega-prime schema validation"
+        "--topic", default=os.environ.get("OP_TOPIC"), help="ObjectList topic to export"
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=os.environ.get("OP_OUT", "/out"),
+        help="Directory to write omega-prime MCAPs",
+    )
+    parser.add_argument(
+        "--bag",
+        action="append",
+        default=[],
+        help="Explicit bag directory to convert (repeatable)",
+    )
+    parser.add_argument(
+        "--map",
+        dest="map_path",
+        default="/map/map.xodr",
+        help="Optional OpenDRIVE map to embed",
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        default=env_validate,
+        help="Enable omega-prime schema validation",
+    )
+    parser.add_argument(
+        "--child_frame",
+        default="base_link",
+        help="Source frame",
+    )
+    parser.add_argument(
+        "--frame",
+        default="utm_32N",
+        help="Target frame",
     )
     return parser.parse_args()
 
@@ -246,10 +364,22 @@ def main() -> None:
 
     for bag in bags:
         if map_path and map_path.exists():
-            print(f"[object_list_to_omega_prime] Processing bag: {bag} with openDRIVE File: {map_path}")
+            print(
+                f"[object_list_to_omega_prime] Processing bag: {bag} with openDRIVE File: {map_path}"
+            )
         else:
-            print(f"[object_list_to_omega_prime] Processing bag: {bag} without openDRIVE File")
-        out_file = convert_bag_to_omega_prime(bag, args.topic, out_dir, map_path, args.validate)
+            print(
+                f"[object_list_to_omega_prime] Processing bag: {bag} without openDRIVE File"
+            )
+        out_file = convert_bag_to_omega_prime(
+            bag,
+            args.topic,
+            out_dir,
+            args.child_frame,
+            args.frame,
+            map_path,
+            args.validate,
+        )
         print(f"[object_list_to_omega_prime] Wrote {out_file}")
 
 
