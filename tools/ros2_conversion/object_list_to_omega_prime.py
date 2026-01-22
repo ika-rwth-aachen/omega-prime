@@ -29,7 +29,7 @@ from rosidl_runtime_py.utilities import get_message
 from omega_prime.map import ProjectionOffset
 from collections import deque
 
-from tf2_ros import BufferCore, TransformException
+from tf2_ros import Buffer, TransformException
 
 import perception_msgs_utils as pmu
 
@@ -186,7 +186,6 @@ def _projection_store_to_projections(
     proj_string: str | None,
 ) -> dict[int, dict[str, Any]]:
     projections: dict[int, dict[str, Any]] = {}
-    # TODO: Handle project string
     if proj_string == "":
         proj_string = None
     for ts, entry in projection_store.items():
@@ -212,7 +211,7 @@ def iter_object_list_messages(
     bag_dir: Path,
     topic: str,
     child_frame: str,
-    frame: str,
+    fixed_frame: str,
     projection_store: dict[int, dict[str, Any]],
 ) -> Iterator[Any]:
     metadata = _load_metadata(bag_dir)
@@ -232,10 +231,12 @@ def iter_object_list_messages(
     msg_cls = get_message(type_map[topic])
 
     tf_msg_cls = get_message(type_map["/tf"]) if "/tf" in type_map else None
-    static_tf_msg_cls = get_message(type_map["/tf_static"]) if "/tf_static" in type_map else None
+    static_tf_msg_cls = (
+        get_message(type_map["/tf_static"]) if "/tf_static" in type_map else None
+    )
 
     # TF buffer for resolving transforms
-    buffer = BufferCore(cache_time=Duration(seconds=1000.0))
+    buffer = Buffer(cache_time=Duration(seconds=1000.0))
 
     # Timestamps of object list messages not yet resolved
     pending: deque[Time] = deque()
@@ -243,7 +244,7 @@ def iter_object_list_messages(
     def try_resolve_and_store(stamp_time: Time) -> bool:
         """Try to resolve transform at stamp_time and store projection; return success."""
         try:
-            resolved = buffer.lookup_transform_core(frame, child_frame, stamp_time)
+            resolved = buffer.lookup_transform(fixed_frame, child_frame, stamp_time)
         except TransformException:
             return False
 
@@ -285,7 +286,6 @@ def iter_object_list_messages(
             continue
 
         msg = deserialize_message(data, msg_cls)
-        
         stamp = msg.header.stamp if hasattr(msg, "header") else None
         if stamp is not None:
             stamp_time = Time.from_msg(stamp)
@@ -297,12 +297,14 @@ def iter_object_list_messages(
     # Final retry pass at end (in case TF arrived after last ObjectList)
     retry_pending()
 
+
 def convert_bag_to_omega_prime(
     bag_dir: Path,
     topic: str,
     output_dir: Path,
     child_frame: str,
-    frame: str,
+    fixed_frame: str,
+    proj_string: str,
     map_path: Path | None = None,
     validate: bool = False,
 ) -> Path:
@@ -313,16 +315,14 @@ def convert_bag_to_omega_prime(
             bag_dir,
             topic,
             child_frame,
-            frame,
+            fixed_frame,
             projection_store=projection_store,
         ):
             yield from _olist_to_rows(msg)
 
     df = pl.DataFrame(row_iter())
 
-    # TODO: Remove hardcoded frame
-    EPSG_UTM_32N = "EPSG:25832"
-    projections = _projection_store_to_projections(projection_store, EPSG_UTM_32N)
+    projections = _projection_store_to_projections(projection_store, proj_string)
 
     rec = omega_prime.Recording(df=df, projections=projections, validate=validate)
 
@@ -330,8 +330,8 @@ def convert_bag_to_omega_prime(
         rec.map = omega_prime.MapOdr.from_file(str(map_path))
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / f"{bag_dir.name}.omega-prime.mcap"
-    rec.to_mcap(out_path)
+    out_path = output_dir / f"{bag_dir.name}.omega-prime.parquet"
+    rec.to_parquet(out_path)
     return out_path
 
 
@@ -357,7 +357,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         default=os.environ.get("OP_OUT", "/out"),
-        help="Directory to write omega-prime MCAPs",
+        help="Directory to write omega-prime parquets",
     )
     parser.add_argument(
         "--bag",
@@ -383,9 +383,14 @@ def _parse_args() -> argparse.Namespace:
         help="Source frame",
     )
     parser.add_argument(
-        "--frame",
+        "--fixed_frame",
         default="utm_32N",
         help="Target frame",
+    )
+    parser.add_argument(
+        "--proj_string",
+        default="EPSG:32632",
+        help="Projection string for fixed_frame",
     )
     return parser.parse_args()
 
@@ -429,7 +434,8 @@ def main() -> None:
             args.topic,
             out_dir,
             args.child_frame,
-            args.frame,
+            args.fixed_frame,
+            args.proj_string,
             map_path,
             args.validate,
         )
