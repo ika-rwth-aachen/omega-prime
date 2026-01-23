@@ -32,7 +32,10 @@ class Metric:
         try:
             df, properties = self.compute_func(df, **kwargs)
             assert isinstance(df, pl.LazyFrame)
-            assert all(p in properties for p in self.computes_properties + self.computes_intermediate_properties)
+            assert all(p in properties for p in self.computes_properties + self.computes_intermediate_properties),(
+                f'computes_properties {self.computes_properties} '
+                f'computes_intermediate_properties {self.computes_intermediate_properties}'
+            )
             return df, properties
 
         except TypeError as e:
