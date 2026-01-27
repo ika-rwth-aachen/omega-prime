@@ -18,15 +18,8 @@ from matplotlib.patches import Polygon as PltPolygon
 
 from .map import MapOsi, MapOsiCenterline, ProjectionOffset
 from .map_odr import MapOdr
-from .schemas import polars_schema, recording_moving_object_schema
-from .map import MapOsi, ProjectionOffset, MapOsiCenterline
-import itertools
-import altair as alt
-import polars as pl
-import polars_st as st
 from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
-
-from pyproj import CRS
+from .schemas import polars_schema, recording_moving_object_schema
 
 
 def timestamp2ts(timestamp: betterosi.Timestamp):
@@ -114,7 +107,7 @@ def bbx_to_polygon(df):
 class Recording:
     """Class representing a continuous traffic observation. Usually corresponds to one omega-prime file.
 
-    Internally, the Recording uses a Polars DataFrame to store moving object data. Each row in the DataFrame 
+    Internally, the Recording uses a Polars DataFrame to store moving object data. Each row in the DataFrame
     represents the state of a moving object at a specific timestamp.
 
     Attributes:
@@ -129,13 +122,17 @@ class Recording:
     _MovingObjectClass: typing.ClassVar = MovingObject
 
     @staticmethod
-    def _offset_components(offset: ProjectionOffset | None) -> tuple[float, float, float, float]:
+    def _offset_components(
+        offset: ProjectionOffset | None,
+    ) -> tuple[float, float, float, float]:
         if offset is None:
             return 0.0, 0.0, 0.0, 0.0
         return offset.x, offset.y, offset.z, offset.yaw
 
     @staticmethod
-    def _encode_projections(projections: dict[int | None, dict[str, typing.Any]]) -> bytes:
+    def _encode_projections(
+        projections: dict[int | None, dict[str, typing.Any]],
+    ) -> bytes:
         if not projections:
             return b""
 
@@ -155,7 +152,9 @@ class Recording:
         return json.dumps(payload).encode()
 
     @staticmethod
-    def _decode_projections(raw: bytes | str | None) -> dict[int | None, dict[str, typing.Any]]:
+    def _decode_projections(
+        raw: bytes | str | None,
+    ) -> dict[int | None, dict[str, typing.Any]]:
         if raw in (None, b"", ""):
             return {}
         if isinstance(raw, bytes):
@@ -172,7 +171,10 @@ class Recording:
 
     @staticmethod
     def get_moving_object_ground_truth(
-        nanos: int, df: pl.DataFrame, host_vehicle_idx: int | None = None, validate: bool = False
+        nanos: int,
+        df: pl.DataFrame,
+        host_vehicle_idx: int | None = None,
+        validate: bool = False,
     ) -> betterosi.GroundTruth:
         if validate:
             recording_moving_object_schema.validate(df, lazy=True)
@@ -197,9 +199,11 @@ class Recording:
         gt = betterosi.GroundTruth(
             version=betterosi.InterfaceVersion(version_major=3, version_minor=7, version_patch=9),
             timestamp=betterosi.Timestamp(seconds=int(nanos // int(1e9)), nanos=int(nanos % int(1e9))),
-            host_vehicle_id=betterosi.Identifier(value=0)
-            if host_vehicle_idx is None
-            else betterosi.Identifier(value=host_vehicle_idx),
+            host_vehicle_id=(
+                betterosi.Identifier(value=0)
+                if host_vehicle_idx is None
+                else betterosi.Identifier(value=host_vehicle_idx)
+            ),
             moving_object=mvs,
         )
         return gt
@@ -221,7 +225,10 @@ class Recording:
             raise ValueError("df must contain column `total_nanos`.")
         nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
         mapping = pl.DataFrame(
-            {"total_nanos": list(nanos2frame.keys()), "frame": list(nanos2frame.values())},
+            {
+                "total_nanos": list(nanos2frame.keys()),
+                "frame": list(nanos2frame.values()),
+            },
             schema=dict(total_nanos=polars_schema["total_nanos"], frame=pl.UInt32),
         )
         if "frame" in df.columns:
@@ -274,11 +281,11 @@ class Recording:
                 .with_columns(
                     pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x), return_dtype=object),
                     pl.col("subtype").map_elements(
-                        lambda x: betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None,
+                        lambda x: (betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None),
                         return_dtype=object,
                     ),
                     pl.col("role").map_elements(
-                        lambda x: betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None,
+                        lambda x: (betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None),
                         return_dtype=object,
                     ),
                 )
@@ -323,14 +330,16 @@ class Recording:
                     )
                 projs[total_nanos] = dict(
                     proj_string=gt.proj_string,
-                    offset=ProjectionOffset(
-                        x=gt.proj_frame_offset.position.x,
-                        y=gt.proj_frame_offset.position.y,
-                        z=gt.proj_frame_offset.position.z,
-                        yaw=gt.proj_frame_offset.yaw,
-                    )
-                    if gt.proj_frame_offset is not None
-                    else None,
+                    offset=(
+                        ProjectionOffset(
+                            x=gt.proj_frame_offset.position.x,
+                            y=gt.proj_frame_offset.position.y,
+                            z=gt.proj_frame_offset.position.z,
+                            yaw=gt.proj_frame_offset.yaw,
+                        )
+                        if gt.proj_frame_offset is not None
+                        else None
+                    ),
                 )
 
                 traffic_light_states[total_nanos] = gt.traffic_light
@@ -355,12 +364,12 @@ class Recording:
                         pitch=mv.base.orientation.pitch,
                         yaw=mv.base.orientation.yaw,
                         type=mv.type,
-                        role=mv.vehicle_classification.role
-                        if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE
-                        else -1,
-                        subtype=mv.vehicle_classification.type
-                        if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE
-                        else -1,
+                        role=(
+                            mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1
+                        ),
+                        subtype=(
+                            mv.vehicle_classification.type if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1
+                        ),
                     )
 
         df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
@@ -458,13 +467,31 @@ class Recording:
         for [idx], track_df in df.group_by("idx"):
             track_data = {}
             track_new_nanos = new_nanos[
-                np.logical_and(track_df["total_nanos"].min() <= new_nanos, track_df["total_nanos"].max() >= new_nanos)
+                np.logical_and(
+                    track_df["total_nanos"].min() <= new_nanos,
+                    track_df["total_nanos"].max() >= new_nanos,
+                )
             ]
-            for c in ["x", "y", "z", "vel_x", "vel_y", "vel_z", "acc_x", "acc_y", "acc_z", "length", "width", "height"]:
+            for c in [
+                "x",
+                "y",
+                "z",
+                "vel_x",
+                "vel_y",
+                "vel_z",
+                "acc_x",
+                "acc_y",
+                "acc_z",
+                "length",
+                "width",
+                "height",
+            ]:
                 track_data[c] = np.interp(track_new_nanos, track_df["total_nanos"], track_df[c])
             for c in ["type", "subtype", "role"]:
                 track_data[c] = nearest_interp(
-                    track_new_nanos, track_df["total_nanos"].to_numpy(), track_df[c].to_numpy()
+                    track_new_nanos,
+                    track_df["total_nanos"].to_numpy(),
+                    track_df[c].to_numpy(),
                 )
             for c in ["roll", "pitch", "yaw"]:
                 # Unwrap angles to handle discontinuities, then interpolate, then wrap back to [-π, π]
@@ -473,8 +500,16 @@ class Recording:
                 track_data[c] = np.mod(interpolated + np.pi, 2 * np.pi) - np.pi
             new_track_df = pl.DataFrame(track_data)
             new_track_df = new_track_df.with_columns(
-                pl.Series(name="idx", values=np.ones_like(track_new_nanos) * idx, dtype=polars_schema["idx"]),
-                pl.Series(name="total_nanos", values=track_new_nanos, dtype=polars_schema["total_nanos"]),
+                pl.Series(
+                    name="idx",
+                    values=np.ones_like(track_new_nanos) * idx,
+                    dtype=polars_schema["idx"],
+                ),
+                pl.Series(
+                    name="total_nanos",
+                    values=track_new_nanos,
+                    dtype=polars_schema["total_nanos"],
+                ),
             )
             new_dfs.append(new_track_df)
         new_df = pl.concat(new_dfs)
@@ -517,7 +552,13 @@ class Recording:
                 x = tl_dict[tl].base.position.x
                 y = tl_dict[tl].base.position.y
                 ax.plot(
-                    x, y, marker="o", label=f"Traffic Light {tl_dict[tl].id.value}", c="blue", alpha=0.7, markersize=2
+                    x,
+                    y,
+                    marker="o",
+                    label=f"Traffic Light {tl_dict[tl].id.value}",
+                    c="blue",
+                    alpha=0.7,
+                    markersize=2,
                 )
             except AttributeError as e:
                 print(f"Warning: Skipping traffic light {tl.id.value} due to missing position data: {e}")
@@ -563,7 +604,13 @@ class Recording:
                         if map is not None:
                             break
 
-        return cls(df, map=map, host_vehicle_idx=host_vehicle_idx, projections=projections, **kwargs)
+        return cls(
+            df,
+            map=map,
+            host_vehicle_idx=host_vehicle_idx,
+            projections=projections,
+            **kwargs,
+        )
 
     def to_parquet(self, filename):
         "Store Recording as a Parquet file."
@@ -573,9 +620,17 @@ class Recording:
         proj_meta = {}
         encoded_projections = self._encode_projections(self.projections)
         if encoded_projections:
+            print("Encoded projections:", encoded_projections, "\n\n\n")
+            print("Decoded projections: ", self._decode_projections(encoded_projections))
             proj_meta[b"projections_json"] = encoded_projections
         to_drop = ["frame"]
-        optional_cols = ["polygon", "global_lat", "global_lon", "global_alt", "global_yaw"]
+        optional_cols = [
+            "polygon",
+            "global_lat",
+            "global_lon",
+            "global_alt",
+            "global_yaw",
+        ]
         to_drop.extend([c for c in optional_cols if c in self._df.columns])
         t = pyarrow.table(self._df.drop(*to_drop))
         map_meta = self.map._to_binary_json() if self.map is not None else {}
@@ -633,14 +688,17 @@ class Recording:
                 },
             )
             df = df.join(proj_df, on="total_nanos", how="left")
+
+            # Set source projection string
             proj_string_list = proj_df["proj_string"].unique().to_list()
             for proj_string_entry in proj_string_list:
-                if source_proj_string:
+                if source_proj_string is None and proj_string_entry is not None:
                     source_proj_string = proj_string_entry
                     break
+
         else:
             ox, oy, oz, oyaw = self._offset_components(default_projection.get("offset"))
-            source_proj_string = default_projection.get("proj_string") 
+            source_proj_string = default_projection.get("proj_string")
             df = df.with_columns(
                 pl.lit(default_projection.get("proj_string")).alias("proj_string"),
                 pl.lit(ox).alias("offset_x"),
@@ -648,6 +706,7 @@ class Recording:
                 pl.lit(oz).alias("offset_z"),
                 pl.lit(oyaw).alias("offset_yaw"),
             )
+        source_crs = pyproj.CRS.from_string(source_proj_string)
 
         if df.select(pl.col("proj_string").is_null().any()).item():
             raise ValueError("Some rows do not have a projection string assigned.")
@@ -659,7 +718,7 @@ class Recording:
             pl.col("z").alias("z_original"),
             pl.col("yaw").alias("yaw_original"),
         )
-        
+
         # Update main columns with offset values
         df = df.with_columns(
             (pl.col("x_original") + pl.col("offset_x")).alias("x"),
@@ -674,37 +733,14 @@ class Recording:
         if not target_crs:
             raise ValueError("Map does not have a valid projection defined.")
 
-        # Use UTM_32N as default:
-        if not source_proj_string:
-            source_proj_string = "EPSG:32632"
-
-        #TODO: Hardcode CRS for debug reasons
-        target_crs = pyproj.CRS.from_proj4("+proj=tmerc +lat_0=50.9098472225444 +lon_0=6.22742895630397 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs")
-        source_crs = pyproj.CRS(source_proj_string)
-
-        # Apply 2D proj string transformation (x,y only)
-        try:
-            transformer = pyproj.Transformer.from_crs(source_crs, target_crs, always_xy=True)
-        except pyproj.exceptions.ProjError:
-            # Handle proj strings with unsupported parameters
-            proj4 = target_crs.to_proj4()
-            sanitized = " ".join(
-                part for part in proj4.split() 
-                if not part.startswith(("+geoidgrids=", "+vunits="))
-            )
-            transformer = pyproj.Transformer.from_crs(source_crs, pyproj.CRS.from_proj4(sanitized), always_xy=True)
-
+        # Apply 2D proj string transformation
+        transformer = pyproj.Transformer.from_crs(source_crs, target_crs)
         x_tgt, y_tgt = transformer.transform(df["x"].to_numpy(), df["y"].to_numpy())
-
-        df = df.with_columns(
-            pl.Series(name="x", values=x_tgt),
-            pl.Series(name="y", values=y_tgt)
-        )
+        df = df.with_columns(pl.Series(name="x", values=x_tgt), pl.Series(name="y", values=y_tgt))
         df = bbx_to_polygon(df)
 
         self._df = df
         return self
-
 
     def plot_altair(
         self,
@@ -774,7 +810,8 @@ class Recording:
         )
         if plot_wedges:
             wedges_df = df["idx", "frame", "type", "x", "y", "yaw", "length"].with_columns(
-                pl.col("yaw").degrees().alias("deg"), (pl.col("length") / 4).alias("size")
+                pl.col("yaw").degrees().alias("deg"),
+                (pl.col("length") / 4).alias("size"),
             )
             plots.append(
                 alt.Chart(wedges_df)
@@ -809,7 +846,13 @@ class Recording:
             vertline = (
                 alt.Chart()
                 .mark_rule()
-                .encode(x=alt.datum(op_var, type="quantitative", scale=alt.Scale(domain=[frame_min, frame_max])))
+                .encode(
+                    x=alt.datum(
+                        op_var,
+                        type="quantitative",
+                        scale=alt.Scale(domain=[frame_min, frame_max]),
+                    )
+                )
             )
             view = view | (metric + vertline)
         return view.add_params(op_var)

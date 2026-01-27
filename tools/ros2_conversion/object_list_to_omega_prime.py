@@ -11,27 +11,25 @@ from __future__ import annotations
 import argparse
 import math
 import os
+from collections import deque
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterable, Iterator
 
-import yaml
-import numpy as np
-import polars as pl
-import omega_prime
 import betterosi
-
+import numpy as np
+import perception_msgs_utils as pmu
+import polars as pl
+import yaml
+from rclpy.duration import Duration
 from rclpy.serialization import deserialize_message
 from rclpy.time import Time
-from rclpy.duration import Duration
 from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
 from rosidl_runtime_py.utilities import get_message
-from omega_prime.map import ProjectionOffset
-from collections import deque
-
 from tf2_ros import Buffer, TransformException
 
-import perception_msgs_utils as pmu
+import omega_prime
+from omega_prime.map import ProjectionOffset
 
 # Legacy numpy aliases expected by perception_msgs_utils/tf_transformations
 if not hasattr(np, "float"):
@@ -230,9 +228,7 @@ def iter_object_list_messages(
     msg_cls = get_message(type_map[topic])
 
     tf_msg_cls = get_message(type_map["/tf"]) if "/tf" in type_map else None
-    static_tf_msg_cls = (
-        get_message(type_map["/tf_static"]) if "/tf_static" in type_map else None
-    )
+    static_tf_msg_cls = get_message(type_map["/tf_static"]) if "/tf_static" in type_map else None
 
     # TF buffer for resolving transforms
     buffer = Buffer(cache_time=Duration(seconds=1000.0))
@@ -341,17 +337,13 @@ def _discover_bags(data_dir: Path) -> list[Path]:
 def _parse_args() -> argparse.Namespace:
     env_validate = os.environ.get("OP_VALIDATE", "").lower() in {"1", "true", "yes"}
 
-    parser = argparse.ArgumentParser(
-        description="Convert ROS 2 ObjectList bags to omega-prime MCAP"
-    )
+    parser = argparse.ArgumentParser(description="Convert ROS 2 ObjectList bags to omega-prime MCAP")
     parser.add_argument(
         "--data-dir",
         default=os.environ.get("OP_DATA", "/data"),
         help="Directory containing rosbag2 folders",
     )
-    parser.add_argument(
-        "--topic", default=os.environ.get("OP_TOPIC"), help="ObjectList topic to export"
-    )
+    parser.add_argument("--topic", default=os.environ.get("OP_TOPIC"), help="ObjectList topic to export")
     parser.add_argument(
         "--output-dir",
         default=os.environ.get("OP_OUT", "/out"),
@@ -415,13 +407,9 @@ def main() -> None:
 
     for bag in bags:
         if map_path and map_path.exists():
-            print(
-                f"[object_list_to_omega_prime] Processing bag: {bag} with openDRIVE File: {map_path}"
-            )
+            print(f"[object_list_to_omega_prime] Processing bag: {bag} with openDRIVE File: {map_path}")
         else:
-            print(
-                f"[object_list_to_omega_prime] Processing bag: {bag} without openDRIVE File"
-            )
+            print(f"[object_list_to_omega_prime] Processing bag: {bag} without openDRIVE File")
         out_file = convert_bag_to_omega_prime(
             bag,
             args.topic,
