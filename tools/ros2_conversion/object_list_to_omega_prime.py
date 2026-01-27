@@ -210,7 +210,6 @@ def _storage_id(meta: dict[str, Any]) -> str:
 def iter_object_list_messages(
     bag_dir: Path,
     topic: str,
-    child_frame: str,
     fixed_frame: str,
     projection_store: dict[int, dict[str, Any]],
 ) -> Iterator[Any]:
@@ -239,12 +238,12 @@ def iter_object_list_messages(
     buffer = Buffer(cache_time=Duration(seconds=1000.0))
 
     # Timestamps of object list messages not yet resolved
-    pending: deque[Time] = deque()
+    pending: deque[tuple[Time, str]] = deque()
 
-    def try_resolve_and_store(stamp_time: Time) -> bool:
+    def try_resolve_and_store(stamp_time: Time, msg_frame_id: str) -> bool:
         """Try to resolve transform at stamp_time and store projection; return success."""
         try:
-            resolved = buffer.lookup_transform(fixed_frame, child_frame, stamp_time)
+            resolved = buffer.lookup_transform(fixed_frame, msg_frame_id, stamp_time)
         except TransformException:
             return False
 
@@ -258,11 +257,11 @@ def iter_object_list_messages(
             return
 
         # Try in FIFO order; keep unresolved ones.
-        new_pending: deque[Time] = deque()
+        new_pending: deque[tuple[Time, str]] = deque()
         while pending:
-            st = pending.popleft()
-            if not try_resolve_and_store(st):
-                new_pending.append(st)
+            st, frame_id = pending.popleft()
+            if not try_resolve_and_store(st, frame_id):
+                new_pending.append((st, frame_id))
         pending.extend(new_pending)
 
     while reader.has_next():
@@ -286,11 +285,12 @@ def iter_object_list_messages(
             continue
 
         msg = deserialize_message(data, msg_cls)
+        msg_frame_id = msg.header.frame_id
         stamp = msg.header.stamp if hasattr(msg, "header") else None
         if stamp is not None:
             stamp_time = Time.from_msg(stamp)
-            if not try_resolve_and_store(stamp_time):
-                pending.append(stamp_time)
+            if not try_resolve_and_store(stamp_time, msg_frame_id):
+                pending.append((stamp_time, msg_frame_id))
 
         yield msg
 
@@ -302,7 +302,6 @@ def convert_bag_to_omega_prime(
     bag_dir: Path,
     topic: str,
     output_dir: Path,
-    child_frame: str,
     fixed_frame: str,
     proj_string: str,
     map_path: Path | None = None,
@@ -314,7 +313,6 @@ def convert_bag_to_omega_prime(
         for msg in iter_object_list_messages(
             bag_dir,
             topic,
-            child_frame,
             fixed_frame,
             projection_store=projection_store,
         ):
@@ -378,11 +376,6 @@ def _parse_args() -> argparse.Namespace:
         help="Enable omega-prime schema validation",
     )
     parser.add_argument(
-        "--child_frame",
-        default="base_link",
-        help="Source frame",
-    )
-    parser.add_argument(
         "--fixed_frame",
         default="utm_32N",
         help="Target frame",
@@ -433,7 +426,6 @@ def main() -> None:
             bag,
             args.topic,
             out_dir,
-            args.child_frame,
             args.fixed_frame,
             args.proj_string,
             map_path,
