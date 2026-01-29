@@ -1,6 +1,5 @@
 import betterosi
 import numpy as np
-import polars as pl
 import pandera.polars as pa
 import pandera.extensions as extensions
 import polars as pl
