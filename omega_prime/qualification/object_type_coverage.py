@@ -20,7 +20,7 @@ def object_type_coverage(
     summary = pl.DataFrame(
         {
             "object_type_coverage": otc,
-            "status": ["pass" if otc > 67.0 else "fail"],
+            "status": ["pass" if otc > 99.9 else "fail"],
         }
     ).lazy()
 
