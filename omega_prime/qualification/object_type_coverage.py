@@ -5,9 +5,12 @@ from collections.abc import Sequence
 from omega_prime import MovingObjectType
 
 from ..metrics import metric
+from .common import STATUS, PASS, FAIL
+
+OBJECT_TYPE_COVERAGE = "object_type_coverage"
 
 
-@metric(computes_properties=["object_type_coverage"])
+@metric(computes_properties=[OBJECT_TYPE_COVERAGE])
 def object_type_coverage(
     df: pl.LazyFrame | pl.DataFrame,
     /,
@@ -19,9 +22,9 @@ def object_type_coverage(
 
     summary = pl.DataFrame(
         {
-            "object_type_coverage": otc,
-            "status": ["pass" if otc > 99.9 else "fail"],
+            OBJECT_TYPE_COVERAGE: otc,
+            STATUS: [PASS if otc > 99.9 else FAIL],
         }
     ).lazy()
 
-    return df, {"object_type_coverage": summary}
+    return df, {OBJECT_TYPE_COVERAGE: summary}
