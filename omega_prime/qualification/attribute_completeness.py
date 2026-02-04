@@ -2,13 +2,11 @@
 
 import polars as pl
 from omega_prime.schemas import polars_schema
-from .common import STATUS, PASS, FAIL
+from .common import STATUS, PASS, FAIL, QRT
 from ..metrics import metric
 
 
 ATTRIBUTE_COMPLETENESS = "attribute_completeness"
-
-QRT = tuple[pl.DataFrame, dict[str, pl.LazyFrame]]
 
 
 @metric(computes_properties=[ATTRIBUTE_COMPLETENESS])

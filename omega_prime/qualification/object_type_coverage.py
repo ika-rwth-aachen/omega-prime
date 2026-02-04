@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from omega_prime import MovingObjectType
 
 from ..metrics import metric
-from .common import STATUS, PASS, FAIL
+from .common import STATUS, PASS, FAIL, QRT
 
 OBJECT_TYPE_COVERAGE = "object_type_coverage"
 
@@ -15,7 +15,7 @@ def object_type_coverage(
     df: pl.LazyFrame | pl.DataFrame,
     /,
     expected_types: Sequence[MovingObjectType],
-):
+) -> QRT:
     present_types = df.select("type").unique().collect().to_series()
     et_set = set(expected_types)
     otc = sum(et in present_types for et in et_set) * 100.0 / len(et_set)
