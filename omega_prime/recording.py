@@ -620,9 +620,21 @@ class Recording:
         proj_meta = {}
         encoded_projections = self._encode_projections(self.projections)
         if encoded_projections:
-            print("Encoded projections:", encoded_projections, "\n\n\n")
-            print("Decoded projections: ", self._decode_projections(encoded_projections))
             proj_meta[b"projections_json"] = encoded_projections
+        df_export = self._df
+        original_to_base = {
+            "x_original": "x",
+            "y_original": "y",
+            "z_original": "z",
+            "yaw_original": "yaw",
+        }
+        overwrite_exprs = [
+            pl.col(original_col).alias(base_col)
+            for original_col, base_col in original_to_base.items()
+            if original_col in df_export.columns
+        ]
+        if overwrite_exprs:
+            df_export = df_export.with_columns(*overwrite_exprs)
         to_drop = ["frame"]
         optional_cols = [
             "polygon",
@@ -630,9 +642,14 @@ class Recording:
             "global_lon",
             "global_alt",
             "global_yaw",
+            "proj_string",
+            "x_original",
+            "y_original",
+            "z_original",
+            "yaw_original",
         ]
-        to_drop.extend([c for c in optional_cols if c in self._df.columns])
-        t = pyarrow.table(self._df.drop(*to_drop))
+        to_drop.extend([c for c in optional_cols if c in df_export.columns])
+        t = pyarrow.table(df_export.drop(*to_drop))
         map_meta = self.map._to_binary_json() if self.map is not None else {}
 
         t = t.cast(t.schema.with_metadata(metadata | proj_meta | map_meta))
