@@ -88,7 +88,7 @@ ignore_packages = [
 zero = true
 
 [tool.pytest.ini_options]
-addopts = "--nbval --codeblocks --cov=omega_prime --cov-report=xml --cov-report=html --cov-report=term-missing"
+addopts = "--nbval --codeblocks --cov-report=xml --cov-report=html --cov-report=term-missing"
 testpaths = [
     "tests",
     "docs/notebooks/tutorial.ipynb",
