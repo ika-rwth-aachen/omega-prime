@@ -45,7 +45,12 @@ _VCT = betterosi.MovingObjectVehicleClassificationType
 _ROLE = betterosi.MovingObjectVehicleClassificationRole
 _MOT = betterosi.MovingObjectType
 
-UTM_TO_EPSG = {"UTM_30N": "EPSG:32630", "UTM_31N": "EPSG:32631", "UTM_32N": "EPSG:32632", "UTM_33N": "EPSG:32633"}
+UTM_TO_EPSG = {
+    "UTM_30N": "EPSG:32630",
+    "UTM_31N": "EPSG:32631",
+    "UTM_32N": "EPSG:32632",
+    "UTM_33N": "EPSG:32633",
+}
 
 
 def _class_to_osi(obj) -> tuple[int, int, int]:

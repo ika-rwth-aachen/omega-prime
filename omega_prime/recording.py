@@ -294,9 +294,27 @@ class Recording:
 
         return self._moving_objects
 
+    def _df_with_original_pose_for_export(self, df: pl.DataFrame | None = None) -> pl.DataFrame:
+        df_export = self._df if df is None else df
+        original_to_base = {
+            "x_original": "x",
+            "y_original": "y",
+            "z_original": "z",
+            "yaw_original": "yaw",
+        }
+        overwrite_exprs = [
+            pl.col(original_col).alias(base_col)
+            for original_col, base_col in original_to_base.items()
+            if original_col in df_export.columns
+        ]
+        if overwrite_exprs:
+            df_export = df_export.with_columns(*overwrite_exprs)
+        return df_export
+
     def to_osi_gts(self) -> list[betterosi.GroundTruth]:
         first_iteration = True
-        for [nanos], group_df in self._df.sort(["total_nanos"]).group_by("total_nanos", maintain_order=True):
+        df_export = self._df_with_original_pose_for_export()
+        for [nanos], group_df in df_export.sort(["total_nanos"]).group_by("total_nanos", maintain_order=True):
             gt = self.get_moving_object_ground_truth(
                 nanos, group_df, host_vehicle_idx=self.host_vehicle_idx, validate=False
             )
@@ -621,20 +639,7 @@ class Recording:
         encoded_projections = self._encode_projections(self.projections)
         if encoded_projections:
             proj_meta[b"projections_json"] = encoded_projections
-        df_export = self._df
-        original_to_base = {
-            "x_original": "x",
-            "y_original": "y",
-            "z_original": "z",
-            "yaw_original": "yaw",
-        }
-        overwrite_exprs = [
-            pl.col(original_col).alias(base_col)
-            for original_col, base_col in original_to_base.items()
-            if original_col in df_export.columns
-        ]
-        if overwrite_exprs:
-            df_export = df_export.with_columns(*overwrite_exprs)
+        df_export = self._df_with_original_pose_for_export()
         to_drop = ["frame"]
         optional_cols = [
             "polygon",
