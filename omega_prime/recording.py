@@ -739,6 +739,9 @@ class Recording:
         df = df.with_columns(pl.Series(name="x", values=x_tgt), pl.Series(name="y", values=y_tgt))
         df = bbx_to_polygon(df)
 
+        # Remove temporary projection columns
+        df = df.drop("proj_string", "offset_x", "offset_y", "offset_z", "offset_yaw")
+
         self._df = df
         return self
 
