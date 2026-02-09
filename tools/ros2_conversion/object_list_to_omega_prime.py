@@ -45,6 +45,8 @@ _VCT = betterosi.MovingObjectVehicleClassificationType
 _ROLE = betterosi.MovingObjectVehicleClassificationRole
 _MOT = betterosi.MovingObjectType
 
+UTM_TO_EPSG = {"UTM_30N": "EPSG:32630", "UTM_31N": "EPSG:32631", "UTM_32N": "EPSG:32632", "UTM_33N": "EPSG:32633"}
+
 
 def _class_to_osi(obj) -> tuple[int, int, int]:
     mot = int(_MOT.TYPE_OTHER)
@@ -181,14 +183,17 @@ def _yaw_from_quaternion(rotation: dict[str, float]) -> float:
 
 def _projection_store_to_projections(
     projection_store: dict[int, dict[str, Any]],
-    proj_string: str | None,
+    utm: str,
 ) -> dict[int, dict[str, Any]]:
     projections: dict[int, dict[str, Any]] = {}
-    if proj_string == "":
-        proj_string = None
     for ts, entry in projection_store.items():
         translation = entry.get("translation") or {}
         rotation = entry.get("rotation") or {}
+
+        proj_string = UTM_TO_EPSG.get(utm.upper())
+        if not proj_string:
+            raise KeyError(f"No EPSG Code defined for {utm}")
+
         projections[int(ts)] = {
             "proj_string": proj_string,
             "offset": ProjectionOffset(
@@ -299,7 +304,6 @@ def convert_bag_to_omega_prime(
     topic: str,
     output_dir: Path,
     fixed_frame: str,
-    proj_string: str,
     map_path: Path | None = None,
     validate: bool = False,
 ) -> Path:
@@ -329,7 +333,7 @@ def convert_bag_to_omega_prime(
 
     df = pl.DataFrame(row_iter())
 
-    projections = _projection_store_to_projections(projection_store, proj_string)
+    projections = _projection_store_to_projections(projection_store, fixed_frame)
 
     rec = omega_prime.Recording(df=df, projections=projections, validate=validate)
 
@@ -385,11 +389,6 @@ def _parse_args() -> argparse.Namespace:
         default="utm_32N",
         help="Target frame",
     )
-    parser.add_argument(
-        "--proj_string",
-        default="EPSG:32632",
-        help="Projection string for fixed_frame",
-    )
     return parser.parse_args()
 
 
@@ -428,7 +427,6 @@ def main() -> None:
             args.topic,
             out_dir,
             args.fixed_frame,
-            args.proj_string,
             map_path,
             args.validate,
         )
