@@ -304,6 +304,8 @@ def convert_bag_to_omega_prime(
     validate: bool = False,
 ) -> Path:
     projection_store: dict[int, dict[str, Any]] = {}
+    warn_gap_nanos = int(3.0 * 1_000_000_000)
+    last_seen_by_idx: dict[int, int] = {}
 
     def row_iter() -> Iterable[dict[str, Any]]:
         for msg in iter_object_list_messages(
@@ -312,7 +314,18 @@ def convert_bag_to_omega_prime(
             fixed_frame,
             projection_store=projection_store,
         ):
-            yield from _olist_to_rows(msg)
+            for row in _olist_to_rows(msg):
+                idx = int(row["idx"])
+                total_nanos = int(row["total_nanos"])
+
+                if idx in last_seen_by_idx:
+                    dt_nanos = total_nanos - last_seen_by_idx[idx]
+                    if dt_nanos > warn_gap_nanos:
+                        dt_seconds = dt_nanos / 1_000_000_000.0
+                        print(f"Warning: {idx} found again after {dt_seconds:.3f} seconds.")
+
+                last_seen_by_idx[idx] = total_nanos
+                yield row
 
     df = pl.DataFrame(row_iter())
 
