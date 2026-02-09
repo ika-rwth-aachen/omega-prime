@@ -113,8 +113,8 @@ class Recording:
     Attributes:
         df (pl.DataFrame): Polars DataFrame containing the moving object data.
         map (MapOsi | MapOsiCenterline | MapOdr | None): Map associated with the recording.
-        projections (dict[int | None, dict]): Mapping from timestamps (or `None` for a global default)
-            to projection information dictionaries.
+        projections (dict): Projection metadata with structure
+            `{"proj_string": str | None, None: ProjectionOffset | None, int: ProjectionOffset | None}`.
         traffic_light_states (dict): Dictionary mapping timestamps to traffic light states.
         host_vehicle_idx (int | None): Index of the host vehicle, if applicable.
     """
@@ -131,7 +131,7 @@ class Recording:
 
     @staticmethod
     def _encode_projections(
-        projections: dict[int | None, dict[str, typing.Any]],
+        projections: dict[typing.Any, typing.Any],
     ) -> bytes:
         if not projections:
             return b""
@@ -141,33 +141,77 @@ class Recording:
                 return None
             return {"x": offset.x, "y": offset.y, "z": offset.z, "yaw": offset.yaw}
 
-        payload = [
-            {
-                "total_nanos": ts,
-                "proj_string": projection.get("proj_string"),
-                "offset": _serialize_offset(projection.get("offset")),
-            }
-            for ts, projection in projections.items()
-        ]
+        payload = {
+            "proj_string": projections.get("proj_string"),
+            "offsets": [
+                {
+                    "total_nanos": ts,
+                    "offset": _serialize_offset(offset),
+                }
+                for ts, offset in projections.items()
+                if ts != "proj_string"
+            ],
+        }
         return json.dumps(payload).encode()
 
     @staticmethod
     def _decode_projections(
         raw: bytes | str | None,
-    ) -> dict[int | None, dict[str, typing.Any]]:
+    ) -> dict[typing.Any, typing.Any]:
         if raw in (None, b"", ""):
             return {}
         if isinstance(raw, bytes):
             raw = raw.decode()
         payload = json.loads(raw)
-        result: dict[int | None, dict[str, typing.Any]] = {}
-        for entry in payload:
+        result: dict[typing.Any, typing.Any] = {"proj_string": payload.get("proj_string")}
+        for entry in payload.get("offsets", []):
             offset_data = entry.get("offset")
             offset = ProjectionOffset(**offset_data) if offset_data is not None else None
             ts = entry.get("total_nanos")
             key = None if ts is None else int(ts)
-            result[key] = {"proj_string": entry.get("proj_string"), "offset": offset}
+            result[key] = offset
         return result
+
+    @staticmethod
+    def _normalize_projections(
+        projections: dict[typing.Any, typing.Any] | None,
+    ) -> dict[typing.Any, typing.Any]:
+        if projections is None:
+            return {}
+        if not isinstance(projections, dict):
+            raise TypeError("`projections` must be a dictionary.")
+
+        normalized: dict[typing.Any, typing.Any] = {}
+        if "proj_string" in projections:
+            normalized["proj_string"] = projections["proj_string"]
+
+        for key, value in projections.items():
+            if key == "proj_string":
+                continue
+
+            if key is not None and not isinstance(key, int):
+                raise TypeError("Projection keys must be integers, `None`, or `proj_string`.")
+
+            if value is not None and not isinstance(value, ProjectionOffset):
+                raise TypeError("Projection values must be `ProjectionOffset` or `None`.")
+
+            normalized[key] = value
+
+        return normalized
+
+    def _projection_for_timestamp(self, total_nanos: int) -> tuple[str | None, ProjectionOffset | None]:
+        source_proj_string = self.projections.get("proj_string")
+        if source_proj_string is None:
+            source_proj_string = getattr(self.map, "proj_string", None)
+
+        if total_nanos in self.projections:
+            offset = self.projections[total_nanos]
+        elif None in self.projections:
+            offset = self.projections[None]
+        else:
+            offset = getattr(self.map, "proj_offset", None)
+
+        return source_proj_string, offset
 
     @staticmethod
     def get_moving_object_ground_truth(
@@ -246,7 +290,7 @@ class Recording:
             df = df.with_columns((pl.col("vel_x") ** 2 + pl.col("vel_y") ** 2).sqrt().alias("vel"))
         if "acc" not in df.columns:
             df = df.with_columns((pl.col("acc_x") ** 2 + pl.col("acc_y") ** 2).sqrt().alias("acc"))
-        self.projections = dict(projections) if projections is not None else {}
+        self.projections = self._normalize_projections(projections)
         self.traffic_light_states = traffic_light_states if traffic_light_states is not None else {}
 
         df = bbx_to_polygon(df)
@@ -329,7 +373,7 @@ class Recording:
 
     @classmethod
     def from_osi_gts(cls, gts: list[betterosi.GroundTruth], **kwargs):
-        projs: dict[int | None, dict[str, typing.Any]] = {}
+        projs: dict[typing.Any, typing.Any] = {"proj_string": None}
         traffic_light_states = {}
 
         gts, tmp_gts = itertools.tee(gts, 2)
@@ -346,18 +390,21 @@ class Recording:
                     raise ValueError(
                         f"Offset of {i}th ground truth message (total_nanos={total_nanos}) is set without position."
                     )
-                projs[total_nanos] = dict(
-                    proj_string=gt.proj_string,
-                    offset=(
-                        ProjectionOffset(
-                            x=gt.proj_frame_offset.position.x,
-                            y=gt.proj_frame_offset.position.y,
-                            z=gt.proj_frame_offset.position.z,
-                            yaw=gt.proj_frame_offset.yaw,
-                        )
-                        if gt.proj_frame_offset is not None
-                        else None
-                    ),
+                if gt.proj_string is not None:
+                    if projs["proj_string"] is None:
+                        projs["proj_string"] = gt.proj_string
+                    elif projs["proj_string"] != gt.proj_string:
+                        raise ValueError("Ground truths contain multiple `proj_string` values.")
+
+                projs[total_nanos] = (
+                    ProjectionOffset(
+                        x=gt.proj_frame_offset.position.x,
+                        y=gt.proj_frame_offset.position.y,
+                        z=gt.proj_frame_offset.position.z,
+                        yaw=gt.proj_frame_offset.yaw,
+                    )
+                    if gt.proj_frame_offset is not None
+                    else None
                 )
 
                 traffic_light_states[total_nanos] = gt.traffic_light
@@ -598,7 +645,7 @@ class Recording:
         t = pq.read_table(filename)
         df = pl.DataFrame(t, schema_overrides=polars_schema)
         host_vehicle_idx = None
-        projections: dict[int | None, dict[str, typing.Any]] = {}
+        projections: dict[typing.Any, typing.Any] = {}
         map = None
         metadata = t.schema.metadata or {}
         if metadata:
@@ -667,17 +714,16 @@ class Recording:
         if self._df.height == 0:
             return self
 
+        source_proj_string, default_offset = self._projection_for_timestamp(-1)
+
         per_frame: list[dict[str, typing.Any]] = []
-        for ts, info in self.projections.items():
-            if ts is None:
+        for ts, offset in self.projections.items():
+            if ts in (None, "proj_string"):
                 continue
-            if info.get("proj_string") is None:
-                continue
-            ox, oy, oz, oyaw = self._offset_components(info.get("offset"))
+            ox, oy, oz, oyaw = self._offset_components(offset)
             per_frame.append(
                 dict(
                     total_nanos=int(ts),
-                    proj_string=info["proj_string"],
                     offset_x=ox,
                     offset_y=oy,
                     offset_z=oz,
@@ -685,24 +731,16 @@ class Recording:
                 )
             )
 
-        default_projection = self.projections.get(None)
-        if default_projection is None:
-            proj_string = getattr(self.map, "proj_string", None)
-            proj_offset = getattr(self.map, "proj_offset", None)
-            if proj_string is not None and proj_offset is not None:
-                default_projection = {"proj_string": proj_string, "offset": proj_offset}
-
-        if not per_frame and default_projection is None:
+        if source_proj_string is None:
             raise ValueError("No projection information available on the recording or attached map.")
 
         df = self._df
-        source_proj_string = None
+        dox, doy, doz, doyaw = self._offset_components(default_offset)
         if per_frame:
             proj_df = pl.DataFrame(
                 per_frame,
                 schema={
                     "total_nanos": polars_schema["total_nanos"],
-                    "proj_string": pl.Utf8,
                     "offset_x": pl.Float64,
                     "offset_y": pl.Float64,
                     "offset_z": pl.Float64,
@@ -710,23 +748,21 @@ class Recording:
                 },
             )
             df = df.join(proj_df, on="total_nanos", how="left")
-
-            # Set source projection string
-            proj_string_list = proj_df["proj_string"].unique().to_list()
-            for proj_string_entry in proj_string_list:
-                if source_proj_string is None and proj_string_entry is not None:
-                    source_proj_string = proj_string_entry
-                    break
+            df = df.with_columns(
+                pl.lit(source_proj_string).alias("proj_string"),
+                pl.col("offset_x").fill_null(dox).alias("offset_x"),
+                pl.col("offset_y").fill_null(doy).alias("offset_y"),
+                pl.col("offset_z").fill_null(doz).alias("offset_z"),
+                pl.col("offset_yaw").fill_null(doyaw).alias("offset_yaw"),
+            )
 
         else:
-            ox, oy, oz, oyaw = self._offset_components(default_projection.get("offset"))
-            source_proj_string = default_projection.get("proj_string")
             df = df.with_columns(
-                pl.lit(default_projection.get("proj_string")).alias("proj_string"),
-                pl.lit(ox).alias("offset_x"),
-                pl.lit(oy).alias("offset_y"),
-                pl.lit(oz).alias("offset_z"),
-                pl.lit(oyaw).alias("offset_yaw"),
+                pl.lit(source_proj_string).alias("proj_string"),
+                pl.lit(dox).alias("offset_x"),
+                pl.lit(doy).alias("offset_y"),
+                pl.lit(doz).alias("offset_z"),
+                pl.lit(doyaw).alias("offset_yaw"),
             )
         source_crs = pyproj.CRS.from_string(source_proj_string)
 

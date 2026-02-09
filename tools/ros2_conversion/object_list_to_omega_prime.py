@@ -189,25 +189,23 @@ def _yaw_from_quaternion(rotation: dict[str, float]) -> float:
 def _projection_store_to_projections(
     projection_store: dict[int, dict[str, Any]],
     utm: str,
-) -> dict[int, dict[str, Any]]:
-    projections: dict[int, dict[str, Any]] = {}
+) -> dict[Any, Any]:
+    projections: dict[Any, Any] = {}
+    proj_string = UTM_TO_EPSG.get(utm.upper())
+    if not proj_string:
+        raise KeyError(f"No EPSG Code defined for {utm}")
+    projections["proj_string"] = proj_string
+
     for ts, entry in projection_store.items():
         translation = entry.get("translation") or {}
         rotation = entry.get("rotation") or {}
 
-        proj_string = UTM_TO_EPSG.get(utm.upper())
-        if not proj_string:
-            raise KeyError(f"No EPSG Code defined for {utm}")
-
-        projections[int(ts)] = {
-            "proj_string": proj_string,
-            "offset": ProjectionOffset(
-                x=float(translation.get("x", 0.0)),
-                y=float(translation.get("y", 0.0)),
-                z=float(translation.get("z", 0.0)),
-                yaw=_yaw_from_quaternion(rotation),
-            ),
-        }
+        projections[int(ts)] = ProjectionOffset(
+            x=float(translation.get("x", 0.0)),
+            y=float(translation.get("y", 0.0)),
+            z=float(translation.get("z", 0.0)),
+            yaw=_yaw_from_quaternion(rotation),
+        )
     return projections
 
 
@@ -331,7 +329,7 @@ def convert_bag_to_omega_prime(
                     dt_nanos = total_nanos - last_seen_by_idx[idx]
                     if dt_nanos > warn_gap_nanos:
                         dt_seconds = dt_nanos / 1_000_000_000.0
-                        print(f"Warning: {idx} found again after {dt_seconds:.3f} seconds.")
+                        print(f"Warning: ID {idx} found again after {dt_seconds:.3f} seconds.")
 
                 last_seen_by_idx[idx] = total_nanos
                 yield row
