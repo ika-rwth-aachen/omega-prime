@@ -435,10 +435,14 @@ class Recording:
                         f"Offset of {i}th ground truth message (total_nanos={total_nanos}) is set without position."
                     )
                 if gt.proj_string is not None:
-                    if projs["proj_string"] is None:
-                        projs["proj_string"] = gt.proj_string
-                    elif projs["proj_string"] != gt.proj_string:
-                        raise ValueError("Ground truths contain multiple `proj_string` values.")
+                    normalized_proj_string = gt.proj_string.strip()
+                    if normalized_proj_string:
+                        if projs["proj_string"] is None:
+                            projs["proj_string"] = normalized_proj_string
+                        elif projs["proj_string"] != normalized_proj_string:
+                            raise ValueError(
+                                f"Conflicting projection strings: {projs['proj_string']} vs {normalized_proj_string} at gt index {i} (total_nanos={total_nanos})."
+                            )
 
                 projs[total_nanos] = (
                     ProjectionOffset(
