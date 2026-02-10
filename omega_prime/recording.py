@@ -607,7 +607,6 @@ class Recording:
         map_path = Path(map_path if map_path is not None else filepath)
         map_parsing = {}
         map = None
-        print(map_path)
         for MC in MAP_CLASSES:
             if map_path.suffix in MC._supported_file_suffixes:
                 try:
