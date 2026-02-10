@@ -125,6 +125,7 @@ class Recording:
     def _offset_components(
         offset: ProjectionOffset | None,
     ) -> tuple[float, float, float, float]:
+        "Extract components from a ProjectionOffset, returning zeros if the offset is None."
         if offset is None:
             return 0.0, 0.0, 0.0, 0.0
         return offset.x, offset.y, offset.z, offset.yaw
@@ -133,6 +134,7 @@ class Recording:
     def _encode_projections(
         projections: dict[typing.Any, typing.Any],
     ) -> bytes:
+        "Encode projection metadata into a JSON string and then to bytes"
         if not projections:
             return b""
 
@@ -158,6 +160,7 @@ class Recording:
     def _decode_projections(
         raw: bytes | str | None,
     ) -> dict[typing.Any, typing.Any]:
+        "Decode projection metadata from bytes or string to a dictionary."
         if raw in (None, b"", ""):
             return {}
         if isinstance(raw, bytes):
@@ -173,17 +176,22 @@ class Recording:
         return result
 
     @staticmethod
-    def _normalize_projections(
+    def _validate_projections_schema(
         projections: dict[typing.Any, typing.Any] | None,
     ) -> dict[typing.Any, typing.Any]:
+        """
+        Validate the schema of the projections dictionary, ensuring correct types and structure.
+        Projection metadata with structure:
+            `{"proj_string": str | None, None: ProjectionOffset | None, int: ProjectionOffset | None}`
+        """
         if projections is None:
             return {}
         if not isinstance(projections, dict):
             raise TypeError("`projections` must be a dictionary.")
 
-        normalized: dict[typing.Any, typing.Any] = {}
+        validated: dict[typing.Any, typing.Any] = {}
         if "proj_string" in projections:
-            normalized["proj_string"] = projections["proj_string"]
+            validated["proj_string"] = projections["proj_string"]
 
         for key, value in projections.items():
             if key == "proj_string":
@@ -195,9 +203,9 @@ class Recording:
             if value is not None and not isinstance(value, ProjectionOffset):
                 raise TypeError("Projection values must be `ProjectionOffset` or `None`.")
 
-            normalized[key] = value
+            validated[key] = value
 
-        return normalized
+        return validated
 
     def _projection_for_timestamp(self, total_nanos: int) -> tuple[str | None, ProjectionOffset | None]:
         source_proj_string = self.projections.get("proj_string")
@@ -252,6 +260,41 @@ class Recording:
         )
         return gt
 
+    @staticmethod
+    def _ensure_polars_dataframe(df: typing.Any) -> pl.DataFrame:
+        if isinstance(df, pl.DataFrame):
+            return df
+        return pl.DataFrame(df, schema_overrides=polars_schema)
+
+    @staticmethod
+    def _build_frame_mapping(df: pl.DataFrame) -> tuple[dict[int, int], pl.DataFrame]:
+        nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
+        mapping = pl.DataFrame(
+            {
+                "total_nanos": list(nanos2frame.keys()),
+                "frame": list(nanos2frame.values()),
+            },
+            schema=dict(total_nanos=polars_schema["total_nanos"], frame=pl.UInt32),
+        )
+        return nanos2frame, mapping
+
+    @staticmethod
+    def _attach_frame_column(df: pl.DataFrame, mapping: pl.DataFrame) -> pl.DataFrame:
+        if "frame" in df.columns:
+            df = df.drop("frame")
+        return df.join(mapping, on="total_nanos", how="left")
+
+    @staticmethod
+    def _ensure_motion_norm_columns(df: pl.DataFrame) -> pl.DataFrame:
+        exprs = []
+        if "vel" not in df.columns:
+            exprs.append((pl.col("vel_x") ** 2 + pl.col("vel_y") ** 2).sqrt().alias("vel"))
+        if "acc" not in df.columns:
+            exprs.append((pl.col("acc_x") ** 2 + pl.col("acc_y") ** 2).sqrt().alias("acc"))
+        if exprs:
+            df = df.with_columns(*exprs)
+        return df
+
     def __init__(
         self,
         df,
@@ -262,35 +305,20 @@ class Recording:
         traffic_light_states: dict | None = None,
     ):
         "Initialize a Recording instance."
-        # Convert pandas DataFrame to polars DataFrame if necessary
-        if not isinstance(df, pl.DataFrame):
-            df = pl.DataFrame(df, schema_overrides=polars_schema)
+        df = self._ensure_polars_dataframe(df)
         if "total_nanos" not in df.columns:
             raise ValueError("df must contain column `total_nanos`.")
-        nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
-        mapping = pl.DataFrame(
-            {
-                "total_nanos": list(nanos2frame.keys()),
-                "frame": list(nanos2frame.values()),
-            },
-            schema=dict(total_nanos=polars_schema["total_nanos"], frame=pl.UInt32),
-        )
-        if "frame" in df.columns:
-            df = df.drop("frame")
-        df = df.join(mapping, on="total_nanos", how="left")
-        if not isinstance(df, pl.DataFrame):
-            df = pl.DataFrame(df, schema_overrides=polars_schema)
+        nanos2frame, mapping = self._build_frame_mapping(df)
+        df = self._attach_frame_column(df, mapping)
+        df = self._ensure_polars_dataframe(df)
         if validate:
             recording_moving_object_schema.validate(df, lazy=True)
 
         super().__init__()
         self.nanos2frame = nanos2frame
 
-        if "vel" not in df.columns:
-            df = df.with_columns((pl.col("vel_x") ** 2 + pl.col("vel_y") ** 2).sqrt().alias("vel"))
-        if "acc" not in df.columns:
-            df = df.with_columns((pl.col("acc_x") ** 2 + pl.col("acc_y") ** 2).sqrt().alias("acc"))
-        self.projections = self._normalize_projections(projections)
+        df = self._ensure_motion_norm_columns(df)
+        self.projections = self._validate_projections_schema(projections)
         self.traffic_light_states = traffic_light_states if traffic_light_states is not None else {}
 
         df = bbx_to_polygon(df)
