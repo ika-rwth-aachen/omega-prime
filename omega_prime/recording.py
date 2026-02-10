@@ -390,6 +390,14 @@ class Recording:
             gt = self.get_moving_object_ground_truth(
                 nanos, group_df, host_vehicle_idx=self.host_vehicle_idx, validate=False
             )
+            source_proj_string, proj_offset = self._projection_for_timestamp(int(nanos))
+            if source_proj_string is not None:
+                gt.proj_string = source_proj_string
+            if proj_offset is not None:
+                gt.proj_frame_offset = betterosi.GroundTruthProjFrameOffset(
+                    position=betterosi.Vector3D(x=proj_offset.x, y=proj_offset.y, z=proj_offset.z),
+                    yaw=proj_offset.yaw,
+                )
             if first_iteration:
                 first_iteration = False
                 if self.map is not None and isinstance(self.map, MapOsi | MapOsiCenterline):
