@@ -262,12 +262,14 @@ class Recording:
 
     @staticmethod
     def _ensure_polars_dataframe(df: typing.Any) -> pl.DataFrame:
+        "Ensure that the input data is a Polars DataFrame with the correct schema, converting if necessary."
         if isinstance(df, pl.DataFrame):
             return df
         return pl.DataFrame(df, schema_overrides=polars_schema)
 
     @staticmethod
     def _build_frame_mapping(df: pl.DataFrame) -> tuple[dict[int, int], pl.DataFrame]:
+        "Build a mapping from `total_nanos` to frame numbers and return both the mapping and a DataFrame for joining."
         nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
         mapping = pl.DataFrame(
             {
@@ -367,6 +369,12 @@ class Recording:
         return self._moving_objects
 
     def _df_with_original_pose_for_export(self, df: pl.DataFrame | None = None) -> pl.DataFrame:
+        """
+        Return a DataFrame with original pose columns (`x_original`, `y_original`, `z_original`, `yaw_original`)
+        for export, if they exist. This is used to ensure that the original pose information is preserved when
+        exporting to formats like Parquet or MCAP,
+        even if the main `x`, `y`, `z`, and `yaw` columns have been modified by projections.
+        """
         df_export = self._df if df is None else df
         original_to_base = {
             "x_original": "x",
@@ -627,7 +635,11 @@ class Recording:
 
     def apply_projections(self, target_crs: str | int = 4326):
         """
-        Add global latitude/longitude/altitude columns by applying the stored projection definitions.
+        Apply projection transformations to the recording's moving object data based on the provided projection metadata
+        and the map's projection. This method updates the `x`, `y`, `z`, and `yaw` columns of the recording's DataFrame
+        according to the specified projections and transforms the coordinates to the target CRS if necessary.
+        The original coordinates before applying projections are stored in `x_original`, `y_original`, `z_original`,
+        and `yaw_original` columns to preserve the original pose information for export or reference.
         """
         if self._df.height == 0:
             return self
@@ -791,6 +803,7 @@ class Recording:
         return self.__init__(df=new_df, map=self.map, host_vehicle_idx=self.host_vehicle_idx)
 
     def plot(self, ax=None, legend=False) -> plt.Axes:
+        "Generate a static plot of the recording using Matplotlib. Plots the map (if available), moving objects, and traffic light states."
         if ax is None:
             fig, ax = plt.subplots(1, 1)
             ax.set_aspect(1)
@@ -803,6 +816,7 @@ class Recording:
         return ax
 
     def plot_mvs(self, ax=None, legend=False):
+        "Generate a static plot of the moving objects in the recording using Matplotlib."
         if ax is None:
             fig, ax = plt.subplots(1, 1)
             ax.set_aspect(1)
@@ -813,6 +827,7 @@ class Recording:
         return ax
 
     def plot_tl(self, ax=None):
+        "Generate a static plot of the traffic lights in the recording using Matplotlib."
         if ax is None:
             fig, ax = plt.subplots(1, 1)
             ax.set_aspect(1)
@@ -841,6 +856,7 @@ class Recording:
         return ax
 
     def plot_frame(self, frame: int, ax=None):
+        "Generate a static plot of a specific frame in the recording using Matplotlib."
         ax = self.plot(ax=ax)
         self.plot_mv_frame(ax, frame=frame)
         return ax

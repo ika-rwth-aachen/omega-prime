@@ -30,6 +30,17 @@ docker run --rm -it \
     ros2omegaprime
 ```
 
+## Projections and Fixed Frame
+- The converter reads `/tf` + `/tf_static` and resolves each ObjectList message frame against the configured `fixed_frame`.
+- The `fixed_frame` should be the georeferenced top-level ROS coordinate frame (TF root) of your setup, for example the global UTM/world frame.
+- These transforms are stored in omega-prime as per-timestamp `ProjectionOffset` metadata.
+- The fixed frame is converted to an EPSG projection string and written as `projections["proj_string"]`.
+- Supported fixed frame values are currently:
+  - `utm_30N` -> `EPSG:32630`
+  - `utm_31N` -> `EPSG:32631`
+  - `utm_32N` -> `EPSG:32632`
+  - `utm_33N` -> `EPSG:32633`
+
 ## Notes
 - The image builds and installs `perception_interfaces` packages needed for Python APIs and messages (`perception_msgs`, `perception_msgs_utils`, `tf2_perception_msgs`).
 - The converter scans `/data` for rosbag2 directories containing a `metadata.yaml` and writes one omega-prime `.mcap` per bag into `/out` per default.
@@ -41,6 +52,7 @@ docker run --rm -it \
   - `OP_OUT` / `--output-dir` (default `/out`)
   - `OP_TOPIC` / `--topic` (required)
   - `OP_VALIDATE` / `--validate`
+  - `OP_FIXED_FRAME` / `--fixed_frame` (default `utm_32N`)
   - `--bag` to process explicit bag directories in addition to auto-discovery
 
 ## OpenDRIVE Map Integration

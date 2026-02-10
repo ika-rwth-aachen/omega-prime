@@ -356,6 +356,7 @@ def _discover_bags(data_dir: Path) -> list[Path]:
 
 def _parse_args() -> argparse.Namespace:
     env_validate = os.environ.get("OP_VALIDATE", "").lower() in {"1", "true", "yes"}
+    env_fixed_frame = os.environ.get("OP_FIXED_FRAME", "utm_32N")
 
     parser = argparse.ArgumentParser(description="Convert ROS 2 ObjectList bags to omega-prime MCAP")
     parser.add_argument(
@@ -389,8 +390,8 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--fixed_frame",
-        default="utm_32N",
-        help="Target frame",
+        default=env_fixed_frame,
+        help="Target fixed frame used for TF lookup and projection metadata (default: OP_FIXED_FRAME or utm_32N)",
     )
     return parser.parse_args()
 
