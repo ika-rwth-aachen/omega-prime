@@ -482,6 +482,87 @@ class Recording:
             **kwargs,
         )
 
+    def to_mcap(self, filepath):
+        "Store Recording as an MCAP file."
+        if Path(filepath).suffix != ".mcap":
+            raise ValueError()
+        with betterosi.Writer(filepath) as w:
+            for gt in self.to_osi_gts():
+                w.add(gt)
+            if isinstance(self.map, MapOdr):
+                w.add(self.map.to_osi(), topic="ground_truth_map", log_time=0)
+            elif (
+                self.map is not None and not isinstance(self.map, MapOsi) and not isinstance(self.map, MapOsiCenterline)
+            ):
+                warn(f"The map {self.map} could not be saved to `mcap`")
+
+    @classmethod
+    def from_parquet(cls, filename, parse_map: bool = False, step_size: float = 0.01, **kwargs):
+        t = pq.read_table(filename)
+        df = pl.DataFrame(t, schema_overrides=polars_schema)
+        host_vehicle_idx = None
+        projections: dict[typing.Any, typing.Any] = {}
+        map = None
+        metadata = t.schema.metadata or {}
+        if metadata:
+            if b"host_vehicle_idx" in metadata:
+                host_vehicle_idx = int(metadata[b"host_vehicle_idx"].decode())
+
+            projections = cls._decode_projections(metadata.get(b"projections_json"))
+
+            map_parsing = {}
+            for MC in MAP_CLASSES:
+                if MC._binary_json_identifier in metadata:
+                    try:
+                        map = MC._from_binary_json(
+                            metadata,
+                            parse_map=parse_map,
+                            step_size=step_size,
+                        )
+                    except Exception as e:
+                        map_parsing[MC.__name__] = str(e)
+                    else:
+                        if map is not None:
+                            break
+
+        return cls(
+            df,
+            map=map,
+            host_vehicle_idx=host_vehicle_idx,
+            projections=projections,
+            **kwargs,
+        )
+
+    def to_parquet(self, filename):
+        "Store Recording as a Parquet file."
+        metadata = {}
+        if self.host_vehicle_idx is not None:
+            metadata[b"host_vehicle_idx"] = str(self.host_vehicle_idx).encode()
+        proj_meta = {}
+        encoded_projections = self._encode_projections(self.projections)
+        if encoded_projections:
+            proj_meta[b"projections_json"] = encoded_projections
+        df_export = self._df_with_original_pose_for_export()
+        to_drop = ["frame"]
+        optional_cols = [
+            "polygon",
+            "global_lat",
+            "global_lon",
+            "global_alt",
+            "global_yaw",
+            "proj_string",
+            "x_original",
+            "y_original",
+            "z_original",
+            "yaw_original",
+        ]
+        to_drop.extend([c for c in optional_cols if c in df_export.columns])
+        t = pyarrow.table(df_export.drop(*to_drop))
+        map_meta = self.map._to_binary_json() if self.map is not None else {}
+
+        t = t.cast(t.schema.with_metadata(metadata | proj_meta | map_meta))
+        pq.write_table(t, filename)
+
     @classmethod
     def from_file(
         cls,
@@ -533,19 +614,101 @@ class Recording:
             warn(f"No map could be found: {map_parsing}")
         return r
 
-    def to_mcap(self, filepath):
-        "Store Recording as an MCAP file."
-        if Path(filepath).suffix != ".mcap":
-            raise ValueError()
-        with betterosi.Writer(filepath) as w:
-            for gt in self.to_osi_gts():
-                w.add(gt)
-            if isinstance(self.map, MapOdr):
-                w.add(self.map.to_osi(), topic="ground_truth_map", log_time=0)
-            elif (
-                self.map is not None and not isinstance(self.map, MapOsi) and not isinstance(self.map, MapOsiCenterline)
-            ):
-                warn(f"The map {self.map} could not be saved to `mcap`")
+    def apply_projections(self, target_crs: str | int = 4326):
+        """
+        Add global latitude/longitude/altitude columns by applying the stored projection definitions.
+        """
+        if self._df.height == 0:
+            return self
+
+        source_proj_string, default_offset = self._projection_for_timestamp(-1)
+
+        per_frame: list[dict[str, typing.Any]] = []
+        for ts, offset in self.projections.items():
+            if ts in (None, "proj_string"):
+                continue
+            ox, oy, oz, oyaw = self._offset_components(offset)
+            per_frame.append(
+                dict(
+                    total_nanos=int(ts),
+                    offset_x=ox,
+                    offset_y=oy,
+                    offset_z=oz,
+                    offset_yaw=oyaw,
+                )
+            )
+
+        if source_proj_string is None:
+            raise ValueError("No projection information available on the recording or attached map.")
+
+        df = self._df
+        dox, doy, doz, doyaw = self._offset_components(default_offset)
+        if per_frame:
+            proj_df = pl.DataFrame(
+                per_frame,
+                schema={
+                    "total_nanos": polars_schema["total_nanos"],
+                    "offset_x": pl.Float64,
+                    "offset_y": pl.Float64,
+                    "offset_z": pl.Float64,
+                    "offset_yaw": pl.Float64,
+                },
+            )
+            df = df.join(proj_df, on="total_nanos", how="left")
+            df = df.with_columns(
+                pl.lit(source_proj_string).alias("proj_string"),
+                pl.col("offset_x").fill_null(dox).alias("offset_x"),
+                pl.col("offset_y").fill_null(doy).alias("offset_y"),
+                pl.col("offset_z").fill_null(doz).alias("offset_z"),
+                pl.col("offset_yaw").fill_null(doyaw).alias("offset_yaw"),
+            )
+
+        else:
+            df = df.with_columns(
+                pl.lit(source_proj_string).alias("proj_string"),
+                pl.lit(dox).alias("offset_x"),
+                pl.lit(doy).alias("offset_y"),
+                pl.lit(doz).alias("offset_z"),
+                pl.lit(doyaw).alias("offset_yaw"),
+            )
+        source_crs = pyproj.CRS.from_string(source_proj_string)
+
+        if df.select(pl.col("proj_string").is_null().any()).item():
+            raise ValueError("Some rows do not have a projection string assigned.")
+
+        # Store original values before applying offsets
+        df = df.with_columns(
+            pl.col("x").alias("x_original"),
+            pl.col("y").alias("y_original"),
+            pl.col("z").alias("z_original"),
+            pl.col("yaw").alias("yaw_original"),
+        )
+
+        # Update main columns with offset values
+        df = df.with_columns(
+            (pl.col("x_original") + pl.col("offset_x")).alias("x"),
+            (pl.col("y_original") + pl.col("offset_y")).alias("y"),
+            (pl.col("z_original") + pl.col("offset_z")).alias("z"),
+            (pl.col("yaw_original") + pl.col("offset_yaw")).alias("yaw"),
+        )
+        df = bbx_to_polygon(df)
+
+        self.map.parse()
+        target_crs = self.map.projection
+        if not target_crs:
+            raise ValueError("Map does not have a valid projection defined.")
+
+        # Apply 2D proj string transformation
+        transformer = pyproj.Transformer.from_crs(source_crs, target_crs)
+        x_tgt, y_tgt = transformer.transform(df["x"].to_numpy(), df["y"].to_numpy())
+        df = df.with_columns(pl.Series(name="x", values=x_tgt), pl.Series(name="y", values=y_tgt))
+        df = bbx_to_polygon(df)
+
+        # Remove temporary projection columns
+        df = df.drop("proj_string", "offset_x", "offset_y", "offset_z", "offset_yaw")
+
+        self._df = df
+        return self
 
     def interpolate(self, new_nanos: list[int] | None = None, hz: float | None = None):
         "Interpolate the recording to new timestamps or a given frequency."
@@ -675,169 +838,6 @@ class Recording:
         polys = self._df.filter(pl.col("frame") == frame)["polygon"]
         for p in polys:
             ax.add_patch(PltPolygon(p.exterior.coords, fc="red"))
-
-    @classmethod
-    def from_parquet(cls, filename, parse_map: bool = False, step_size: float = 0.01, **kwargs):
-        t = pq.read_table(filename)
-        df = pl.DataFrame(t, schema_overrides=polars_schema)
-        host_vehicle_idx = None
-        projections: dict[typing.Any, typing.Any] = {}
-        map = None
-        metadata = t.schema.metadata or {}
-        if metadata:
-            if b"host_vehicle_idx" in metadata:
-                host_vehicle_idx = int(metadata[b"host_vehicle_idx"].decode())
-
-            projections = cls._decode_projections(metadata.get(b"projections_json"))
-
-            map_parsing = {}
-            for MC in MAP_CLASSES:
-                if MC._binary_json_identifier in metadata:
-                    try:
-                        map = MC._from_binary_json(
-                            metadata,
-                            parse_map=parse_map,
-                            step_size=step_size,
-                        )
-                    except Exception as e:
-                        map_parsing[MC.__name__] = str(e)
-                    else:
-                        if map is not None:
-                            break
-
-        return cls(
-            df,
-            map=map,
-            host_vehicle_idx=host_vehicle_idx,
-            projections=projections,
-            **kwargs,
-        )
-
-    def to_parquet(self, filename):
-        "Store Recording as a Parquet file."
-        metadata = {}
-        if self.host_vehicle_idx is not None:
-            metadata[b"host_vehicle_idx"] = str(self.host_vehicle_idx).encode()
-        proj_meta = {}
-        encoded_projections = self._encode_projections(self.projections)
-        if encoded_projections:
-            proj_meta[b"projections_json"] = encoded_projections
-        df_export = self._df_with_original_pose_for_export()
-        to_drop = ["frame"]
-        optional_cols = [
-            "polygon",
-            "global_lat",
-            "global_lon",
-            "global_alt",
-            "global_yaw",
-            "proj_string",
-            "x_original",
-            "y_original",
-            "z_original",
-            "yaw_original",
-        ]
-        to_drop.extend([c for c in optional_cols if c in df_export.columns])
-        t = pyarrow.table(df_export.drop(*to_drop))
-        map_meta = self.map._to_binary_json() if self.map is not None else {}
-
-        t = t.cast(t.schema.with_metadata(metadata | proj_meta | map_meta))
-        pq.write_table(t, filename)
-
-    def apply_projections(self, target_crs: str | int = 4326):
-        """
-        Add global latitude/longitude/altitude columns by applying the stored projection definitions.
-        """
-        if self._df.height == 0:
-            return self
-
-        source_proj_string, default_offset = self._projection_for_timestamp(-1)
-
-        per_frame: list[dict[str, typing.Any]] = []
-        for ts, offset in self.projections.items():
-            if ts in (None, "proj_string"):
-                continue
-            ox, oy, oz, oyaw = self._offset_components(offset)
-            per_frame.append(
-                dict(
-                    total_nanos=int(ts),
-                    offset_x=ox,
-                    offset_y=oy,
-                    offset_z=oz,
-                    offset_yaw=oyaw,
-                )
-            )
-
-        if source_proj_string is None:
-            raise ValueError("No projection information available on the recording or attached map.")
-
-        df = self._df
-        dox, doy, doz, doyaw = self._offset_components(default_offset)
-        if per_frame:
-            proj_df = pl.DataFrame(
-                per_frame,
-                schema={
-                    "total_nanos": polars_schema["total_nanos"],
-                    "offset_x": pl.Float64,
-                    "offset_y": pl.Float64,
-                    "offset_z": pl.Float64,
-                    "offset_yaw": pl.Float64,
-                },
-            )
-            df = df.join(proj_df, on="total_nanos", how="left")
-            df = df.with_columns(
-                pl.lit(source_proj_string).alias("proj_string"),
-                pl.col("offset_x").fill_null(dox).alias("offset_x"),
-                pl.col("offset_y").fill_null(doy).alias("offset_y"),
-                pl.col("offset_z").fill_null(doz).alias("offset_z"),
-                pl.col("offset_yaw").fill_null(doyaw).alias("offset_yaw"),
-            )
-
-        else:
-            df = df.with_columns(
-                pl.lit(source_proj_string).alias("proj_string"),
-                pl.lit(dox).alias("offset_x"),
-                pl.lit(doy).alias("offset_y"),
-                pl.lit(doz).alias("offset_z"),
-                pl.lit(doyaw).alias("offset_yaw"),
-            )
-        source_crs = pyproj.CRS.from_string(source_proj_string)
-
-        if df.select(pl.col("proj_string").is_null().any()).item():
-            raise ValueError("Some rows do not have a projection string assigned.")
-
-        # Store original values before applying offsets
-        df = df.with_columns(
-            pl.col("x").alias("x_original"),
-            pl.col("y").alias("y_original"),
-            pl.col("z").alias("z_original"),
-            pl.col("yaw").alias("yaw_original"),
-        )
-
-        # Update main columns with offset values
-        df = df.with_columns(
-            (pl.col("x_original") + pl.col("offset_x")).alias("x"),
-            (pl.col("y_original") + pl.col("offset_y")).alias("y"),
-            (pl.col("z_original") + pl.col("offset_z")).alias("z"),
-            (pl.col("yaw_original") + pl.col("offset_yaw")).alias("yaw"),
-        )
-        df = bbx_to_polygon(df)
-
-        self.map.parse()
-        target_crs = self.map.projection
-        if not target_crs:
-            raise ValueError("Map does not have a valid projection defined.")
-
-        # Apply 2D proj string transformation
-        transformer = pyproj.Transformer.from_crs(source_crs, target_crs)
-        x_tgt, y_tgt = transformer.transform(df["x"].to_numpy(), df["y"].to_numpy())
-        df = df.with_columns(pl.Series(name="x", values=x_tgt), pl.Series(name="y", values=y_tgt))
-        df = bbx_to_polygon(df)
-
-        # Remove temporary projection columns
-        df = df.drop("proj_string", "offset_x", "offset_y", "offset_z", "offset_yaw")
-
-        self._df = df
-        return self
 
     def plot_altair(
         self,
