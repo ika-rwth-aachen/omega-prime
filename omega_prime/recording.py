@@ -614,6 +614,17 @@ class Recording:
             warn(f"No map could be found: {map_parsing}")
         return r
 
+    def to_file(self, filepath):
+        "Store Recording to a file based on its suffix (`.parquet`, `.mcap`)."
+        suffix = Path(filepath).suffix.lower()
+        if suffix == ".parquet":
+            self.to_parquet(filepath)
+            return
+        if suffix == ".mcap":
+            self.to_mcap(filepath)
+            return
+        raise ValueError(f"Unsupported file suffix `{suffix}`. Expected one of: `.parquet`, `.mcap`.")
+
     def apply_projections(self, target_crs: str | int = 4326):
         """
         Add global latitude/longitude/altitude columns by applying the stored projection definitions.
