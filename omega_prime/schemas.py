@@ -1,3 +1,5 @@
+"""."""
+
 import betterosi
 import numpy as np
 import pandera.polars as pa
@@ -87,20 +89,20 @@ recording_moving_object_schema = pa.DataFrameSchema(
         "length": pa.Column(
             polars_schema["length"],
             pa.Check.gt(0),
-            title="MovingObject.base.dimesion.length",
-            description="osi3.Dimenstion3d.length",
+            title="MovingObject.base.dimension.length",
+            description="osi3.Dimension3d.length",
         ),
         "width": pa.Column(
             polars_schema["width"],
             pa.Check.gt(0),
-            title="MovingObject.base.dimesion.width",
-            description="osi3.Dimenstion3d.width",
+            title="MovingObject.base.dimension.width",
+            description="osi3.Dimension3d.width",
         ),
         "height": pa.Column(
             polars_schema["height"],
             pa.Check.ge(0),
-            title="MovingObject.base.dimesion.height",
-            description="osi3.Dimenstion3d.height",
+            title="MovingObject.base.dimension.height",
+            description="osi3.Dimension3d.height",
         ),
         "type": pa.Column(
             polars_schema["type"],
@@ -165,29 +167,29 @@ recording_moving_object_schema = pa.DataFrameSchema(
             int(betterosi.MovingObjectType.TYPE_VEHICLE),
             "role",
             -1,
-            error="`role` is `-1` despite type beeing `TYPE_VEHICLE`",
+            error="`role` is `-1` despite type being `TYPE_VEHICLE`",
         ),
         pa.Check.other_column_unset_on_column_value(
             "type",
             int(betterosi.MovingObjectType.TYPE_VEHICLE),
             "role",
             -1,
-            error="`role` is set despite type not beeing `TYPE_VEHICLE`",
+            error="`role` is set despite type not being `TYPE_VEHICLE`",
         ),
         pa.Check.other_column_set_on_column_value(
             "type",
             int(betterosi.MovingObjectType.TYPE_VEHICLE),
             "subtype",
             -1,
-            error="`subtype` is `-1` despite type beeing `TYPE_VEHICLE`",
+            error="`subtype` is `-1` despite type being `TYPE_VEHICLE`",
         ),
         pa.Check.other_column_unset_on_column_value(
             "type",
             int(betterosi.MovingObjectType.TYPE_VEHICLE),
             "subtype",
             -1,
-            error="`subtype` is set despite type not beeing `TYPE_VEHICLE`",
+            error="`subtype` is set despite type not being `TYPE_VEHICLE`",
         ),
-        pa.Check.check_has_no_frame_skip(error="Some objects skip frames during their etistence."),
+        pa.Check.check_has_no_frame_skip(error="Some objects skip frames during their existence."),
     ],
 )
