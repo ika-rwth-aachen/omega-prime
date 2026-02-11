@@ -1,4 +1,5 @@
 """."""
+
 from omega_prime import Recording
 from omega_prime.qualification.non_default_attr_accuracy import (
     non_default_attributes_accuracy,
@@ -10,7 +11,7 @@ from .conftest import qualification_assert
 
 
 def test_get_column_names() -> None:
-    assert get_column_names(int) == ['total_nanos', 'idx', 'type', 'role', 'subtype']
+    assert get_column_names(int) == ["total_nanos", "idx", "type", "role", "subtype"]
     # fmt: off
     ref = [
         'x', 'y', 'z',
@@ -30,8 +31,8 @@ def test_fail_with_default_columns(rec: Recording) -> None:
 
 
 def test_pass_for_xyz(rec: Recording) -> None:
-    _df, result_dict = non_default_attributes_accuracy(rec.df, columns=('x', 'y', 'z'))
-    qualification_assert(result_dict, NON_DEFAULT_ATTRIBUTES_ACCURACY, 100., True)
+    _df, result_dict = non_default_attributes_accuracy(rec.df, columns=("x", "y", "z"))
+    qualification_assert(result_dict, NON_DEFAULT_ATTRIBUTES_ACCURACY, 100.0, True)
 
 
 def test_pass_for_all_float(rec: Recording) -> None:

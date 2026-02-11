@@ -1,5 +1,6 @@
 """."""
-from typing import Sequence
+
+from collections.abc import Sequence
 
 import polars as pl
 
@@ -16,14 +17,11 @@ def get_column_names(t: type[int] | type[float]) -> list[str]:
 
 
 @metric(computes_properties=[NON_DEFAULT_ATTRIBUTES_ACCURACY])
-def non_default_attributes_accuracy(
-        df: pl.LazyFrame | pl.DataFrame, /,
-        columns: Sequence[str] = tuple()
-) -> QRT:
+def non_default_attributes_accuracy(df: pl.LazyFrame | pl.DataFrame, /, columns: Sequence[str] = tuple()) -> QRT:
     cc = columns if columns else polars_schema.keys()
     s_cc = df.select(cc)
     select = s_cc.select(pl.sum_horizontal(*[pl.col(c) == 0 for c in cc]).sum())
-    num_def = int(select.collect().item(0,0))
+    num_def = int(select.collect().item(0, 0))
 
     num_rec = get_num_rec(df)
     value = 100.0 * (num_rec - num_def) / num_rec
