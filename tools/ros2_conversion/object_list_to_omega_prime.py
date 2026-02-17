@@ -21,7 +21,6 @@ import numpy as np
 import perception_msgs_utils as pmu
 import polars as pl
 import yaml
-from rclpy.duration import Duration
 from rclpy.serialization import deserialize_message
 from rclpy.time import Time
 from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
@@ -239,7 +238,7 @@ def iter_object_list_messages(
     static_tf_msg_cls = get_message(type_map["/tf_static"]) if "/tf_static" in type_map else None
 
     # TF buffer for resolving transforms
-    buffer = Buffer(cache_time=Duration(seconds=1000.0))
+    buffer = Buffer()
 
     # Timestamps of object list messages not yet resolved
     pending: deque[tuple[Time, str]] = deque()
@@ -300,6 +299,8 @@ def iter_object_list_messages(
 
     # Final retry pass at end (in case TF arrived after last ObjectList)
     retry_pending()
+    if pending:
+        print(f"Warning: {len(pending)} messages could not be resolved to a projection frame at the end of processing.")
 
 
 def convert_bag_to_omega_prime(
