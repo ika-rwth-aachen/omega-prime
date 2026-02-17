@@ -171,6 +171,7 @@ def _extract_proj_offset(msg) -> tuple[int, ProjectionOffset]:
 
 
 def _yaw_from_quaternion(rotation) -> float:
+    # Source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#:~:text=1%5D-,Quaternion%20to%20angles%20%28in%20ZYX%20sequence%29%20conversion
     x = float(rotation.x if hasattr(rotation, "x") else 0.0)
     y = float(rotation.y if hasattr(rotation, "y") else 0.0)
     z = float(rotation.z if hasattr(rotation, "z") else 0.0)
