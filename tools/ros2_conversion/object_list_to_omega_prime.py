@@ -276,16 +276,31 @@ def iter_object_list_messages(
         print(f"Warning: {len(pending)} messages could not be resolved to a projection frame at the end of processing.")
 
 
+def _warn_if_reappearing_id(
+    row: dict[str, Any],
+    last_seen_by_idx: dict[int, int],
+    warn_gap_nanos: float,
+) -> None:
+    idx = int(row["idx"])
+    total_nanos = int(row["total_nanos"])
+    if idx in last_seen_by_idx:
+        dt_nanos = total_nanos - last_seen_by_idx[idx]
+        if dt_nanos > warn_gap_nanos:
+            print(f"Warning: ID {idx} found again after {dt_nanos / 1e9:.3f} seconds.")
+    last_seen_by_idx[idx] = total_nanos
+
+
 def convert_bag_to_omega_prime(
     bag_dir: Path,
     topic: str,
     output_dir: Path,
     fixed_frame: str,
+    timeout: float,
     map_path: Path | None = None,
     validate: bool = False,
 ) -> Path:
     projections: dict[Any, Any] = {}
-    warn_gap_nanos = int(3.0 * 1_000_000_000)
+    warn_gap_nanos = timeout * 1e9
     last_seen_by_idx: dict[int, int] = {}
 
     def row_iter() -> Iterable[dict[str, Any]]:
@@ -296,16 +311,7 @@ def convert_bag_to_omega_prime(
             projection=projections,
         ):
             for row in _olist_to_rows(msg):
-                idx = int(row["idx"])
-                total_nanos = int(row["total_nanos"])
-
-                if idx in last_seen_by_idx:
-                    dt_nanos = total_nanos - last_seen_by_idx[idx]
-                    if dt_nanos > warn_gap_nanos:
-                        dt_seconds = dt_nanos / 1_000_000_000.0
-                        print(f"Warning: ID {idx} found again after {dt_seconds:.3f} seconds.")
-
-                last_seen_by_idx[idx] = total_nanos
+                _warn_if_reappearing_id(row, last_seen_by_idx, warn_gap_nanos)
                 yield row
 
     df = pl.DataFrame(row_iter())
@@ -370,6 +376,12 @@ def _parse_args() -> argparse.Namespace:
         default=env_fixed_frame,
         help="Target fixed frame used for TF lookup and projection metadata (default: OP_FIXED_FRAME or utm_32N)",
     )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=3.0,
+        help="Timeout in seconds for checking if same object is seen again",
+    )
     return parser.parse_args()
 
 
@@ -408,6 +420,7 @@ def main() -> None:
             args.topic,
             out_dir,
             args.fixed_frame,
+            args.timeout,
             map_path,
             args.validate,
         )

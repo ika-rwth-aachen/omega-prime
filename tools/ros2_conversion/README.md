@@ -55,6 +55,7 @@ docker run --rm -it \
   - `OP_VALIDATE` / `--validate`
   - `OP_FIXED_FRAME` / `--fixed_frame` (default `utm_32N`)
   - `--bag` to process explicit bag directories in addition to auto-discovery
+  - `--timeout` Set a timeout that prints a warning if the same object ID appears again after `timeout` seconds.
 
 ## OpenDRIVE Map Integration
 
