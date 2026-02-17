@@ -434,6 +434,14 @@ class Recording:
                     raise ValueError(
                         f"Offset of {i}th ground truth message (total_nanos={total_nanos}) is set without position."
                     )
+
+                projs[total_nanos] = ProjectionOffset(
+                    x=gt.proj_frame_offset.position.x,
+                    y=gt.proj_frame_offset.position.y,
+                    z=gt.proj_frame_offset.position.z,
+                    yaw=gt.proj_frame_offset.yaw,
+                )
+
                 if gt.proj_string is not None:
                     normalized_proj_string = gt.proj_string.strip()
                     if normalized_proj_string:
@@ -443,17 +451,6 @@ class Recording:
                             raise ValueError(
                                 f"Conflicting projection strings: {projs['proj_string']} vs {normalized_proj_string} at gt index {i} (total_nanos={total_nanos})."
                             )
-
-                projs[total_nanos] = (
-                    ProjectionOffset(
-                        x=gt.proj_frame_offset.position.x,
-                        y=gt.proj_frame_offset.position.y,
-                        z=gt.proj_frame_offset.position.z,
-                        yaw=gt.proj_frame_offset.yaw,
-                    )
-                    if gt.proj_frame_offset is not None
-                    else None
-                )
 
                 traffic_light_states[total_nanos] = gt.traffic_light
 
@@ -649,12 +646,12 @@ class Recording:
 
         source_proj_string, default_offset = self._projection_for_timestamp(-1)
 
-        per_frame: list[dict[str, typing.Any]] = []
+        frame_projections: list[dict[str, typing.Any]] = []
         for ts, offset in self.projections.items():
             if ts in (None, "proj_string"):
                 continue
             ox, oy, oz, oyaw = self._offset_components(offset)
-            per_frame.append(
+            frame_projections.append(
                 dict(
                     total_nanos=int(ts),
                     offset_x=ox,
@@ -669,9 +666,9 @@ class Recording:
 
         df = self._df
         dox, doy, doz, doyaw = self._offset_components(default_offset)
-        if per_frame:
+        if frame_projections:
             proj_df = pl.DataFrame(
-                per_frame,
+                frame_projections,
                 schema={
                     "total_nanos": polars_schema["total_nanos"],
                     "offset_x": pl.Float64,
@@ -824,7 +821,7 @@ class Recording:
             fig, ax = plt.subplots(1, 1)
             ax.set_aspect(1)
         for [idx], mv in self._df["idx", "x", "y"].group_by("idx"):
-            ax.plot(*mv["x", "y"], c="red", alpha=0.5, label=str(idx))
+            ax.scatter(*mv["x", "y"], label=str(idx))
         if legend:
             ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         return ax
