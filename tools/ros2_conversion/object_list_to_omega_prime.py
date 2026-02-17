@@ -424,9 +424,9 @@ def main() -> None:
 
     for bag in bags:
         if map_path and map_path.exists():
-            print(f"[object_list_to_omega_prime] Processing bag: {bag} with openDRIVE File: {map_path}")
+            print(f"[object_list_to_omega_prime] Processing bag: {bag} with OpenDRIVE File: {map_path}")
         else:
-            print(f"[object_list_to_omega_prime] Processing bag: {bag} without openDRIVE File")
+            print(f"[object_list_to_omega_prime] Processing bag: {bag} without OpenDRIVE File")
         out_file = convert_bag_to_omega_prime(
             bag,
             args.topic,

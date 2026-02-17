@@ -40,6 +40,7 @@ docker run --rm -it \
   - `utm_31N` -> `EPSG:32631`
   - `utm_32N` -> `EPSG:32632`
   - `utm_33N` -> `EPSG:32633`
+- If you want to add a new EPSG definition, look up the corresponding `utm` zone (for example using [this](https://de.wikipedia.org/wiki/UTM-Koordinatensystem#/media/Datei:Utm-zones.jpg) map) of your fixed frame. With that information, you can find the correct EPSG code [here](https://epsg.io/).
 
 ## Notes
 - The image builds and installs `perception_interfaces` packages needed for Python APIs and messages (`perception_msgs`, `perception_msgs_utils`, `tf2_perception_msgs`).
