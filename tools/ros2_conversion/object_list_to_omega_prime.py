@@ -155,57 +155,29 @@ def _load_metadata(bag_dir: Path) -> dict[str, Any]:
         return yaml.safe_load(fh)
 
 
-def _extract_proj_offset(msg) -> tuple[int, dict[str, Any]]:
+def _extract_proj_offset(msg) -> tuple[int, ProjectionOffset]:
     transformation = msg.transforms[0] if hasattr(msg, "transforms") else msg
     translation = transformation.transform.translation
     rotation = transformation.transform.rotation
     ts = int(Time.from_msg(transformation.header.stamp).nanoseconds)
-    return ts, {
-        "translation": {
-            "x": translation.x,
-            "y": translation.y,
-            "z": translation.z,
-        },
-        "rotation": {
-            "x": rotation.x,
-            "y": rotation.y,
-            "z": rotation.z,
-            "w": rotation.w,
-        },
-    }
+
+    offset = ProjectionOffset(
+        x=float(translation.x if hasattr(translation, "x") else 0.0),
+        y=float(translation.y if hasattr(translation, "y") else 0.0),
+        z=float(translation.z if hasattr(translation, "z") else 0.0),
+        yaw=_yaw_from_quaternion(rotation),
+    )
+    return ts, offset
 
 
-def _yaw_from_quaternion(rotation: dict[str, float]) -> float:
-    x = float(rotation.get("x", 0.0))
-    y = float(rotation.get("y", 0.0))
-    z = float(rotation.get("z", 0.0))
-    w = float(rotation.get("w", 1.0))
+def _yaw_from_quaternion(rotation) -> float:
+    x = float(rotation.x if hasattr(rotation, "x") else 0.0)
+    y = float(rotation.y if hasattr(rotation, "y") else 0.0)
+    z = float(rotation.z if hasattr(rotation, "z") else 0.0)
+    w = float(rotation.w if hasattr(rotation, "w") else 1.0)
     siny_cosp = 2.0 * (w * z + x * y)
     cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
     return math.atan2(siny_cosp, cosy_cosp)
-
-
-def _projection_store_to_projections(
-    projection_store: dict[int, dict[str, Any]],
-    utm: str,
-) -> dict[Any, Any]:
-    projections: dict[Any, Any] = {}
-    proj_string = UTM_TO_EPSG.get(utm.upper())
-    if not proj_string:
-        raise KeyError(f"No EPSG Code defined for {utm}")
-    projections["proj_string"] = proj_string
-
-    for ts, entry in projection_store.items():
-        translation = entry.get("translation") or {}
-        rotation = entry.get("rotation") or {}
-
-        projections[int(ts)] = ProjectionOffset(
-            x=float(translation.get("x", 0.0)),
-            y=float(translation.get("y", 0.0)),
-            z=float(translation.get("z", 0.0)),
-            yaw=_yaw_from_quaternion(rotation),
-        )
-    return projections
 
 
 def _storage_id(meta: dict[str, Any]) -> str:
@@ -216,7 +188,7 @@ def iter_object_list_messages(
     bag_dir: Path,
     topic: str,
     fixed_frame: str,
-    projection_store: dict[int, dict[str, Any]],
+    projection: dict[Any, Any],
 ) -> Iterator[Any]:
     metadata = _load_metadata(bag_dir)
     storage_id = _storage_id(metadata)
@@ -250,8 +222,8 @@ def iter_object_list_messages(
         except TransformException:
             return False
 
-        ts, proj = _extract_proj_offset(resolved)
-        projection_store[ts] = proj
+        ts, proj_offset = _extract_proj_offset(resolved)
+        projection[int(ts)] = proj_offset
         return True
 
     def retry_pending() -> None:
@@ -311,7 +283,7 @@ def convert_bag_to_omega_prime(
     map_path: Path | None = None,
     validate: bool = False,
 ) -> Path:
-    projection_store: dict[int, dict[str, Any]] = {}
+    projections: dict[Any, Any] = {}
     warn_gap_nanos = int(3.0 * 1_000_000_000)
     last_seen_by_idx: dict[int, int] = {}
 
@@ -320,7 +292,7 @@ def convert_bag_to_omega_prime(
             bag_dir,
             topic,
             fixed_frame,
-            projection_store=projection_store,
+            projection=projections,
         ):
             for row in _olist_to_rows(msg):
                 idx = int(row["idx"])
@@ -337,7 +309,10 @@ def convert_bag_to_omega_prime(
 
     df = pl.DataFrame(row_iter())
 
-    projections = _projection_store_to_projections(projection_store, fixed_frame)
+    proj_string = UTM_TO_EPSG.get(fixed_frame.upper())
+    if not proj_string:
+        raise KeyError(f"No EPSG Code defined for {fixed_frame}")
+    projections["proj_string"] = proj_string
 
     rec = omega_prime.Recording(df=df, projections=projections, validate=validate)
 
@@ -346,7 +321,7 @@ def convert_bag_to_omega_prime(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / f"{bag_dir.name}.omega-prime.parquet"
-    rec.to_parquet(out_path)
+    rec.to_file(out_path)
     return out_path
 
 
