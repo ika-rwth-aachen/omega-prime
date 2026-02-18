@@ -316,9 +316,20 @@ def convert_bag_to_omega_prime(
 
     df = pl.DataFrame(row_iter())
 
-    proj_string = UTM_TO_EPSG.get(fixed_frame.upper())
-    if not proj_string:
-        raise KeyError(f"No EPSG Code defined for {fixed_frame}")
+    if fixed_frame == "map":
+        if map_path and map_path.exists():
+            map = omega_prime.MapOdr.from_file(str(map_path), parse_map=True)
+            proj_string = map.proj_string
+            if not proj_string:
+                raise ValueError(f"Map {map_path} has no projection string")
+        elif not map_path:
+            raise FileNotFoundError("Map file must be provided for fixed_frame 'map'")
+        elif not map_path.exists():
+            raise FileNotFoundError(f"Map file does not exist: {map_path}")
+    else:
+        proj_string = UTM_TO_EPSG.get(fixed_frame.upper())
+        if not proj_string:
+            raise KeyError(f"No EPSG Code defined for {fixed_frame}")
     projections["proj_string"] = proj_string
 
     rec = omega_prime.Recording(df=df, projections=projections, validate=validate)

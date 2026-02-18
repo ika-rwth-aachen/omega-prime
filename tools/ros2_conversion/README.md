@@ -32,7 +32,7 @@ docker run --rm -it \
 
 ## Projections and Fixed Frame
 - The converter reads `/tf` + `/tf_static` and resolves each ObjectList message frame against the configured `fixed_frame`.
-- The `fixed_frame` should be the georeferenced top-level ROS coordinate frame (TF root) of your setup, for example the global UTM/world frame.
+- The `fixed_frame` should be the georeferenced top-level ROS coordinate frame (TF root) of your setup, for example the global UTM/world frame. When `fixed_frame` is map, the map must be parsed and the projection string is the one of the map.
 - These transforms are stored in omega-prime as per-timestamp `ProjectionOffset` metadata.
 - The fixed frame is converted to an EPSG projection string and written as `projections["proj_string"]`.
 - Supported fixed frame values are currently:
