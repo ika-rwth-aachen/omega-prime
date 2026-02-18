@@ -637,7 +637,7 @@ class Recording:
             return
         raise ValueError(f"Unsupported file suffix `{suffix}`. Expected one of: `.parquet`, `.mcap`.")
 
-    def apply_projections(self, target_crs: str | int = 4326):
+    def apply_projections(self):
         """
         Apply projection transformations to the recording's moving object data based on the provided projection metadata
         and the map's projection. This method updates the `x`, `y`, `z`, and `yaw` columns of the recording's DataFrame
@@ -650,6 +650,7 @@ class Recording:
 
         source_proj_string = self.projections.get("proj_string")
         if source_proj_string is None:
+            self.map.parse()
             source_proj_string = getattr(self.map, "proj_string", None)
 
         if source_proj_string is None:
