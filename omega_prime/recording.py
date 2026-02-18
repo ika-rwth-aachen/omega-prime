@@ -720,10 +720,10 @@ class Recording:
 
         # Update main columns with offset values
         df = df.with_columns(
-            (pl.col("x_original") + pl.col("offset_x")).alias("x"),
-            (pl.col("y_original") + pl.col("offset_y")).alias("y"),
-            (pl.col("z_original") + pl.col("offset_z")).alias("z"),
-            (pl.col("yaw_original") + pl.col("offset_yaw")).alias("yaw"),
+            (pl.col("x") + pl.col("offset_x")).alias("x"),
+            (pl.col("y") + pl.col("offset_y")).alias("y"),
+            (pl.col("z") + pl.col("offset_z")).alias("z"),
+            (pl.col("yaw") + pl.col("offset_yaw")).alias("yaw"),
         )
         df = bbx_to_polygon(df)
 
