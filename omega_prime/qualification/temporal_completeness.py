@@ -4,7 +4,10 @@ import polars as pl
 
 from ..metrics import metric
 
-@metric(computes_properties=["temporal_completeness"])
+
+TEMPORAL_COMPLETENESS = "temporal_completeness"
+
+@metric(computes_properties=[TEMPORAL_COMPLETENESS])
 def temporal_completeness(
     df,
     /,
@@ -47,17 +50,17 @@ def temporal_completeness(
             .alias("delta_rms"),
             expected_interval_expr.alias("expected_interval"),
         )
-        .with_columns((1 - pl.col("delta_rms")).alias("temporal_completeness"))
+        .with_columns((1 - pl.col("delta_rms")).alias(TEMPORAL_COMPLETENESS))
         .select(
             "idx",
             "sample_count",
             "expected_interval",
             "delta_rms",
-            "temporal_completeness",
+            TEMPORAL_COMPLETENESS,
         )
     )
 
-    below_expr = pl.col("temporal_completeness") < threshold
+    below_expr = pl.col(TEMPORAL_COMPLETENESS) < threshold
     temporal_completeness = temporal_completeness.with_columns(
         below_expr.alias("below_threshold"),
         pl.lit(threshold).alias("threshold"),
@@ -80,4 +83,4 @@ def temporal_completeness(
         pl.lit(status).alias("status"),
     )
 
-    return df, {"temporal_completeness": temporal_completeness}
+    return df, {TEMPORAL_COMPLETENESS: temporal_completeness}
