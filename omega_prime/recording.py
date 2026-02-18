@@ -709,13 +709,14 @@ class Recording:
         if df.select(pl.col("proj_string").is_null().any()).item():
             raise ValueError("Some rows do not have a projection string assigned.")
 
-        # Store original values before applying offsets
-        df = df.with_columns(
-            pl.col("x").alias("x_original"),
-            pl.col("y").alias("y_original"),
-            pl.col("z").alias("z_original"),
-            pl.col("yaw").alias("yaw_original"),
-        )
+        # Store original values before applying offsets, when it is the first projection
+        if not any(col in df.columns for col in ["x_original", "y_original", "z_original", "yaw_original"]):
+            df = df.with_columns(
+                pl.col("x").alias("x_original"),
+                pl.col("y").alias("y_original"),
+                pl.col("z").alias("z_original"),
+                pl.col("yaw").alias("yaw_original"),
+            )
 
         # Update main columns with offset values
         df = df.with_columns(
