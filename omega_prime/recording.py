@@ -217,7 +217,7 @@ class Recording:
         elif None in self.projections:
             offset = self.projections[None]
         else:
-            offset = getattr(self.map, "proj_offset", None)
+            offset = None
 
         return source_proj_string, offset
 
@@ -648,7 +648,12 @@ class Recording:
         if self._df.height == 0:
             return self
 
-        source_proj_string, default_offset = self._projection_for_timestamp(-1)
+        source_proj_string = self.projections.get("proj_string")
+        if source_proj_string is None:
+            source_proj_string = getattr(self.map, "proj_string", None)
+
+        if source_proj_string is None:
+            raise ValueError("No proj_string information available on the recording or attached map.")
 
         frame_projections: list[dict[str, typing.Any]] = []
         for ts, offset in self.projections.items():
@@ -665,11 +670,11 @@ class Recording:
                 )
             )
 
-        if source_proj_string is None:
-            raise ValueError("No projection information available on the recording or attached map.")
-
         df = self._df
+
+        default_offset = self.projections.get(None)
         dox, doy, doz, doyaw = self._offset_components(default_offset)
+
         if frame_projections:
             proj_df = pl.DataFrame(
                 frame_projections,
