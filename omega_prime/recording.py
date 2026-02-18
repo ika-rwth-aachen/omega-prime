@@ -435,11 +435,15 @@ class Recording:
                         f"Offset of {i}th ground truth message (total_nanos={total_nanos}) is set without position."
                     )
 
-                projs[total_nanos] = ProjectionOffset(
-                    x=gt.proj_frame_offset.position.x,
-                    y=gt.proj_frame_offset.position.y,
-                    z=gt.proj_frame_offset.position.z,
-                    yaw=gt.proj_frame_offset.yaw,
+                projs[total_nanos] = (
+                    ProjectionOffset(
+                        x=gt.proj_frame_offset.position.x,
+                        y=gt.proj_frame_offset.position.y,
+                        z=gt.proj_frame_offset.position.z,
+                        yaw=gt.proj_frame_offset.yaw,
+                    )
+                    if gt.proj_frame_offset is not None
+                    else None
                 )
 
                 if gt.proj_string is not None:
@@ -821,7 +825,7 @@ class Recording:
             fig, ax = plt.subplots(1, 1)
             ax.set_aspect(1)
         for [idx], mv in self._df["idx", "x", "y"].group_by("idx"):
-            ax.scatter(*mv["x", "y"], label=str(idx))
+            ax.plot(*mv["x", "y"], c="red", alpha=0.5, label=str(idx))
         if legend:
             ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         return ax
