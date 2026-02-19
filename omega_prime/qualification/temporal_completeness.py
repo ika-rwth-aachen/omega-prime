@@ -3,84 +3,48 @@
 import polars as pl
 
 from ..metrics import metric
-
+from .common import STATUS, PASS, FAIL, QRT
 
 TEMPORAL_COMPLETENESS = "temporal_completeness"
 
+
 @metric(computes_properties=[TEMPORAL_COMPLETENESS])
 def temporal_completeness(
-    df,
+    df: pl.LazyFrame | pl.DataFrame,
     /,
     expected_frequency: float,
-    threshold: float = 0.95,
-    max_fraction_below: float = 0.05
-):
-    sorted_df = df.sort(["idx", "total_nanos"]).select("idx", "total_nanos")
+) -> QRT:
+    DELTA_TARGET = 1.0 / expected_frequency
+    TRACK_THRESHOLD = 0.95
 
-    deltas = (
-        sorted_df.with_columns((pl.col("total_nanos").diff().over("idx") / 1e9).alias("delta_t"))
-        .filter(pl.col("delta_t").is_not_null())
+    idx_and_time = df.select("idx", "total_nanos").sort(["idx", "total_nanos"])
+    deltas = idx_and_time.with_columns((pl.col("total_nanos").diff().over("idx") / 1e9).alias("delta_t"))
+    valid_deltas = deltas.filter(pl.col("delta_t").is_not_null())
+    per_track_rms = valid_deltas.group_by("idx").agg(
+        (((pl.col("delta_t") - DELTA_TARGET) / DELTA_TARGET).pow(2).mean().sqrt()).alias("delta_rms")
     )
+    below_count_query = per_track_rms.select((pl.col("delta_rms") > (1 - TRACK_THRESHOLD)).sum().alias("below_count"))
 
-    frame_counts = df.group_by("idx").agg(pl.len().alias("sample_count"))
+    if isinstance(below_count_query, pl.LazyFrame):
+        below_count = int(below_count_query.collect().item(0, 0))
+    else:
+        below_count = int(below_count_query.item(0, 0))
 
-    delta_target = 1.0 / expected_frequency
-    stats = (
-        deltas.group_by("idx")
-        .agg(
-            pl.len().alias("observed_interval_count"),
-            ((pl.col("delta_t") - delta_target) / delta_target).pow(2).mean().sqrt().alias("delta_rms"),
-        )
-        .with_columns(pl.lit(delta_target).alias("expected_interval"))
-    )
+    if isinstance(per_track_rms, pl.LazyFrame):
+        total_tracks = per_track_rms.select(pl.len()).collect().item(0, 0)
+    else:
+        total_tracks = per_track_rms.shape[0]
+        
+    if total_tracks > 0:
+        temporal_completeness = (1.0 - (below_count / total_tracks)) * 100.0
+    else:
+        temporal_completeness = 100.0
 
-    expected_interval_expr = pl.lit(delta_target)
+    summary = pl.DataFrame(
+        {
+            TEMPORAL_COMPLETENESS: temporal_completeness,
+            STATUS: [PASS if temporal_completeness == 100.0 else FAIL],
+        }
+    ).lazy()
 
-    temporal_completeness = (
-        frame_counts.join(stats, on="idx", how="left")
-        .with_columns(
-            (pl.col("sample_count") - 1).clip(lower_bound=0).alias("expected_interval_count"),
-            pl.col("observed_interval_count").fill_null(0),
-        )
-        .with_columns(
-            pl.when(pl.col("observed_interval_count") == 0)
-            .then(0.0)
-            .otherwise(pl.col("delta_rms"))
-            .fill_null(0.0)
-            .alias("delta_rms"),
-            expected_interval_expr.alias("expected_interval"),
-        )
-        .with_columns((1 - pl.col("delta_rms")).alias(TEMPORAL_COMPLETENESS))
-        .select(
-            "idx",
-            "sample_count",
-            "expected_interval",
-            "delta_rms",
-            TEMPORAL_COMPLETENESS,
-        )
-    )
-
-    below_expr = pl.col(TEMPORAL_COMPLETENESS) < threshold
-    temporal_completeness = temporal_completeness.with_columns(
-        below_expr.alias("below_threshold"),
-        pl.lit(threshold).alias("threshold"),
-    )
-
-    summary_frame = temporal_completeness.select(
-        pl.len().alias("total_tracks"),
-        pl.col("below_threshold").sum().alias("below_count"),
-    ).collect()
-    total_tracks = summary_frame[0, "total_tracks"]
-    below_count = summary_frame[0, "below_count"]
-    fraction_below = below_count / total_tracks if total_tracks else 0.0
-
-    passes_fraction = fraction_below <= max_fraction_below
-    status = "pass" if passes_fraction else "fail"
-
-    temporal_completeness = temporal_completeness.with_columns(
-        pl.lit(max_fraction_below).alias("max_fraction_below"),
-        pl.lit(fraction_below).alias("fraction_below"),
-        pl.lit(status).alias("status"),
-    )
-
-    return df, {TEMPORAL_COMPLETENESS: temporal_completeness}
+    return df, {TEMPORAL_COMPLETENESS: summary}
