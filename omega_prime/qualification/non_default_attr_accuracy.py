@@ -4,9 +4,10 @@ from collections.abc import Sequence
 
 import polars as pl
 
+from .english_syntax import get_is_ending, format_items
 from ..metrics import metric
 from ..schemas import polars_schema
-from .common import STATUS, PASS, FAIL, QRT, get_num_rec
+from .common import STATUS, PASS, FAIL, QRT, get_num_rows
 
 NON_DEFAULT_ATTRIBUTES_ACCURACY = "non_default_attributes_accuracy"
 
@@ -24,6 +25,22 @@ def get_column_names(t: type[int] | type[float]) -> list[str]:
     return [k for k, v in polars_schema.items() if v == pl_type]
 
 
+POLARS_T = pl.Int64 | pl.Float64 | pl.Float32 | pl.Binary | pl.Object | pl.String
+
+
+def get_default_value(polars_type: POLARS_T) -> float | int | str | bytes | None:
+    # fmt: off
+    match polars_type:
+        case pl.Int64: x = 0
+        case pl.Float64 | pl.Float32: x = 0.0
+        case pl.Binary: x = b''
+        case pl.String: x = ''
+        case _:
+            raise ValueError(f'Default value for type {polars_type} is undefined')
+    # fmt: on
+    return x
+
+
 @metric(computes_properties=[NON_DEFAULT_ATTRIBUTES_ACCURACY])
 def non_default_attributes_accuracy(df: pl.LazyFrame | pl.DataFrame, /, columns: Sequence[str] = tuple()) -> QRT:
     """Non default valued attributes accuracy.
@@ -33,6 +50,14 @@ def non_default_attributes_accuracy(df: pl.LazyFrame | pl.DataFrame, /, columns:
         Formula is (number of non-default value) * 100 / (total number of values)
         Threshold is greater or equal than 95%.
 
+        Design choices:
+          - the keyword argument `columns` allows to analyze a custom set of columns, even those
+        outside the OmegaPrime data schema `polars_schema`. The default values for the columns
+        outside the OmegaPrime data schema are derived from the column types of the data frame.
+
+          - if some columns are missing in the data frame, then a message is printed,
+        **but no exception is raised**.
+
     Args:
         df: omega-prime data frame (LazyFrame).
         columns: columns to query. If not given, the schema keys are used.
@@ -40,12 +65,21 @@ def non_default_attributes_accuracy(df: pl.LazyFrame | pl.DataFrame, /, columns:
     Returns:
         The tuple of original data and qualification summary (dictionary).
     """
-    cc = columns if columns else polars_schema.keys()
-    s_cc = df.select(cc)
-    select = s_cc.select(pl.sum_horizontal(*[pl.col(c) == 0 for c in cc]).sum())
+    schema = df.collect_schema()
+    cc = set(columns) if columns else polars_schema.keys()
+    absent_cols = set(c for c in cc if c not in schema)
+    if absent_cols:
+        is_verb, ending = get_is_ending(len(absent_cols))
+        items = format_items(sorted(absent_cols))
+        print(f"Column{ending} {items} {is_verb} absent in the data frame.")
+
+    existing_cols = cc - absent_cols
+    s_cc = df.select(existing_cols)
+    gen_expr = (pl.col(c) == get_default_value(schema[c]) for c in existing_cols)
+    select = s_cc.select(pl.sum_horizontal(*gen_expr).sum())
     num_def = int(select.collect().item(0, 0))
 
-    num_rec = get_num_rec(df)
+    num_rec = get_num_rows(df) * len(existing_cols)
     value = 100.0 * (num_rec - num_def) / num_rec
 
     summary = pl.DataFrame(
