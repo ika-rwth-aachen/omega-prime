@@ -3,6 +3,8 @@
 import pytest
 import polars as pl
 
+from omega_prime import Recording
+
 from omega_prime.qualification.temporal_completeness import temporal_completeness, TEMPORAL_COMPLETENESS
 
 from .conftest import qualification_assert
@@ -40,16 +42,13 @@ def temporal_df_mixed() -> pl.DataFrame:
     )
 
 def test_pass(temporal_df_pass: pl.DataFrame) -> None:
-    _df, result = temporal_completeness(
-        temporal_df_pass,
-        expected_frequency=10.0
-    )
+    _df, result = temporal_completeness(temporal_df_pass, expected_frequency=10.0)
     qualification_assert(result, TEMPORAL_COMPLETENESS, 100.0, True)
 
-
 def test_fail(temporal_df_mixed: pl.DataFrame) -> None:
-    _df, result = temporal_completeness(
-        temporal_df_mixed,
-        expected_frequency=10.0
-    )
+    _df, result = temporal_completeness(temporal_df_mixed, expected_frequency=10.0)
     qualification_assert(result, TEMPORAL_COMPLETENESS, 50.0, False)
+
+def test_record(rec: Recording) -> None:
+    df, result = temporal_completeness(rec.df, expected_frequency=30.0)
+    qualification_assert(result, TEMPORAL_COMPLETENESS, 100.0, True)
