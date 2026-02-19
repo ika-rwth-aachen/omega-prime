@@ -640,10 +640,10 @@ class Recording:
     def apply_projections(self):
         """
         Apply projection transformations to the recording's moving object data based on the provided projection metadata
-        and the map's projection. This method updates the `x`, `y`, `z`, and `yaw` columns of the recording's DataFrame
+        and the map's projection. This method updates the `x`, `y`, and `z` columns of the recording's DataFrame
         according to the specified projections and transforms the coordinates to the target CRS if necessary.
-        The original coordinates before applying projections are stored in `x_original`, `y_original`, `z_original`,
-        and `yaw_original` columns to preserve the original pose information for export or reference.
+        The original coordinates before applying projections are stored in `x_original`, `y_original`, and `z_original`
+        columns to preserve the original pose information for export or reference.
         """
         if self._df.height == 0:
             return self
@@ -710,20 +710,22 @@ class Recording:
             raise ValueError("Some rows do not have a projection string assigned.")
 
         # Store original values before applying offsets, when it is the first projection
-        if not any(col in df.columns for col in ["x_original", "y_original", "z_original", "yaw_original"]):
+        if not any(col in df.columns for col in ["x_original", "y_original", "z_original"]):
             df = df.with_columns(
                 pl.col("x").alias("x_original"),
                 pl.col("y").alias("y_original"),
                 pl.col("z").alias("z_original"),
-                pl.col("yaw").alias("yaw_original"),
             )
 
         # Update main columns with offset values
         df = df.with_columns(
-            (pl.col("x") + pl.col("offset_x")).alias("x"),
-            (pl.col("y") + pl.col("offset_y")).alias("y"),
+            (
+                pl.col("x") * pl.col("offset_yaw").cos() - pl.col("y") * pl.col("offset_yaw").sin() + pl.col("offset_x")
+            ).alias("x"),
+            (
+                pl.col("x") * pl.col("offset_yaw").sin() + pl.col("y") * pl.col("offset_yaw").cos() + pl.col("offset_y")
+            ).alias("y"),
             (pl.col("z") + pl.col("offset_z")).alias("z"),
-            (pl.col("yaw") + pl.col("offset_yaw")).alias("yaw"),
         )
 
         self.map.parse()
@@ -736,14 +738,13 @@ class Recording:
         x_tgt, y_tgt = transformer.transform(df["x"].to_numpy(), df["y"].to_numpy())
         df = df.with_columns(pl.Series(name="x", values=x_tgt), pl.Series(name="y", values=y_tgt))
 
-        # Remove map offset
+        # From map world to map local
         if self.map.proj_offset:
             m_ox, m_oy, m_oz, m_oyaw = self._offset_components(self.map.proj_offset)
             df = df.with_columns(
-                (pl.col("x") - m_ox).alias("x"),
-                (pl.col("y") - m_oy).alias("y"),
+                ((pl.col("x") - m_ox) * np.cos(m_oyaw) + (pl.col("y") - m_oy) * np.sin(m_oyaw)).alias("x"),
+                ((pl.col("y") - m_oy) * np.cos(m_oyaw) - (pl.col("x") - m_ox) * np.sin(m_oyaw)).alias("y"),
                 (pl.col("z") - m_oz).alias("z"),
-                (pl.col("yaw") - m_oyaw).alias("yaw"),
             )
 
         df = bbx_to_polygon(df)
