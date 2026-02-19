@@ -35,12 +35,7 @@ docker run --rm -it \
 - The `fixed_frame` should be the georeferenced top-level ROS coordinate frame (TF root) of your setup, for example the global UTM/world frame. When `fixed_frame` is map, the map must be parsed and the projection string is the one of the map.
 - These transforms are stored in omega-prime as per-timestamp `ProjectionOffset` metadata.
 - The fixed frame is converted to an EPSG projection string and written as `projections["proj_string"]`.
-- Supported fixed frame values are currently:
-  - `utm_30N` -> `EPSG:32630`
-  - `utm_31N` -> `EPSG:32631`
-  - `utm_32N` -> `EPSG:32632`
-  - `utm_33N` -> `EPSG:32633`
-- If you want to add a new EPSG definition, look up the corresponding `utm` zone (for example using [this](https://de.wikipedia.org/wiki/UTM-Koordinatensystem#/media/Datei:Utm-zones.jpg) map) of your fixed frame. With that information, you can find the correct EPSG code [here](https://epsg.io/).
+- Supported fixed frame values are currently: `utm_<zone_nr: int>[N/S]`. Examples: `utm_30N`, `utm_32S`
 
 ## Notes
 - The image builds and installs `perception_interfaces` packages needed for Python APIs and messages (`perception_msgs`, `perception_msgs_utils`, `tf2_perception_msgs`).

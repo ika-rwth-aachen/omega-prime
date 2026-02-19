@@ -725,7 +725,6 @@ class Recording:
             (pl.col("z") + pl.col("offset_z")).alias("z"),
             (pl.col("yaw") + pl.col("offset_yaw")).alias("yaw"),
         )
-        df = bbx_to_polygon(df)
 
         self.map.parse()
         target_crs = self.map.projection
@@ -736,6 +735,17 @@ class Recording:
         transformer = pyproj.Transformer.from_crs(source_crs, target_crs)
         x_tgt, y_tgt = transformer.transform(df["x"].to_numpy(), df["y"].to_numpy())
         df = df.with_columns(pl.Series(name="x", values=x_tgt), pl.Series(name="y", values=y_tgt))
+
+        # Remove map offset
+        if self.map.proj_offset:
+            m_ox, m_oy, m_oz, m_oyaw = self._offset_components(self.map.proj_offset)
+            df = df.with_columns(
+                (pl.col("x") - m_ox).alias("x"),
+                (pl.col("y") - m_oy).alias("y"),
+                (pl.col("z") - m_oz).alias("z"),
+                (pl.col("yaw") - m_oyaw).alias("yaw"),
+            )
+
         df = bbx_to_polygon(df)
 
         # Remove temporary projection columns

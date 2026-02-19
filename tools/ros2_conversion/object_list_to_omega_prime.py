@@ -44,12 +44,13 @@ _VCT = betterosi.MovingObjectVehicleClassificationType
 _ROLE = betterosi.MovingObjectVehicleClassificationRole
 _MOT = betterosi.MovingObjectType
 
-UTM_TO_EPSG = {
-    "UTM_30N": "EPSG:32630",
-    "UTM_31N": "EPSG:32631",
-    "UTM_32N": "EPSG:32632",
-    "UTM_33N": "EPSG:32633",
-}
+
+def utm_to_epsg(zone: int, northern: bool = True) -> str:
+    if not isinstance(zone, int):
+        raise TypeError(f"Zone must be an integer {zone}")
+    base = 32600 if northern else 32700
+    epsg_str = f"EPSG:{int(base + zone)}"
+    return epsg_str
 
 
 def _class_to_osi(obj) -> tuple[int, int, int]:
@@ -327,7 +328,11 @@ def convert_bag_to_omega_prime(
         elif not map_path.exists():
             raise FileNotFoundError(f"Map file does not exist: {map_path}")
     else:
-        proj_string = UTM_TO_EPSG.get(fixed_frame.upper())
+        if fixed_frame.split("_")[0] != "utm":
+            raise ValueError(f"fixed_frame must be in format 'utm_<zone_number>', got '{fixed_frame}'")
+        if not fixed_frame.split("_")[1][-1] in ["N", "S"]:
+            raise ValueError(f"fixed_frame must be in format 'utm_<zone_number><N|S>', got '{fixed_frame}'")
+        proj_string = utm_to_epsg(int(fixed_frame.split("_")[1][:-1]), northern=fixed_frame.split("_")[1][-1] == "N")
         if not proj_string:
             raise KeyError(f"No EPSG Code defined for {fixed_frame}")
     projections["proj_string"] = proj_string
