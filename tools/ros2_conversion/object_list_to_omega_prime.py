@@ -329,7 +329,7 @@ def convert_bag_to_omega_prime(
             raise FileNotFoundError(f"Map file does not exist: {map_path}")
     else:
         if fixed_frame.split("_")[0] != "utm":
-            raise ValueError(f"fixed_frame must be in format 'utm_<zone_number>', got '{fixed_frame}'")
+            raise ValueError(f"fixed_frame must be in format 'utm_<zone_number><N|S>', got '{fixed_frame}'")
         if not fixed_frame.split("_")[1][-1] in ["N", "S"]:
             raise ValueError(f"fixed_frame must be in format 'utm_<zone_number><N|S>', got '{fixed_frame}'")
         proj_string = utm_to_epsg(int(fixed_frame.split("_")[1][:-1]), northern=fixed_frame.split("_")[1][-1] == "N")
