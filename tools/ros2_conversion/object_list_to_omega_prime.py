@@ -9,23 +9,26 @@ folders (identified via metadata.yaml).
 from __future__ import annotations
 
 import argparse
+import math
 import os
+from collections import deque
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterable, Iterator
 
-import yaml
-import numpy as np
-import polars as pl
-import omega_prime
 import betterosi
-
+import numpy as np
+import perception_msgs_utils as pmu
+import polars as pl
+import yaml
 from rclpy.serialization import deserialize_message
 from rclpy.time import Time
 from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
 from rosidl_runtime_py.utilities import get_message
+from tf2_ros import Buffer, TransformException
 
-import perception_msgs_utils as pmu
+import omega_prime
+from omega_prime.map import ProjectionOffset
 
 # Legacy numpy aliases expected by perception_msgs_utils/tf_transformations
 if not hasattr(np, "float"):
@@ -40,6 +43,14 @@ if not hasattr(np, "maximum_sctype"):
 _VCT = betterosi.MovingObjectVehicleClassificationType
 _ROLE = betterosi.MovingObjectVehicleClassificationRole
 _MOT = betterosi.MovingObjectType
+
+
+def utm_to_epsg(zone: int, northern: bool = True) -> str:
+    if not isinstance(zone, int):
+        raise TypeError(f"Zone must be an integer {zone}")
+    base = 32600 if northern else 32700
+    epsg_str = f"EPSG:{int(base + zone)}"
+    return epsg_str
 
 
 def _class_to_osi(obj) -> tuple[int, int, int]:
@@ -145,11 +156,42 @@ def _load_metadata(bag_dir: Path) -> dict[str, Any]:
         return yaml.safe_load(fh)
 
 
+def _extract_proj_offset(msg) -> tuple[int, ProjectionOffset]:
+    transformation = msg.transforms[0] if hasattr(msg, "transforms") else msg
+    translation = transformation.transform.translation
+    rotation = transformation.transform.rotation
+    ts = int(Time.from_msg(transformation.header.stamp).nanoseconds)
+
+    offset = ProjectionOffset(
+        x=float(translation.x if hasattr(translation, "x") else 0.0),
+        y=float(translation.y if hasattr(translation, "y") else 0.0),
+        z=float(translation.z if hasattr(translation, "z") else 0.0),
+        yaw=_yaw_from_quaternion(rotation),
+    )
+    return ts, offset
+
+
+def _yaw_from_quaternion(rotation) -> float:
+    # Source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#:~:text=1%5D-,Quaternion%20to%20angles%20%28in%20ZYX%20sequence%29%20conversion
+    x = float(rotation.x if hasattr(rotation, "x") else 0.0)
+    y = float(rotation.y if hasattr(rotation, "y") else 0.0)
+    z = float(rotation.z if hasattr(rotation, "z") else 0.0)
+    w = float(rotation.w if hasattr(rotation, "w") else 1.0)
+    siny_cosp = 2.0 * (w * z + x * y)
+    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+    return math.atan2(siny_cosp, cosy_cosp)
+
+
 def _storage_id(meta: dict[str, Any]) -> str:
     return meta["rosbag2_bagfile_information"]["storage_identifier"]
 
 
-def iter_object_list_messages(bag_dir: Path, topic: str) -> Iterator[Any]:
+def iter_object_list_messages(
+    bag_dir: Path,
+    topic: str,
+    fixed_frame: str,
+    projection: dict[Any, Any],
+) -> Iterator[Any]:
     metadata = _load_metadata(bag_dir)
     storage_id = _storage_id(metadata)
 
@@ -159,39 +201,150 @@ def iter_object_list_messages(bag_dir: Path, topic: str) -> Iterator[Any]:
     reader.open(storage_options, converter_options)
 
     type_map = {info.name: info.type for info in reader.get_all_topics_and_types()}
+
     if topic not in type_map:
         available = ", ".join(sorted(type_map))
         raise RuntimeError(f"Topic {topic} not found. Available topics: {available}")
 
     msg_cls = get_message(type_map[topic])
 
+    tf_msg_cls = get_message(type_map["/tf"]) if "/tf" in type_map else None
+    static_tf_msg_cls = get_message(type_map["/tf_static"]) if "/tf_static" in type_map else None
+
+    # TF buffer for resolving transforms
+    buffer = Buffer()
+
+    # Timestamps of object list messages not yet resolved
+    pending: deque[tuple[Time, str]] = deque()
+
+    def try_resolve_and_store(stamp_time: Time, msg_frame_id: str) -> bool:
+        """Try to resolve transform at stamp_time and store projection; return success."""
+        try:
+            resolved = buffer.lookup_transform(fixed_frame, msg_frame_id, stamp_time)
+        except TransformException:
+            return False
+
+        ts, proj_offset = _extract_proj_offset(resolved)
+        projection[int(ts)] = proj_offset
+        return True
+
+    def retry_pending() -> None:
+        """Retry pending stamps after TF updates. Removes those that succeed."""
+        if not pending:
+            return
+
+        # Try in FIFO order; keep unresolved ones.
+        new_pending: deque[tuple[Time, str]] = deque()
+        while pending:
+            st, frame_id = pending.popleft()
+            if not try_resolve_and_store(st, frame_id):
+                new_pending.append((st, frame_id))
+        pending.extend(new_pending)
+
     while reader.has_next():
         topic_name, data, _ = reader.read_next()
+
+        if topic_name == "/tf_static" and static_tf_msg_cls is not None:
+            tf_msg = deserialize_message(data, static_tf_msg_cls)
+            for transform in tf_msg.transforms:
+                buffer.set_transform_static(transform, "bag")
+            retry_pending()
+            continue
+
+        if topic_name == "/tf" and tf_msg_cls is not None:
+            tf_msg = deserialize_message(data, tf_msg_cls)
+            for transform in tf_msg.transforms:
+                buffer.set_transform(transform, "bag")
+            retry_pending()
+            continue
+
         if topic_name != topic:
             continue
-        yield deserialize_message(data, msg_cls)
+
+        msg = deserialize_message(data, msg_cls)
+        msg_frame_id = msg.header.frame_id
+        stamp = msg.header.stamp if hasattr(msg, "header") else None
+        if stamp is not None:
+            stamp_time = Time.from_msg(stamp)
+            if not try_resolve_and_store(stamp_time, msg_frame_id):
+                pending.append((stamp_time, msg_frame_id))
+
+        yield msg
+
+    # Final retry pass at end (in case TF arrived after last ObjectList)
+    retry_pending()
+    if pending:
+        print(f"Warning: {len(pending)} messages could not be resolved to a projection frame at the end of processing.")
+
+
+def _warn_if_reappearing_id(
+    row: dict[str, Any],
+    last_seen_by_idx: dict[int, int],
+    warn_gap_nanos: float,
+) -> None:
+    idx = int(row["idx"])
+    total_nanos = int(row["total_nanos"])
+    if idx in last_seen_by_idx:
+        dt_nanos = total_nanos - last_seen_by_idx[idx]
+        if dt_nanos > warn_gap_nanos:
+            print(f"Warning: ID {idx} found again after {dt_nanos / 1e9:.3f} seconds.")
+    last_seen_by_idx[idx] = total_nanos
 
 
 def convert_bag_to_omega_prime(
     bag_dir: Path,
     topic: str,
     output_dir: Path,
+    fixed_frame: str,
+    timeout: float,
     map_path: Path | None = None,
     validate: bool = False,
 ) -> Path:
+    projections: dict[Any, Any] = {}
+    warn_gap_nanos = timeout * 1e9
+    last_seen_by_idx: dict[int, int] = {}
+
     def row_iter() -> Iterable[dict[str, Any]]:
-        for msg in iter_object_list_messages(bag_dir, topic):
-            yield from _olist_to_rows(msg)
+        for msg in iter_object_list_messages(
+            bag_dir,
+            topic,
+            fixed_frame,
+            projection=projections,
+        ):
+            for row in _olist_to_rows(msg):
+                _warn_if_reappearing_id(row, last_seen_by_idx, warn_gap_nanos)
+                yield row
 
     df = pl.DataFrame(row_iter())
-    rec = omega_prime.Recording(df=df, validate=validate)
+
+    if fixed_frame == "map":
+        if map_path and map_path.exists():
+            map = omega_prime.MapOdr.from_file(str(map_path), parse_map=True)
+            proj_string = map.proj_string
+            if not proj_string:
+                raise ValueError(f"Map {map_path} has no projection string")
+        elif not map_path:
+            raise FileNotFoundError("Map file must be provided for fixed_frame 'map'")
+        elif not map_path.exists():
+            raise FileNotFoundError(f"Map file does not exist: {map_path}")
+    else:
+        if fixed_frame.split("_")[0] != "utm":
+            raise ValueError(f"fixed_frame must be in format 'utm_<zone_number><N|S>', got '{fixed_frame}'")
+        if not fixed_frame.split("_")[1][-1] in ["N", "S"]:
+            raise ValueError(f"fixed_frame must be in format 'utm_<zone_number><N|S>', got '{fixed_frame}'")
+        proj_string = utm_to_epsg(int(fixed_frame.split("_")[1][:-1]), northern=fixed_frame.split("_")[1][-1] == "N")
+        if not proj_string:
+            raise KeyError(f"No EPSG Code defined for {fixed_frame}")
+    projections["proj_string"] = proj_string
+
+    rec = omega_prime.Recording(df=df, projections=projections, validate=validate)
 
     if map_path and map_path.exists():
         rec.map = omega_prime.MapOdr.from_file(str(map_path))
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / f"{bag_dir.name}.omega-prime.mcap"
-    rec.to_mcap(out_path)
+    out_path = output_dir / f"{bag_dir.name}.omega-prime.parquet"
+    rec.to_file(out_path)
     return out_path
 
 
@@ -202,19 +355,48 @@ def _discover_bags(data_dir: Path) -> list[Path]:
 
 def _parse_args() -> argparse.Namespace:
     env_validate = os.environ.get("OP_VALIDATE", "").lower() in {"1", "true", "yes"}
+    env_fixed_frame = os.environ.get("OP_FIXED_FRAME", "utm_32N")
 
     parser = argparse.ArgumentParser(description="Convert ROS 2 ObjectList bags to omega-prime MCAP")
     parser.add_argument(
-        "--data-dir", default=os.environ.get("OP_DATA", "/data"), help="Directory containing rosbag2 folders"
+        "--data-dir",
+        default=os.environ.get("OP_DATA", "/data"),
+        help="Directory containing rosbag2 folders",
     )
     parser.add_argument("--topic", default=os.environ.get("OP_TOPIC"), help="ObjectList topic to export")
     parser.add_argument(
-        "--output-dir", default=os.environ.get("OP_OUT", "/out"), help="Directory to write omega-prime MCAPs"
+        "--output-dir",
+        default=os.environ.get("OP_OUT", "/out"),
+        help="Directory to write omega-prime parquets",
     )
-    parser.add_argument("--bag", action="append", default=[], help="Explicit bag directory to convert (repeatable)")
-    parser.add_argument("--map", dest="map_path", default="/map/map.xodr", help="Optional OpenDRIVE map to embed")
     parser.add_argument(
-        "--validate", action="store_true", default=env_validate, help="Enable omega-prime schema validation"
+        "--bag",
+        action="append",
+        default=[],
+        help="Explicit bag directory to convert (repeatable)",
+    )
+    parser.add_argument(
+        "--map",
+        dest="map_path",
+        default="/map/map.xodr",
+        help="Optional OpenDRIVE map to embed",
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        default=env_validate,
+        help="Enable omega-prime schema validation",
+    )
+    parser.add_argument(
+        "--fixed_frame",
+        default=env_fixed_frame,
+        help="Target fixed frame used for TF lookup and projection metadata (default: OP_FIXED_FRAME or utm_32N)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=3.0,
+        help="Timeout in seconds for checking if same object is seen again",
     )
     return parser.parse_args()
 
@@ -246,10 +428,18 @@ def main() -> None:
 
     for bag in bags:
         if map_path and map_path.exists():
-            print(f"[object_list_to_omega_prime] Processing bag: {bag} with openDRIVE File: {map_path}")
+            print(f"[object_list_to_omega_prime] Processing bag: {bag} with OpenDRIVE File: {map_path}")
         else:
-            print(f"[object_list_to_omega_prime] Processing bag: {bag} without openDRIVE File")
-        out_file = convert_bag_to_omega_prime(bag, args.topic, out_dir, map_path, args.validate)
+            print(f"[object_list_to_omega_prime] Processing bag: {bag} without OpenDRIVE File")
+        out_file = convert_bag_to_omega_prime(
+            bag,
+            args.topic,
+            out_dir,
+            args.fixed_frame,
+            args.timeout,
+            map_path,
+            args.validate,
+        )
         print(f"[object_list_to_omega_prime] Wrote {out_file}")
 
 
