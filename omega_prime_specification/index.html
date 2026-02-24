@@ -1,0 +1,1681 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://ika-rwth-aachen.github.io/omega-prime/omega_prime_specification/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../library/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../logo/omega-prime-no-text.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Data Model & Specification - Omega-Prime</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#introduction" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Omega-Prime" class="md-header__button md-logo" aria-label="Omega-Prime" data-md-component="logo">
+      
+  <img src="../logo/omega-prime-no-text.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Omega-Prime
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Data Model & Specification
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Omega-Prime" class="md-nav__button md-logo" aria-label="Omega-Prime" data-md-component="logo">
+      
+  <img src="../logo/omega-prime-no-text.svg" alt="logo">
+
+    </a>
+    Omega-Prime
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    omega-prime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Model & Specification
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Model & Specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements-on-scenario-source-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements on Scenario Source Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#omega-prime-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OMEGA-PRIME specification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OMEGA-PRIME specification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rationale-for-the-choice-of-the-underlying-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale for the choice of the underlying standards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#omega-prime-specification_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OMEGA-PRIME Specification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OMEGA-PRIME Specification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#coordinate-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinate Systems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Coordinate Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geo-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geo Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamic Information
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dynamic Information">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#note-on-field-presence-in-protobuf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Note on Field Presence in Protobuf
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#omega-prime-format-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OMEGA-PRIME Format Specification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OMEGA-PRIME Format Specification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-self-contained-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A: Self-contained Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-one-map-multiple-recordings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B: One Map – Multiple Recordings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-is-asam-opendrive-used-instead-of-osi-physicallanes-and-laneboundaries-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why is ASAM OpenDRIVE used instead of OSI PhysicalLanes and LaneBoundaries directly?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-does-osmp-relate-to-osi-and-omega-prime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How does OSMP relate to OSI and OMEGA-PRIME?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Library
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python Library
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../map_segmentation/map_segmentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map Segmentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inroduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/tutorial_locator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Locator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/tutorial_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/tutorial_map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map Segmentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements-on-scenario-source-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements on Scenario Source Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#omega-prime-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OMEGA-PRIME specification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OMEGA-PRIME specification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rationale-for-the-choice-of-the-underlying-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale for the choice of the underlying standards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#omega-prime-specification_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OMEGA-PRIME Specification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OMEGA-PRIME Specification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#coordinate-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinate Systems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Coordinate Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geo-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geo Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamic Information
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dynamic Information">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#note-on-field-presence-in-protobuf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Note on Field Presence in Protobuf
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#omega-prime-format-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OMEGA-PRIME Format Specification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OMEGA-PRIME Format Specification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-self-contained-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A: Self-contained Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-one-map-multiple-recordings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B: One Map – Multiple Recordings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-is-asam-opendrive-used-instead-of-osi-physicallanes-and-laneboundaries-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why is ASAM OpenDRIVE used instead of OSI PhysicalLanes and LaneBoundaries directly?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-does-osmp-relate-to-osi-and-omega-prime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How does OSMP relate to OSI and OMEGA-PRIME?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+  <h1>Data Model & Specification</h1>
+
+<h2 id="introduction">Introduction</h2>
+<p>In the context of <a href="https://synergies-ccam.eu/">SYNERGIES</a>, Scenario Source Data (SSD) corresponds to the data that is provided to WP5 for scenario identification and extraction.
+Such data can stem from multiple sources: in-traffic-vehicle data collection, fixed or mobile (e.g., drones) roadside observations, dynamic accident reconstruction, but also generative AI, traffic simulation...
+WP5 itself will also develop multiple approaches to generate scenarios from data.
+To facilitate interoperability between multiple data sources and multiple scenarios' creation approaches, a standardization of Scenario Source Data needs to be defined, both in terms of content and in terms of container, i.e., format.</p>
+<p>The format itself is called OMEGA-PRIME.
+It relies on existing ASAM standards, namely ASAM OpenDRIVE and ASAM Open Simulation Interface.
+Those allow, respectively, to represent the infrastructure and traffic participants' type, trajectories, and state.
+The OMEGA-PRIME format also specifies MCAP as the container in which ASAM OpenDRIVE maps and Open Simulation Interface messages are stored (or, in the case of map information, optionally linked to) in a file.</p>
+<p>Those standards are very flexible, and not all information that can be represented using ASAM OpenDrive and ASAM Open Simulation Interface are required for scenario identification and extraction.
+Those standards also allow characterizing the same traffic situation in multiple ways, and, especially in the case of Open Simulation Interface, can represent multiple kinds of data.</p>
+<p><strong>This document therefore defines which features from the aforementioned standards <em>need</em> to be used, and <em>how</em> they should be used, to create a valid OMEGA-PRIME file.</strong></p>
+<p><strong>It also defines requirements on the <em>content</em> of Scenario Source Data itself, in order to meet sufficient quality for scenario identification and extraction.</strong></p>
+<p><u>Notes:</u></p>
+<ul>
+<li>This specification corresponds to a "least common denominator", i.e., what is directly needed for scenario identification and extraction, and just that.
+  Since the underlying standards allow representing and storing more information, users are free to use additional features at their discretion, for their own needs, as long as they respect the minimum set of rules herein defined.</li>
+<li>In the event that the underlying standards are insufficient, either in terms of features or in terms of documentation (e.g., clarity), the intention of the authors is to collaborate with the standards' maintainers to upstream necessary changes and extensions, rather than inventing yet another incompletely compatible format.</li>
+</ul>
+<h2 id="requirements-on-scenario-source-data">Requirements on Scenario Source Data</h2>
+<p>Scenario Source Data contains the following information:</p>
+<ul>
+<li>The infrastructure, in the form of a <strong>static</strong> map,</li>
+<li>A succession of time-stamped observations of:</li>
+<li>Environmental conditions (precipitation, illumination, visibility),</li>
+<li>Properties, states and kinematics of dynamic elements (i.e., traffic participants).</li>
+</ul>
+<p>Necessary fields for those categories of information are listed in the
+subsequent chapter.</p>
+<p>More importantly, Scenario Source Data shall correspond to <strong>consolidated</strong> / <strong>ground truth</strong> data.
+This implies that raw sensor data is out of the scope of this specification and cannot be accepted as Scenario Source Data.
+Rather:</p>
+<ul>
+<li>Dynamic elements <strong>must</strong> be consolidated over time:</li>
+<li>Successive observations of the same traffic participant <strong>must</strong> be linked by a unique identifier,</li>
+<li>A traffic participant's classification <strong>cannot</strong> change over time,</li>
+<li>Properties describing a traffic participant's shape (i.e. its bounding box dimensions) <strong>cannot</strong> change over time, with the only accepted exception being when the <em>actual</em> participant's shape did change (e.g. door opening).</li>
+<li>They <strong>must</strong> be properly positioned in relation to the static map.</li>
+</ul>
+<p>The creation of such consolidated / ground truth data from raw observations requires complex processing and, in some instance, manual annotation, that depend on the nature of the original data.
+Such processing may include <strong>sensor fusion</strong>, <strong>object detection and tracking, mapping, geo-referencing...</strong> All those operations are out of the scope of this document but need to be performed before Scenario Source Data can be stored and exchanged using OMEGA-PRIME.</p>
+<h2 id="omega-prime-specification">OMEGA-PRIME specification</h2>
+<h3 id="rationale-for-the-choice-of-the-underlying-standards">Rationale for the choice of the underlying standards</h3>
+<p>There exists a multitude of data models and formats that cover the aforementioned information, a selection of established data models and formats is listed below:</p>
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 19%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>Name</th>
+<th>Dynamic Elements</th>
+<th>Static Map</th>
+<th>Environmental Information</th>
+<th>Traffic Light</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a
+href="https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html">ASAM
+OSI</a></td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><a
+href="https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html">ASAM
+OpenDRIVE</a></td>
+<td></td>
+<td>✅</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a
+href="https://github.com/fzi-forschungszentrum-informatik/Lanelet2">Lanelet2</a></td>
+<td></td>
+<td>✅</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a
+href="https://www.hi-drive.eu/app/uploads/2023/05/01_Hi-Drive-Project-Overview.pdf">Hi-Drive
+CDF</a></td>
+<td>✅</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a
+href="https://github.com/ika-rwth-aachen/omega_format">OMEGAFormat</a></td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+
+<p>Since it is advisable to base the definitions of data model and data format on already established ones, <a href="https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html">ASAM OSI 3.7.0</a> lends itself for the representation of dynamic elements since it is already heavily used for co-simulation data exchange by different simulation platforms.
+<a href="https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/1.8.0/specification/00_preface/00_introduction.html">ASAM OpenDRIVE 1.8.1</a> is the most common non-proprietary standard for defining maps for simulation.
+Therefore, it should be used to define static maps.
+The usage of OpenDRIVE is already supported by OSI and has the additional benefit, that OpenDRIVE maps can be directly used in simulation tools and there exists tooling around creating such maps.
+OSI itself does not enforce what signals have to be set and not what quality those signals need to have (There exists the <a href="https://github.com/asam-ev/qc-framework">qc-framework</a> for defining rules on these formats).
+The <a href="https://github.com/ika-rwth-aachen/omega_format">OMEGAFormat</a>, which has been defined in the <a href="https://www.vvm-projekt.de/en/">VVMethods</a> project specifically for the task of storing traffic data for the validation of automated vehicles, already established <a href="https://scholar.google.com/scholar?hl=de&amp;as_sdt=0%2C5&amp;q=OMEGAFormat%3A+A+Comprehensive+Format+of+Traffic+Recordings+for+Scenario+Extraction&amp;btnG=">such requirements</a>.
+Therefore, we propose to remodel the OMEGAFormat through usage of ASAM OSI and ASAM OpenDRIVE.
+In the following the resulting SSD Specification OMEGA-PRIME is presented.</p>
+<h3 id="omega-prime-specification_1">OMEGA-PRIME Specification</h3>
+<p>OMEGA-PRIME defines a data model and data format for scenario source data through an extension of ASAM OSI, under usage of ASAM OpenDRIVE.
+Especially for ASAM OSI it defines the exchange of such files and mandatory signals and quality for the use case of scenario identification and generation.
+The specification has the explicit goal to upstream extensions made to existing formats when possible.</p>
+<p>The following sections describe the specification.
+First, the coordinate system is explained.
+Then the representation of moving objects through ASAM OSI Ground Truth messages is defined.
+Lastly, the usage of ASAM OpenDRIVE for information on the map level is specified.
+Accuracy requirements of signals are derived from the <a href="https://github.com/ika-rwth-aachen/omega_format/blob/main/doc/signal_list_reference.md">OMEGAFormat</a>.</p>
+<h4 id="coordinate-systems">Coordinate Systems</h4>
+<p>ASAM OSI and ASAM OpenDRIVE are harmonized in terms of their inertial coordinate system specification (handedness, axis directions and rotation order).
+The OpenDRIVE 'inertial coordinate system' is defined in the same way as OSI’s 'global coordinate system', relying on the ISO 8855 standard.
+Both OpenDRIVE and ASAM OSI define further context-related coordinate systems (e.g. road reference line coordinate system in OpenDRIVE, sensor or object coordinate system in OSI).
+Each standard's documentation must be consulted when working with data structures using these coordinate systems.</p>
+<h5 id="geo-reference">Geo Reference</h5>
+<p>For both OSI and OpenDRIVE the inertial coordinate system’s origin can be mapped to a geographic coordinate system using PROJ transformations in a harmonized way.
+Both standards allow the definition of a PROJ-string and a corresponding offset.
+The offset parameter offers a position (x, y, z) and an orientation offset (yaw/heading).
+It is recommended by both standards to set the orientation offset to 0.
+For OMEGA-PRIME real-world datasets, both PROJ-string and offset must be given in every frame of the ASAM OSI GroundTruth message as well as in the ASAM OpenDRIVE map.</p>
+<p><u>Note:</u> Pay attention that even if it moves from one observation to the next, this coordinate system never encompasses velocity.
+Therefore, relative measurements of velocities from a moving observer must not be directly stored in the GroundTruth message but have to be processed first.</p>
+<p><img alt="Geo-reference and coordinate system in ASAM OpenDRIVE and ASAM OSI" src="../omega_prime/coordinate_system.svg" /></p>
+<p>Figure 1: Geo-reference and coordinate system in ASAM OpenDRIVE and ASAM OSI</p>
+<h4 id="dynamic-information">Dynamic Information</h4>
+<p>For representing object-list based trajectory information of moving elements and the dynamic information of traffic signs, OMEGA-PRIME utilizes <a href="https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html">ASAM OSI GroundTruth messages</a>.
+Each GroundTruth message defines one point in time.
+The dynamic extent of the SSD is therefore be represented through a sequence of OSI GroundTruth messages.
+To appropriately cover highly dynamic contexts found in urban environments, OMEGA-PRIME sets a minimum required frequency of 10Hz on those messages.
+Unless stated otherwise, the fields listed in the following table are mandatory in each of the OSI GroundTruth messages.
+Detailed info about the signal content are found in the <a href="https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html">ASAM OSI documentation</a>.
+Additional fields, e.g. as defined in the Open Simulation Interface, are optional.
+To represent a corresponding sequence of weather observations the OSI message <code>environmental_conditions</code> (contained in OSI GroundTruth) can be filled.
+The column 'Minimal Accuracy' indicates the desired accuracy of the signal in relation to the real world.</p>
+<h5 id="note-on-field-presence-in-protobuf">Note on Field Presence in Protobuf</h5>
+<p>With all proto fields being intentionally marked as <code>optional</code> in OSI, <a href="https://protobuf.dev/programming-guides/field_presence/">field presence</a> is tracked independent of the protobuf version (proto2, proto3).
+Though, the default value handling (in the case of unset fields) might still cause confusion, e.g., basic type fields are deserialized using their default value (0 for numeric types, false for booleans, zero-valued enumerator for enums, zero-length value for strings, bytes and repeated fields) even if they weren't set during serialization.
+Hence, to know if a field was intentionally set, the presence checking functionality of the corresponding protobuf implementation (if implemented) can be used.
+<strong>Example:</strong>
+<code>osi3::MovingObject::VehicleClassification::has_trailer</code> is not a mandatory field in the OMEGA-PRIME format.
+If <code>has_trailer</code> was not set during serialization, it will still resolve to its basic type's default value (<code>false</code>) when deserializing/reading the value.
+This could theoretically be interpreted to mean that the <code>has_trailer</code> field has been left blank on purpose to indicate <code>false</code> for a reader.
+Though, it could be checked if the field was actually intendedly set to false using the field presence checking functionality (e.g. <code>msg.HasField('foo')</code> in Python).</p>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 46%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr>
+<th><strong>Signal hierarchy</strong></th>
+<th><strong>Data model and type</strong></th>
+<th><strong>Minimal Accuracy</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>map_reference</td>
+<td>
+<p>str</p>
+<p>Content depends on the chosen map association option (see 'OMEGA-PRIME Format Specification').</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>country_code</td>
+<td>int [3 digit ISO country code (e.g. germany=276,usa=840)].</td>
+<td></td>
+</tr>
+<tr>
+<td>version</td>
+<td>InterfaceVersion</td>
+<td></td>
+</tr>
+<tr>
+<td>. version_major</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>. version_minor</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>. version_patch</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>proj_frame_offset</td>
+<td>GroundTruthProjFrameOffset</td>
+<td>0,2 m</td>
+</tr>
+<tr>
+<td>. position</td>
+<td>Vector3D</td>
+<td>0,2 m</td>
+</tr>
+<tr>
+<td>. yaw</td>
+<td>float</td>
+<td>0,035 rad (2°)</td>
+</tr>
+<tr>
+<td>proj_string</td>
+<td>
+<p>str [PROJ coordinate transformation software library]</p>
+<p>Mandatory for real world data; Can be omitted for simulation data.</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>Timestamp (total time is combination of seconds and nanos)</td>
+<td></td>
+</tr>
+<tr>
+<td>. nanos</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>. seconds</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>host_vehicle_id</td>
+<td>Identifier</td>
+<td></td>
+</tr>
+<tr>
+<td>. value</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>moving_object</td>
+<td>list[MovingObject]</td>
+<td></td>
+</tr>
+<tr>
+<td>. id</td>
+<td>Identifier</td>
+<td></td>
+</tr>
+<tr>
+<td>. . value</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>. base</td>
+<td>BaseMoving</td>
+<td></td>
+</tr>
+<tr>
+<td>. . dimension</td>
+<td>Dimension3D</td>
+<td></td>
+</tr>
+<tr>
+<td>. . . x</td>
+<td>float [m]</td>
+<td>0,2 m</td>
+</tr>
+<tr>
+<td>. . . y</td>
+<td>float [m]</td>
+<td>0,2 m</td>
+</tr>
+<tr>
+<td>. . . z</td>
+<td>float [m]</td>
+<td>0,2 m</td>
+</tr>
+<tr>
+<td>. . position</td>
+<td>Vector3D</td>
+<td></td>
+</tr>
+<tr>
+<td>. . . x</td>
+<td>float [m]</td>
+<td>0,2 m</td>
+</tr>
+<tr>
+<td>. . . y</td>
+<td>float [m]</td>
+<td>0,2 m</td>
+</tr>
+<tr>
+<td>. . . z</td>
+<td>float [m]</td>
+<td>0,2 m</td>
+</tr>
+<tr>
+<td>. . orientation</td>
+<td>Orientation3D</td>
+<td></td>
+</tr>
+<tr>
+<td>. . . roll</td>
+<td>float [rad]</td>
+<td>0,035 rad (2°)</td>
+</tr>
+<tr>
+<td>. . . pitch</td>
+<td>float [rad]</td>
+<td>0,035 rad (2°)</td>
+</tr>
+<tr>
+<td>. . . yaw</td>
+<td>float [rad]</td>
+<td>0,035 rad (2°)</td>
+</tr>
+<tr>
+<td>. . velocity</td>
+<td>Vector3D</td>
+<td>0,1 m/s</td>
+</tr>
+<tr>
+<td>. . acceleration</td>
+<td>Vector3D</td>
+<td>0,1 m/s^2</td>
+</tr>
+<tr>
+<td>. type</td>
+<td>
+<p>MovingObjectType</p>
+<p>(Other, Vehicle, Pedestrian, Animal)</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>. vehicle_classification</td>
+<td>MovingObjectVehicleClassification</td>
+<td></td>
+</tr>
+<tr>
+<td>. . type</td>
+<td>
+<p>MovingObjectVehicleClassificationType</p>
+<p>(Other, car, delivery van, semitrailer, trailer, motorbike, bicycle, bus, tram, train, wheelchair, standup scooter)</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>. . role</td>
+<td>
+<p>MovingObjectVehicleClassificationRole</p>
+<p>(Other, civil, ambulance, fire, police, public transport, road assistance, garbage  collectin, road construction, military)</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>traffic_light</td>
+<td>list[TrafficLight]</td>
+<td></td>
+</tr>
+<tr>
+<td>. id</td>
+<td>Identifier</td>
+<td></td>
+</tr>
+<tr>
+<td>. . value</td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td>. base (optional)</td>
+<td>
+<p>BaseStationary</p>
+<p>
+The position of traffic lights is given in the associated OpenDRIVE map file.
+If optionally given in the OSI message, it must match the corresponding data in the map file.
+The association between OSI and OpenDRIVE objects is established using the 'source_reference' field.
+</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>. classification</td>
+<td>TrafficLightClassification</td>
+<td></td>
+</tr>
+<tr>
+<td>. . color</td>
+<td>
+<p>TrafficLightClassificationColor</p>
+<p>(Other, red, yellow, green, blue, white)</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>. . icon</td>
+<td>
+<p>TrafficLightClassificationIcon</p>
+<p>(Other, none, arrow_straight_ahead, arrow_left, arrow_diag_left, arrow_straight_ahead_left, arrow_right, ...)</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>. . mode</td>
+<td>
+<p>TrafficLightClassificationMode</p>
+<p>(Other, off, constant, flashing, counting)</p>
+</td>
+<td></td>
+</tr>
+<tr>
+<td>. . counter</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>. . is_out_of_servcie</td>
+<td>bool</td>
+<td></td>
+</tr>
+<tr>
+<td>. source_reference</td>
+<td>
+<p>list[ExternalReference]</p>
+<p>The source reference maps the dynamic OSI traffic light information to the static traffic light information in the OpenDRIVE map.</p>
+</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h4 id="static-information">Static Information</h4>
+<p>The static map information is defined through ASAM OpenDRIVE 1.8.1.
+The map should contain information on the roads all observed traffic participants are moving on and the respective lanes.
+This includes information on the junction and road object positions defined by ASAM OpenDRIVE.
+See the <a href="https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html">ASAM OpenDRIVE specification</a> on data model and format definitions.
+When real-world data is represented, the deviation of the modelled geometries to the real-world counterparts should not be larger than 0.2m.</p>
+<h4 id="omega-prime-format-specification">OMEGA-PRIME Format Specification</h4>
+<p>The OMEGA-PRIME MCAP multi-channel trace file format is a binary file format that allows for storing a serialized specified subset of an OSI GroundTruth message stream, along with additional meta-data, OpenDRIVE map data and other related data streams.</p>
+<p>OMEGA-PRIME is based on the <a href="https://opensimulationinterface.github.io/osi-antora-generator/asamosi/current/interface/architecture/trace_file_formats.html#_multi_channel_trace_file_format">OSI MCAP multi-channel trace file format</a> and therefore is a specialization with additional constraints and requirements.
+Hence, any valid OMEGA-PRIME multi-channel trace file is also a valid OSI MCAP file, but not the other way around.
+This means that an OMEGA-PRIME MCAP file must comply with all constraints and requirements defined in the OSI MCAP format specification.
+This includes general file writing requirements (e.g. chunk indexing), mandatory file-global metadata definitions (e.g., OSI version, zero time, authors, data sources) as well as mandatory channel-specific metadata for the OSI GroundTruth channel.</p>
+<p>The following rules apply to OMEGA-PRIME multi-channel trace files:</p>
+<ul>
+<li>The OMEGA-PRIME OSI GroundTruth message stream must be stored as a compliant OSI channel as specified by the OSI MCAP format specification.</li>
+<li>The channel name of the OMEGA-PRIME OSI GroundTruth data must be <code>\ground_truth</code>.</li>
+<li>The OMEGA-PRIME OSI GroundTruth message interface must comply with the required subset as defined in the table in section 'Dynamic Information'.</li>
+<li>The version of the OMEGA-PRIME OSI GroundTruth messages must be &gt;=3.7.0.</li>
+<li>The message frequency of consecutive OMEGA-PRIME OSI GroundTruth messages must be 10Hz or higher.</li>
+</ul>
+<p>The OMEGA-PRIME format specifies two options to store the associated ASAM OpenDRIVE map data:</p>
+<ul>
+<li><strong>Option A</strong>: Additional MCAP channel which holds a protobuf-encoded message containing a map reference string and the associated ASAM OpenDRIVE map data as specified in the section 'Option A'. </li>
+<li><strong>Option B</strong>: Additional ASAM OpenDRIVE XML file located in the same folder as the OSI GroundTruth MCAP file as specified in the section 'Option B'.</li>
+</ul>
+<p>The following rules apply independent of the chosen option:
+-   The version of the OpenDRIVE map data must be 1.8.1.</p>
+<p>The following sections specify the rules depending on the chosen option.</p>
+<h5 id="option-a-self-contained-package">Option A: Self-contained Package</h5>
+<p>Storing map data with object data in a single file has the benefit that there is no chance that the association gets lost or is unclear.
+This is especially relevant for the exchange of data between parties.
+Therefore, we suggest storing the map information also in the MCAP file.</p>
+<p>The OpenDRIVE map should be stored in the MCAP topic <code>/ground_truth_map</code> with the proto <em>MapASAMOpenDRIVE message</em> (specified below).
+In <code>open_drive_xml</code> store the string content of an OpenDRIVE XML file.
+<code>map_reference</code> must match the <code>map_reference</code> in the <em>GroundTruth message</em>.</p>
+<p><div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nn">osi3</span><span class="p">;</span>
+<span class="kd">message</span><span class="w"> </span><span class="nc">MapAsamOpenDrive</span>
+<span class="p">{</span>
+<span class="err"> </span><span class="w"> </span><span class="err"> </span><span class="w"> </span><span class="k">optional</span><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">map_reference</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="err"> </span><span class="w"> </span><span class="err"> </span><span class="w"> </span><span class="k">optional</span><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">open_drive_xml_content</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<img alt="File structure of OMEGA-PRIME self-contained package - scenario source data file." src="../omega_prime/omega_specification.svg" />
+Figure 2: File structure of OMEGA-PRIME self-contained package - scenario source data file.</p>
+<h5 id="option-b-one-map-multiple-recordings">Option B: One Map – Multiple Recordings</h5>
+<p>On the data provider side, it could be useful to just store an instance of the map once, when you have multiple recordings of the same map.
+This can be useful in settings where you are still iterating the map and do not want to update it in many places.
+If you use this option, the map file has to be in the same directory (or zip archive level) as the MCAP file and <code>map_reference</code> in the Ground Truth messages must be set to the filename of the ASAM OpenDRIVE file.</p>
+<h2 id="technical-notes">Technical Notes</h2>
+<h3 id="why-is-asam-opendrive-used-instead-of-osi-physicallanes-and-laneboundaries-directly">Why is ASAM OpenDRIVE used instead of OSI PhysicalLanes and LaneBoundaries directly?</h3>
+<p>OSI itself has the option to represent information on lanes and their boundaries.
+Unfortunately, creating map information in such a way is not widely known and used.
+Additionally, despite many simulation frameworks providing such data for co-simulation, there is no known, especially no freely available simulation framework, that can take such data as input for creating the virtual worlds in simulation.
+Currently, the most widely used map format for feeding simulator is OpenDRIVE.
+Therefore, we define OpenDRIVE as required.</p>
+<p>On Downstream Tasks of the Scenario Source Data Format, it could be useful to also have the map information directly in OSI.
+Since it is not useful for every partner to create tooling for this on their own and different interpretations of standards could cause discrepancy.</p>
+<h3 id="how-does-osmp-relate-to-osi-and-omega-prime">How does OSMP relate to OSI and OMEGA-PRIME?</h3>
+<p><a href="https://github.com/OpenSimulationInterface/osi-sensor-model-packaging">OSMP</a> is the OSI Sensor Model Packaging.
+It defines how Functional Mock-up Units (FMU) (e.g., Environmental effect model, sensor model, logical models, …) can communicate with the simulation.
+The communication is performed via OSI messages.
+Since OMEGA-PRIME also relies on OSI, feeding such models from it is trivial.
+OMEGA-PRIME is a data model and serialization format; therefore, it does not need to know about any intricacies of OSMP.
+That would be part of a tool that takes OMEGA-PRIME data and replays it to some models (like generating a OSMPGroundTruthInit from OMEGA-PRIME).</p>
+<p>The same holds true for a “dynamic view port”.
+In some cases, OSMP models might be overburdened, if the amount of data provided to them is too large.
+Therefore, there exist approaches to first filter a relevant subset of data and provide only this subset to the OSMP model.
+That would be a task of a tooling that reads in OMEGA-PRIME.
+The OMEGA-PRIME specification should not have such a view port since the goal is to store the “Ground truth” and all available information.</p>
+<p>OSMP might require that the static information is also send and every timestep.
+This is not respected in OMEGA-PRIME, since, again, OMEGA-PRIME is a serialization format for data exchange and storage.
+It is task of a reading/parsing tool to take the OMEGA-PRIME and create valid OSMP communication from that.
+The task is expected to be trivial since OMEGA-PRIME eavily relies on the ASAM OSI specification.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.instant.preview", "toc.follow", "search.suggest", "search.highlight", "navigation.tracking", "navigation.sections"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

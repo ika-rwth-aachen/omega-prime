@@ -1,0 +1,1607 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://ika-rwth-aachen.github.io/omega-prime/map_segmentation/map_segmentation/">
+      
+      
+        <link rel="prev" href="../../library/">
+      
+      
+        <link rel="next" href="../../notebooks/tutorial/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../logo/omega-prime-no-text.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Map Segmentation - Omega-Prime</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#map-segmentation-omega_primemap_segmentation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Omega-Prime" class="md-header__button md-logo" aria-label="Omega-Prime" data-md-component="logo">
+      
+  <img src="../../logo/omega-prime-no-text.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Omega-Prime
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Map Segmentation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Omega-Prime" class="md-nav__button md-logo" aria-label="Omega-Prime" data-md-component="logo">
+      
+  <img src="../../logo/omega-prime-no-text.svg" alt="logo">
+
+    </a>
+    Omega-Prime
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    omega-prime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../omega_prime_specification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Model & Specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Library
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python Library
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map Segmentation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map Segmentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#segment-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segment Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#abstract-base-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract Base Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Abstract Base Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#segment-abc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segment (ABC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapsegmentation-abc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MapSegmentation (ABC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#concrete-implementations-for-osi-centerline-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concrete Implementations for OSI Centerline Maps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Concrete Implementations for OSI Centerline Maps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#segmentosicenterline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SegmentOsiCenterline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maposicenterlinesegmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MapOsiCenterlineSegmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intersection-and-connectionsegment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Intersection and ConnectionSegment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-and-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs and Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs and Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lane-object-requirements-for-osi-centerline-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lane Object Requirements (for OSI Centerline implementation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#segments-and-polygons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segments and Polygons
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#algorithms-and-key-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithms and Key Details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-api-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public API Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public API Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#base-classes-for-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base Classes (for extension)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#concrete-implementation-for-osi-centerline-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concrete Implementation for OSI Centerline Maps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#segment-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segment Classes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions and Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases-to-consider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases to Consider
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extensibility-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extensibility Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inroduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/tutorial_locator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Locator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/tutorial_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/tutorial_map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map Segmentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#segment-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segment Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#abstract-base-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract Base Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Abstract Base Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#segment-abc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segment (ABC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapsegmentation-abc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MapSegmentation (ABC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#concrete-implementations-for-osi-centerline-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concrete Implementations for OSI Centerline Maps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Concrete Implementations for OSI Centerline Maps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#segmentosicenterline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SegmentOsiCenterline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maposicenterlinesegmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MapOsiCenterlineSegmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intersection-and-connectionsegment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Intersection and ConnectionSegment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-and-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs and Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs and Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lane-object-requirements-for-osi-centerline-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lane Object Requirements (for OSI Centerline implementation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#segments-and-polygons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segments and Polygons
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#algorithms-and-key-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithms and Key Details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-api-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public API Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public API Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#base-classes-for-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base Classes (for extension)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#concrete-implementation-for-osi-centerline-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concrete Implementation for OSI Centerline Maps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#segment-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segment Classes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions and Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases-to-consider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases to Consider
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extensibility-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extensibility Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="map-segmentation-omega_primemap_segmentation">Map Segmentation (omega_prime.map_segmentation)</h1>
+<p>This document describes the MapSegmentation system used to group map lanes into semantic segments (junctions and non-junction road segments), attach traffic lights, and offer utilities for plotting and trajectory-to-segment mapping.</p>
+<p>It covers:
+- Architecture and class hierarchy
+- What the classes do and the data they expect
+- The step-by-step processing pipeline
+- Algorithms and thresholds used
+- Public API surface and typical usage
+- Assumptions, limitations, and edge cases</p>
+<h2 id="overview">Overview</h2>
+<p>The map segmentation system uses an <strong>abstract base class pattern</strong> to support different map types (e.g., OSI full maps, OSI centerline-only maps). The core abstractions are:</p>
+<ul>
+<li><strong><code>MapSegmentation</code> (ABC)</strong>: Base class defining the segmentation pipeline and common operations</li>
+<li><strong><code>Segment</code> (ABC)</strong>: Base class for map segments (junctions, connections, etc.)</li>
+<li><strong><code>MapOsiCenterlineSegmentation</code></strong>: Concrete implementation for OSI centerline maps</li>
+<li><strong><code>SegmentOsiCenterline</code></strong>: Concrete segment implementation for OSI centerline maps</li>
+<li><strong><code>Intersection</code></strong> and <strong><code>ConnectionSegment</code></strong>: Specialized segment types</li>
+</ul>
+<h3 id="segment-types">Segment Types</h3>
+<p>MapSegmentation clusters lanes into segments of type:
+- <strong>JUNCTION</strong> (intersections): groups of lanes whose buffered geometries intersect
+- <strong>STRAIGHT</strong> (connection segments): connected components of lanes outside junctions
+- Other types exist in the enum but are not currently assigned by the code (e.g., RAMP_ON, RAMP_OFF, ROUNDABOUT)</p>
+<p>Each segment has a polygon generated from lane centerlines (concave hull) and may have traffic lights attached. The system also:
+- Marks lanes as <code>on_intersection</code> or <code>is_approaching</code> (predecessors of intersection lanes)
+- Assigns traffic lights to nearest lanes
+- Optionally updates lane <code>road_id</code> to the segment ID
+- Splits trajectories into segment-wise chunks
+- Provides plotting utilities for quick inspection</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="abstract-base-classes">Abstract Base Classes</h3>
+<p>The system is built on two abstract base classes in <code>mapsegment.py</code>:</p>
+<h4 id="segment-abc"><code>Segment</code> (ABC)</h4>
+<p>Base class for all segment types. Defines abstract methods that must be implemented by concrete segment classes:
+- <code>_get_lane_id(lane)</code>: Extract lane ID from a lane object
+- <code>_get_lane_geometry(lane)</code>: Extract geometry (LineString) from a lane object<br />
+- <code>set_trafficlight()</code>: Set traffic lights for the segment</p>
+<p>Common functionality provided:
+- Polygon computation with caching (concave hull with fallback to convex hull)
+- Lane management (<code>add_lane</code>, lane IDs tracking)
+- Center point calculation
+- Time interval analysis for road users on segment</p>
+<h4 id="mapsegmentation-abc"><code>MapSegmentation</code> (ABC)</h4>
+<p>Base class for map segmentation implementations. Defines abstract methods for map-type-specific operations.</p>
+<p>Common functionality provided:
+- Lane dictionary creation
+- Successor/predecessor mapping
+- Validation that all lanes are assigned to segments</p>
+<h3 id="concrete-implementations-for-osi-centerline-maps">Concrete Implementations for OSI Centerline Maps</h3>
+<p>In <code>maposicenterlinesegmentation.py</code>:</p>
+<h4 id="segmentosicenterline"><code>SegmentOsiCenterline</code></h4>
+<p>Concrete implementation of <code>Segment</code> for OSI centerline maps.</p>
+<h4 id="maposicenterlinesegmentation"><code>MapOsiCenterlineSegmentation</code></h4>
+<p>Concrete implementation of <code>MapSegmentation</code> for OSI centerline maps. Implements all abstract methods and provides the full segmentation pipeline including:
+- Parallel lane detection using spatial indexing
+- Intersection detection via graph analysis
+- Connection segment identification
+- Road ID updates
+- Trajectory segmentation</p>
+<h4 id="intersection-and-connectionsegment"><code>Intersection</code> and <code>ConnectionSegment</code></h4>
+<p>Specialized segment classes extending <code>SegmentOsiCenterline</code>:
+- <code>Intersection</code>: Represents junction segments (type = JUNCTION)
+- <code>ConnectionSegment</code>: Represents connection segments (type = STRAIGHT), also tracks which intersections it connects</p>
+<h2 id="inputs-and-data-model">Inputs and Data Model</h2>
+<p>The constructor expects a <code>recording</code> object with at least:
+- <code>recording.map</code>: provides <code>map.lanes</code> (iterable of lane objects)
+- <code>recording.traffic_light_states</code>: mapping of traffic light states over time (used to discover static traffic lights)</p>
+<h3 id="lane-object-requirements-for-osi-centerline-implementation">Lane Object Requirements (for OSI Centerline implementation)</h3>
+<p>Lane objects are assumed to provide:
+- <code>lane.idx</code>: a key/index object with fields: <code>.lane_id</code> (unique lane identifier) and <code>.road_id</code> (road grouping id)
+- <code>lane.centerline</code>: a shapely LineString geometry in meters
+- <code>lane.successor_ids</code> and <code>lane.predecessor_ids</code>: each item is either a lane ID or an object with <code>.lane_id</code>
+- Optional attributes set/used by MapSegmentation: <code>lane.on_intersection</code>, <code>lane.is_approaching</code>, and <code>lane.trafficlight</code></p>
+<p><strong>Note</strong>: Different map types may have different lane object requirements. Concrete implementations define how to extract this information via the abstract methods.</p>
+<p>Coordinate system and units:
+- All XY coordinates are in meters in a consistent local frame.</p>
+<h2 id="configuration-parameters">Configuration Parameters</h2>
+<p>Constructor parameters (with defaults) for <code>MapOsiCenterlineSegmentation</code>:
+- <code>lane_buffer</code> (float, default 0.3 m): buffer used to detect intersecting lanes (geometric proximity)
+- <code>intersection_overlap_buffer</code> (float, default 1.0 m): buffer used to determine when two intersections should be merged
+- <code>concave_hull_ratio</code> (float, default 0.3): ratio parameter for concave hull polygon generation (range 0-1, where 0 is convex hull and 1 is maximally concave)</p>
+<p>The base <code>MapSegmentation</code> class also accepts:
+- <code>concave_hull_ratio</code> (float, default 0.3): passed through to all segment instances for polygon generation</p>
+<p>Internal thresholds/constants:
+- Parallel lane search radius: 10 m (buffer around a lane when searching for parallels)
+- Parallel lane angle threshold: &lt; 10 degrees between centerline directions
+- Trajectory re-segmentation buffer around intersections: 5 m
+- Combine isolated connections connecting the same single intersection if polygon distance &lt; 5 m</p>
+<h2 id="segments-and-polygons">Segments and Polygons</h2>
+<p>Each segment is represented by a <code>Segment</code> base class with the following structure:
+- Holds <code>lanes</code>, <code>lane_ids</code>, <code>trafficlights</code>, <code>idx</code>, <code>type</code>
+- Computes a polygon once and caches it; polygon is a concave hull of the union of lane centerlines
+- <code>create_segment_polygon()</code> / <code>update_polygon()</code> maintain cache consistency
+- Uses abstract methods <code>_get_lane_id()</code> and <code>_get_lane_geometry()</code> to extract lane-specific information</p>
+<p>Specializations:
+- <code>Intersection(SegmentOsiCenterline)</code>: <code>type = JUNCTION</code>
+- <code>ConnectionSegment(SegmentOsiCenterline)</code>: <code>type = STRAIGHT</code>; also tracks <code>intersection_idxs</code> it connects</p>
+<p>Polygon generation uses <code>concave_hull</code> with ratio <code>0.3</code>. The polygon is re-built when lanes change. If concave hull fails, it falls back to convex hull.</p>
+<p><strong>Extensibility</strong>: To support a new map type, create:
+1. A concrete <code>Segment</code> subclass implementing the three abstract methods
+2. A concrete <code>MapSegmentation</code> subclass implementing the nine abstract methods
+3. Optionally, specialized segment types (like <code>Intersection</code> and <code>ConnectionSegment</code> for OSI centerline maps)</p>
+<h2 id="algorithms-and-key-details">Algorithms and Key Details</h2>
+<ul>
+<li>Parallel lane detection</li>
+<li>
+<p>For each lane, build a 10 m buffer around its centerline, query STRtree of original centerlines, then compare direction vectors (angle &lt; 10°) to mark as parallel.</p>
+</li>
+<li>
+<p>Intersecting lanes (potential junction membership)</p>
+</li>
+<li>
+<p>For each lane, create a <code>lane_buffer</code>-sized buffer and query STRtree for nearby lanes. Exclude successors, predecessors, and parallels. If candidate centerline intersects the buffer, it is considered intersecting.</p>
+</li>
+<li>
+<p>Intersection detection and merging</p>
+</li>
+<li>Build a graph where nodes are lanes and edges indicate geometric intersection; connected components form <code>Intersection</code> objects.</li>
+<li>Merge intersections whose polygons overlap when buffered by <code>intersection_overlap_buffer</code> to avoid fragmented junctions.</li>
+<li>
+<p>Add non-intersecting lanes that are contained within the buffered intersection polygon.</p>
+</li>
+<li>
+<p>Connection segments</p>
+</li>
+<li>For lanes not assigned to intersections, build a graph linking successors and predecessors; connected components form <code>ConnectionSegment</code> objects.</li>
+<li>
+<p>If multiple connection components connect the same pair(s) of intersections, merge them. If they relate to a single intersection, merge when polygons are within 5 m.</p>
+</li>
+<li>
+<p>Traffic lights</p>
+</li>
+<li>
+<p>From <code>recording.traffic_light_states</code>, unique traffic lights are collected and assigned to the nearest lane (via STRtree nearest query on centerlines).</p>
+</li>
+<li>
+<p>Trajectory segmentation</p>
+</li>
+<li><code>trajectory_segment_detection(trajectory)</code> maps a timestamped trajectory (n x 3: frame/time, x, y) to lane IDs via <code>Locator.xys2sts</code>, then to segment indices, and refines intersection assignment using buffered intersection polygons. Returns a list of tuples (trajectory_chunk, segment_object).</li>
+</ul>
+<h2 id="public-api-summary">Public API Summary</h2>
+<h3 id="base-classes-for-extension">Base Classes (for extension)</h3>
+<ul>
+<li><strong><code>MapSegmentation(recording)</code> (ABC)</strong></li>
+<li>Abstract base class for map segmentation implementations.</li>
+<li>Subclasses must implement 9 abstract methods for map-type-specific operations.</li>
+<li>
+<p>Provides common functionality: lane dictionaries, successor/predecessor mapping, validation.</p>
+</li>
+<li>
+<p><strong><code>Segment(lanes, idx=None)</code> (ABC)</strong></p>
+</li>
+<li>Abstract base class for segment implementations.</li>
+<li>Subclasses must implement 3 abstract methods for lane-specific operations.</li>
+<li>Provides polygon computation, caching, lane management, and road user analysis.</li>
+</ul>
+<h3 id="concrete-implementation-for-osi-centerline-maps">Concrete Implementation for OSI Centerline Maps</h3>
+<ul>
+<li><strong><code>MapOsiCenterlineSegmentation(recording, lane_buffer=0.3, intersection_overlap_buffer=1.0, concave_hull_ratio=0.3)</code></strong></li>
+<li>Create a segmentation object from a recording/map with OSI centerline lanes.</li>
+<li>Implements all abstract methods from <code>MapSegmentation</code>.</li>
+<li>
+<p><code>concave_hull_ratio</code>: Controls the shape of segment polygons (0=convex, 1=maximally concave).</p>
+</li>
+<li>
+<p><strong><code>init_intersections()</code></strong></p>
+</li>
+<li>
+<p>Run the full pipeline to populate intersections, connections, polygons, lane flags, traffic light mapping, and segment indices.</p>
+</li>
+<li>
+<p><strong><code>trajectory_segment_detection(trajectory: np.ndarray) -&gt; list[(np.ndarray, Segment)]</code></strong></p>
+</li>
+<li>
+<p>Split a time-ordered trajectory into segment-wise chunks; each chunk is an array of (time, x, y).</p>
+</li>
+<li>
+<p><strong><code>plot(output_plot=None, trajectory=None, plot_lane_ids=False, plot_intersection_polygons=False, plot_connection_polygons=False)</code></strong></p>
+</li>
+<li>
+<p>Plot lanes and segments; optionally render polygons and annotate IDs. If <code>output_plot</code> is a Path, saves a PDF.</p>
+</li>
+<li>
+<p><strong><code>plot_intersections(output_plot)</code></strong></p>
+</li>
+<li>Plot each intersection/connection into separate PDFs.</li>
+</ul>
+<h3 id="segment-classes">Segment Classes</h3>
+<ul>
+<li><strong><code>SegmentOsiCenterline(lanes, idx=None, concave_hull_ratio=0.3)</code></strong></li>
+<li>
+<p>Concrete segment implementation for OSI centerline maps.</p>
+</li>
+<li>
+<p><strong><code>Intersection(lanes, idx=None, concave_hull_ratio=0.3)</code></strong></p>
+</li>
+<li>
+<p>Specialized segment for junctions (extends <code>SegmentOsiCenterline</code>).</p>
+</li>
+<li>
+<p><strong><code>ConnectionSegment(lanes, idx=None, concave_hull_ratio=0.3)</code></strong></p>
+</li>
+<li>Specialized segment for connections (extends <code>SegmentOsiCenterline</code>).</li>
+</ul>
+<h2 id="assumptions-and-limitations">Assumptions and Limitations</h2>
+<ul>
+<li><strong>Geometry and units</strong></li>
+<li>Coordinates are meters in a consistent local frame; lane centerlines are valid shapely LineStrings.</li>
+<li>
+<p>The concave hull at ratio 0.3 yields sensible junction polygons; highly irregular geometries may need tuning.</p>
+</li>
+<li>
+<p><strong>Topology</strong></p>
+</li>
+<li>Successor/predecessor IDs are consistent with lane IDs (or objects exposing <code>.lane_id</code>).</li>
+<li>
+<p>Parallel lanes share a similar direction; 10° threshold may not capture very slight divergence or reversible lanes.</p>
+</li>
+<li>
+<p><strong>Spatial thresholds</strong></p>
+</li>
+<li><code>lane_buffer</code> (default 0.3 m) controls when lanes are deemed intersecting; maps with larger lane spacing may need higher values.</li>
+<li>
+<p><code>intersection_overlap_buffer</code> (default 1.0 m) controls intersection merging; too small can fragment, too large can over-merge.</p>
+</li>
+<li>
+<p><strong>Traffic lights</strong></p>
+</li>
+<li>
+<p>Assignment is nearest-centerline based. Complex lane-level signal mapping is out of scope.</p>
+</li>
+<li>
+<p><strong>Road ID updates</strong></p>
+</li>
+<li>
+<p><code>update_road_ids()</code> reassigns <code>lane.idx.road_id</code> to the segment index, modifies <code>lane.idx</code> and updates dict keys and successor/predecessor references. If external code relies on original road IDs or lane indices as dict keys, ensure compatibility before enabling this behavior downstream.</p>
+</li>
+<li>
+<p><strong>Performance</strong></p>
+</li>
+<li>
+<p>Uses STRtree spatial indices for near-neighbor queries. Still, very large maps may require tuning buffer sizes.</p>
+</li>
+<li>
+<p><strong>Robustness and warnings</strong></p>
+</li>
+<li>If a lane is encountered in more than one segment, a warning is printed and the assignment is not duplicated.</li>
+<li>
+<p>If no lanes or traffic lights exist, the pipeline degrades gracefully (empty structures).</p>
+</li>
+<li>
+<p><strong>Map type specific implementations</strong></p>
+</li>
+<li>Currently, only OSI centerline maps are fully implemented (<code>MapOsiCenterlineSegmentation</code>).</li>
+<li>To support other map types, implement the abstract methods in new subclasses of <code>MapSegmentation</code> and <code>Segment</code>.</li>
+</ul>
+<h2 id="edge-cases-to-consider">Edge Cases to Consider</h2>
+<ul>
+<li>Empty map (no lanes): all data structures remain empty; plotting produces a blank map.</li>
+<li>Degenerate or extremely short centerlines: parallel detection and hull computation can be unstable; ensure valid geometries.</li>
+<li>Very dense lane networks: increase <code>lane_buffer</code> and <code>intersection_overlap_buffer</code> prudently to avoid over-fragmentation.</li>
+<li>Miswired predecessors/successors: can impact approaching-lane marking and connection grouping.</li>
+<li>Trajectories straddling polygon boundaries: buffered checks attempt to align intersection membership; adjust <code>buffer=5</code> in <code>trajectory_segment_detection</code> if needed.</li>
+</ul>
+<h2 id="extensibility-notes">Extensibility Notes</h2>
+<ul>
+<li><strong>Supporting new map types</strong></li>
+<li>Create a concrete <code>Segment</code> subclass implementing:<ul>
+<li><code>_get_lane_id(lane)</code>: Extract lane ID</li>
+<li><code>_get_lane_geometry(lane)</code>: Extract lane geometry (LineString)</li>
+<li><code>set_trafficlight()</code>: Set traffic lights for the segment</li>
+</ul>
+</li>
+<li>Create a concrete <code>MapSegmentation</code> subclass implementing:<ul>
+<li><code>_get_lane_id(lane)</code>: Extract lane ID</li>
+<li><code>_get_lane_centerline(lane)</code>: Extract centerline</li>
+<li><code>_get_lane_successors(lane)</code>: Extract successor IDs</li>
+<li><code>_get_lane_predecessors(lane)</code>: Extract predecessor IDs</li>
+<li><code>_has_traffic_light(lane)</code>: Check for traffic light</li>
+<li><code>_get_traffic_light(lane)</code>: Get traffic light object</li>
+<li><code>_set_lane_on_intersection(lane, value)</code>: Set intersection flag</li>
+<li><code>_set_lane_is_approaching(lane, value)</code>: Set approaching flag</li>
+<li><code>_get_lane_on_intersection(lane)</code>: Get intersection status</li>
+</ul>
+</li>
+<li>
+<p>Optionally override methods like <code>init_intersections()</code> if the pipeline needs customization.</p>
+</li>
+<li>
+<p><strong>Additional segment types</strong></p>
+</li>
+<li>
+<p>The enum <code>MapSegmentType</code> includes non-used types (ramp_on, ramp_off, roundabout). You can add classifiers to set <code>segment.type</code> based on topology/geometry.</p>
+</li>
+<li>
+<p><strong>Alternative polygon generation</strong></p>
+</li>
+<li>
+<p>Swap concave hull for convex hull or buffered union, or adapt concave hull ratio per segment size by overriding <code>_compute_segment_polygon()</code> in your <code>Segment</code> subclass.</p>
+</li>
+<li>
+<p><strong>Better traffic light mapping</strong></p>
+</li>
+<li>
+<p>Replace nearest-lane heuristic with spatial joins to stop lines or explicit topology by overriding <code>set_lane_trafficlights()</code>.</p>
+</li>
+<li>
+<p><strong>Visualization</strong></p>
+</li>
+<li>Add tiled basemaps or interactive inspection leveraging geopandas/folium if appropriate by extending the <code>plot()</code> methods.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.instant.preview", "toc.follow", "search.suggest", "search.highlight", "navigation.tracking", "navigation.sections"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
