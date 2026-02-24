@@ -627,13 +627,11 @@ class Recording:
         elif r.map is None:
             warn(f"No map could be found: {map_parsing}")
 
-        if apply_proj:
-            if r.map is not None and r.projections:
+        if r.projections and apply_proj:
+            try:
                 r.apply_projections()
-            elif r.map is not None and not r.projections:
-                raise ValueError("Map is available but no projections are defined.")
-            elif r.map is None and r.projections:
-                raise ValueError("Projections are defined but no map is available.")
+            except Exception:
+                warn("Failed to apply projections.")
         return r
 
     def to_file(self, filepath):
