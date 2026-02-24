@@ -906,7 +906,7 @@ class Recording:
                 ax.plot(
                     x,
                     y,
-                    marker="o",
+                    marker="s",
                     label=f"Traffic Light {tl_dict[tl].id.value}",
                     c="blue",
                     alpha=0.7,
