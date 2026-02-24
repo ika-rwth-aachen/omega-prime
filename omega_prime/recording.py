@@ -584,6 +584,7 @@ class Recording:
         validate: bool = False,
         parse_map: bool = False,
         step_size: float = 0.01,
+        apply_proj: bool = True,
         **kwargs,
     ) -> "Recording":
         """Load a Recording from a file. Supports `.parquet`, `.osi` and `.mcap` files.
@@ -594,6 +595,7 @@ class Recording:
             validate (bool): Whether to validate the data against the schema.
             parse_map (bool): Whether to create python objects from the map data or just load it.
             step_size (float): Step size for map parsing, if applicable (Used for ASAM OpenDRIVE).
+            apply_proj (bool): Whether to apply projection transformations to the recording's moving object data.
 
         Returns:
             Recording (Recording): The loaded Recording object.
@@ -624,6 +626,14 @@ class Recording:
             r.map = map
         elif r.map is None:
             warn(f"No map could be found: {map_parsing}")
+            
+        if apply_proj:
+            if r.map is not None and r.projections:
+                r.apply_projections()
+            elif r.map is not None and not r.projections:
+                raise ValueError("TreMap is available but no projections are defined.")
+            elif r.map is None and r.projections:
+                raise ValueError("Projections are defined but no map is available.")
         return r
 
     def to_file(self, filepath):
