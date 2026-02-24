@@ -878,10 +878,8 @@ class Recording:
             if idx == self.host_vehicle_idx:
                 ax.plot(*mv["x", "y"], c="red", label=f"{idx} - HV")
                 continue
-            if mvs_plt_type == "scatter":
-                plot_fn(*mv["x", "y"], label=str(idx), **base_kwargs)
-            else:
-                plot_fn(*mv["x", "y"], label=str(idx), **base_kwargs)
+            plot_fn(*mv["x", "y"], label=str(idx), **base_kwargs)
+
         if legend:
             ax = self._create_legend(ax)
         return ax
