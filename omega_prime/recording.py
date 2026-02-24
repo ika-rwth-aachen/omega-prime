@@ -626,12 +626,12 @@ class Recording:
             r.map = map
         elif r.map is None:
             warn(f"No map could be found: {map_parsing}")
-            
+
         if apply_proj:
             if r.map is not None and r.projections:
                 r.apply_projections()
             elif r.map is not None and not r.projections:
-                raise ValueError("TreMap is available but no projections are defined.")
+                raise ValueError("Map is available but no projections are defined.")
             elif r.map is None and r.projections:
                 raise ValueError("Projections are defined but no map is available.")
         return r
@@ -841,7 +841,7 @@ class Recording:
         def sort_key(item):
             label = item[1]
             if label == host_label:
-                return (-1, -1)  
+                return (-1, -1)
             try:
                 return (0, int(label))
             except ValueError:
