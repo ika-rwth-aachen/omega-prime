@@ -834,28 +834,58 @@ class Recording:
         new_df = pl.concat(new_dfs)
         return self.__init__(df=new_df, map=self.map, host_vehicle_idx=self.host_vehicle_idx)
 
-    def plot(self, ax=None, legend=False) -> plt.Axes:
+    def _create_legend(self, ax):
+        handles, labels = ax.get_legend_handles_labels()
+        host_label = f"{self.host_vehicle_idx} - HV"
+
+        def sort_key(item):
+            label = item[1]
+            if label == host_label:
+                return (-1, -1)  
+            try:
+                return (0, int(label))
+            except ValueError:
+                return (0, float("inf"))  # non-numeric labels go last
+
+        items = sorted(zip(handles, labels), key=sort_key)
+        handles, labels = zip(*items)
+        ax.legend(handles, labels, loc="center left", bbox_to_anchor=(1, 0.5))
+        return ax
+
+    def plot(self, ax=None, legend=False, mvs_plt_type: str = "scatter") -> plt.Axes:
         "Generate a static plot of the recording using Matplotlib. Plots the map (if available), moving objects, and traffic light states."
         if ax is None:
             fig, ax = plt.subplots(1, 1)
             ax.set_aspect(1)
         if self.map:
             self.map.plot(ax)
-        self.plot_mvs(ax=ax)
+        self.plot_mvs(ax=ax, mvs_plt_type=mvs_plt_type)
         self.plot_tl(ax=ax)
         if legend:
-            ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+            ax = self._create_legend(ax)
         return ax
 
-    def plot_mvs(self, ax=None, legend=False):
+    def plot_mvs(self, ax=None, legend=False, mvs_plt_type: str = "scatter"):
         "Generate a static plot of the moving objects in the recording using Matplotlib."
         if ax is None:
             fig, ax = plt.subplots(1, 1)
             ax.set_aspect(1)
-        for [idx], mv in self._df["idx", "x", "y"].group_by("idx"):
-            ax.plot(*mv["x", "y"], c="red", alpha=0.5, label=str(idx))
+        plot_fn = {"scatter": ax.scatter, "plot": ax.plot}.get(mvs_plt_type)
+        if plot_fn is None:
+            raise ValueError("`mvs_plt_type` must be one of: 'scatter', 'plot'.")
+
+        plot_df = self._df["idx", "x", "y"]
+        base_kwargs = {"alpha": 0.5}
+        for [idx], mv in plot_df.group_by("idx"):
+            if idx == self.host_vehicle_idx:
+                ax.plot(*mv["x", "y"], c="red", label=f"{idx} - HV")
+                continue
+            if mvs_plt_type == "scatter":
+                plot_fn(*mv["x", "y"], label=str(idx), **base_kwargs)
+            else:
+                plot_fn(*mv["x", "y"], label=str(idx), **base_kwargs)
         if legend:
-            ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+            ax = self._create_legend(ax)
         return ax
 
     def plot_tl(self, ax=None):
