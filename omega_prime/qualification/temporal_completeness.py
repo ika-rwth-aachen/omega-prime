@@ -14,6 +14,10 @@ def temporal_completeness(
     /,
     expected_frequency: float,
 ) -> QRT:
+    
+    if expected_frequency <= 0.0:
+        raise ValueError(f'expected_frequency must be > 0, got {expected_frequency}')
+    
     delta_target = 1.0 / expected_frequency
     track_threshold = 0.95
 
