@@ -41,7 +41,7 @@ def temporal_completeness(
     summary = pl.DataFrame(
         {
             TEMPORAL_COMPLETENESS: temporal_completeness,
-            STATUS: [PASS if temporal_completeness == 100.0 else FAIL],
+            STATUS: [PASS if temporal_completeness > 99.999999999 else FAIL],
         }
     ).lazy()
 
