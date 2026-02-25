@@ -11,11 +11,7 @@ OBJECT_TYPE_COVERAGE = "object_type_coverage"
 
 
 @metric(computes_properties=[OBJECT_TYPE_COVERAGE])
-def object_type_coverage(
-    df: pl.LazyFrame | pl.DataFrame,
-    /,
-    expected_types: Sequence[MovingObjectType],
-) -> QRT:
+def object_type_coverage(df: pl.LazyFrame, /, expected_types: Sequence[MovingObjectType]) -> QRT:
     present_types = df.select("type").unique().collect().to_series()
     et_set = set(expected_types)
     otc = sum(et in present_types for et in et_set) * 100.0 / len(et_set)

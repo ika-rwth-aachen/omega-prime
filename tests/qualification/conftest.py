@@ -9,7 +9,7 @@ from omega_prime.qualification.common import STATUS, PASS, FAIL
 import polars as pl
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def rec(files_dir: Path):
     return omega_prime.Recording.from_file(str(files_dir / "pedestrian.osi"))
 
