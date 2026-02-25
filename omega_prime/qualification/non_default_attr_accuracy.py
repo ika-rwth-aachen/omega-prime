@@ -75,13 +75,12 @@ def non_default_attributes_accuracy(df: pl.LazyFrame, /, columns: Sequence[str] 
         items = format_items(sorted(absent_cols))
         raise ValueError(f"Column{ending} {items} {is_verb} absent in the data frame.")
 
-    existing_cols = cc - absent_cols
-    s_cc = df.select(existing_cols)
-    gen_expr = (pl.col(c) == get_default_value(schema[c]) for c in existing_cols)
+    s_cc = df.select(cc)
+    gen_expr = (pl.col(c) == get_default_value(schema[c]) for c in cc)
     select = s_cc.select(pl.sum_horizontal(*gen_expr).sum())
     num_def = int(select.collect().item(0, 0))
 
-    num_rec = get_num_rows(df) * len(existing_cols)
+    num_rec = get_num_rows(df) * len(cc)
     value = 100.0 * (num_rec - num_def) / num_rec
 
     summary = pl.DataFrame(
