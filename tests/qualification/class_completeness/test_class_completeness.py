@@ -9,6 +9,7 @@ from omega_prime.qualification.class_completeness import (
     class_completeness,
     CLASS_COMPLETENESS,
     SUBTYPE_COMPLETENESS,
+    ROLE_COMPLETENESS,
 )
 
 from ..conftest import qualification_assert
@@ -24,6 +25,7 @@ expected_fail = [
     betterosi.MovingObjectType.TYPE_ANIMAL,
 ]
 vct = betterosi.MovingObjectVehicleClassificationType
+vcr = betterosi.MovingObjectVehicleClassificationRole
 
 @pytest.fixture()
 def class_df() -> pl.LazyFrame:
@@ -50,6 +52,23 @@ def class_df_with_subtype() -> pl.LazyFrame:
                 -1,
                 int(vct.TYPE_CAR),
                 int(vct.TYPE_BICYCLE),
+            ],
+        }
+    ).lazy()
+
+@pytest.fixture()
+def class_df_with_role() -> pl.LazyFrame:
+    return pl.DataFrame(
+        {
+            "type": [
+                int(betterosi.MovingObjectType.TYPE_PEDESTRIAN),
+                int(betterosi.MovingObjectType.TYPE_VEHICLE),
+                int(betterosi.MovingObjectType.TYPE_VEHICLE),
+            ],
+            "role": [
+                -1,
+                int(vcr.ROLE_CIVIL),
+                int(vcr.ROLE_POLICE),
             ],
         }
     ).lazy()
@@ -97,4 +116,33 @@ def test_subtype_not_required(class_df) -> None:
         expected_subtype=None,
     )
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=SUBTYPE_COMPLETENESS)
+    qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
+
+def test_role_pass(class_df_with_role) -> None:
+    expected_roles = [vcr.ROLE_CIVIL, vcr.ROLE_POLICE]
+    _df, result_dict = class_completeness(
+        class_df_with_role,
+        expected_classes=expected_pass,
+        expected_role=expected_roles,
+    )
+    qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=ROLE_COMPLETENESS)
+    qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
+
+def test_role_fail(class_df_with_role) -> None:
+    expected_roles = [vcr.ROLE_CIVIL, vcr.ROLE_POLICE, vcr.ROLE_AMBULANCE]
+    _df, result_dict = class_completeness(
+        class_df_with_role,
+        expected_classes=expected_pass,
+        expected_role=expected_roles,
+    )
+    qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False, sub_metric_name=ROLE_COMPLETENESS)
+    qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, False)
+
+def test_role_not_required(class_df) -> None:
+    _df, result_dict = class_completeness(
+        class_df,
+        expected_classes=expected_pass,
+        expected_role=None,
+    )
+    qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=ROLE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
