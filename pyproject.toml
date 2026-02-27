@@ -54,6 +54,8 @@ version = "0.2.0"
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
 Repository = "https://github.com/ika-rwth-aachen/omega-prime"
 Documentation = "https://ika-rwth-aachen.github.io/omega-prime/"
+ChangeLog = "https://ika-rwth-aachen.github.io/omega-prime/CHANGELOG.md"
+
 
 [project.optional-dependencies]
 test = ['ruff', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets', 'mkdocs-jupyter', 'mkdocs-material', 'mkdocstrings[python]', 'mkdocs-typer2']
