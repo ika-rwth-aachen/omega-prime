@@ -93,12 +93,14 @@ def test_fail(class_df) -> None:
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, False, sub_metric_name=ROLE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False)
 
+
 def test_record_pass(rec: Recording) -> None:
     _df, result_dict = class_completeness(rec.df.lazy(), expected_types=expected_pass)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=TYPE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=SUBTYPE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=ROLE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
+
 
 def test_record_fail(rec: Recording) -> None:
     _df, result_dict = class_completeness(
@@ -111,6 +113,7 @@ def test_record_fail(rec: Recording) -> None:
     qualification_assert(result_dict, CLASS_COMPLETENESS, 0.0, False, sub_metric_name=SUBTYPE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 0.0, False, sub_metric_name=ROLE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 0.0, False)
+
 
 def test_record_fail(rec: Recording) -> None:
     _df, result_dict = class_completeness(rec.df.lazy(), expected_types=expected_fail)
@@ -140,7 +143,9 @@ def test_subtype_fail(class_df_with_subtype) -> None:
         expected_subtypes=expected_subtypes,
     )
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, False, sub_metric_name=TYPE_COMPLETENESS)
-    qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False, sub_metric_name=SUBTYPE_COMPLETENESS)
+    qualification_assert(
+        result_dict, CLASS_COMPLETENESS, 66.66666666666667, False, sub_metric_name=SUBTYPE_COMPLETENESS
+    )
     qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False)
 
 
@@ -175,7 +180,7 @@ def test_role_fail(class_df_with_role) -> None:
         expected_types=expected_pass,
         expected_roles=expected_roles,
     )
-    
+
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, False, sub_metric_name=TYPE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, False, sub_metric_name=SUBTYPE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False, sub_metric_name=ROLE_COMPLETENESS)
