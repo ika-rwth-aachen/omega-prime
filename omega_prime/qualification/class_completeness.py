@@ -25,20 +25,7 @@ def class_completeness(
     expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] | None = None,
     expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] | None = None,
 ) -> QRT:
-    if not expected_types:
-        raise ValueError("expected_types must be provided")
-
-    expected_set = _normalize_expected(expected_types)
-    if not expected_set:
-        raise ValueError("expected_types must contain at least one valid entry")
-
-    try:
-        observed = df.select(pl.col("type").drop_nulls().unique()).collect().get_column("type").to_list()
-    except pl.exceptions.ColumnNotFoundError:
-        observed = []
-
-    observed_set = {v for v in observed if not (isinstance(v, int | float) and v < 0)}
-    type_completeness = (len(expected_set & observed_set) / len(expected_set)) * 100.0
+    type_completeness_score = type_completeness(df, expected_types)
 
     subtype_completeness_score = 100.0
     subtype_completeness_is_applicable = (
@@ -59,7 +46,7 @@ def class_completeness(
         role_completeness_score = role_completeness(df, expected_roles)
 
     passes = (
-        type_completeness > 99.999999999
+        type_completeness_score > 99.999999999
         and (not subtype_completeness_is_applicable or subtype_completeness_score > 99.999999999)
         and (not role_completeness_is_applicable or role_completeness_score > 99.999999999)
     )
@@ -67,8 +54,8 @@ def class_completeness(
 
     summary = pl.DataFrame(
         {
-            CLASS_COMPLETENESS: min(type_completeness, subtype_completeness_score, role_completeness_score),
-            TYPE_COMPLETENESS: type_completeness,
+            CLASS_COMPLETENESS: min(type_completeness_score, subtype_completeness_score, role_completeness_score),
+            TYPE_COMPLETENESS: type_completeness_score,
             SUBTYPE_COMPLETENESS: subtype_completeness_score if subtype_completeness_is_applicable else 100.0,
             ROLE_COMPLETENESS: role_completeness_score if role_completeness_is_applicable else 100.0,
             STATUS: [status],
@@ -78,24 +65,23 @@ def class_completeness(
     return df, {CLASS_COMPLETENESS: summary}
 
 
+def type_completeness(
+    df: pl.LazyFrame,
+    expected_types: Sequence[betterosi.MovingObjectType],
+) -> float:
+    if not expected_types:
+        raise ValueError("expected_types must be provided")
+
+    return _completeness_for_column(df, "type", expected_types, "expected_types")
+
+
 def subtype_completeness(
     df: pl.LazyFrame,
     expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] | None,
 ) -> float:
     if not expected_subtypes:
         return 100.0
-
-    expected_subtype_set = _normalize_expected(expected_subtypes)
-    if not expected_subtype_set:
-        raise ValueError("expected_subtypes must contain at least one valid entry")
-
-    try:
-        observed_subtype = df.select(pl.col("subtype").drop_nulls().unique()).collect().get_column("subtype").to_list()
-    except pl.exceptions.ColumnNotFoundError:
-        observed_subtype = []
-    observed_subtype_set = {v for v in observed_subtype if not (isinstance(v, int | float) and v < 0)}
-    subtype_completeness = (len(expected_subtype_set & observed_subtype_set) / len(expected_subtype_set)) * 100.0
-    return subtype_completeness
+    return _completeness_for_column(df, "subtype", expected_subtypes, "expected_subtypes")
 
 
 def role_completeness(
@@ -104,18 +90,29 @@ def role_completeness(
 ) -> float:
     if not expected_roles:
         return 100.0
+    return _completeness_for_column(df, "role", expected_roles, "expected_roles")
 
-    expected_role_set = _normalize_expected(expected_roles)
-    if not expected_role_set:
-        raise ValueError("expected_roles must contain at least one valid entry")
+
+def _completeness_for_column(
+    df: pl.LazyFrame,
+    column: str,
+    expected_values: Sequence[
+        betterosi.MovingObjectType
+        | betterosi.MovingObjectVehicleClassificationType
+        | betterosi.MovingObjectVehicleClassificationRole
+    ],
+    expected_label: str,
+) -> float:
+    expected_set = _normalize_expected(expected_values)
+    if not expected_set:
+        raise ValueError(f"{expected_label} must contain at least one valid entry")
 
     try:
-        observed_role = df.select(pl.col("role").drop_nulls().unique()).collect().get_column("role").to_list()
+        observed = df.select(pl.col(column).drop_nulls().unique()).collect().get_column(column).to_list()
     except pl.exceptions.ColumnNotFoundError:
-        observed_role = []
-    observed_role_set = {v for v in observed_role if not (isinstance(v, int | float) and v < 0)}
-    role_completeness = (len(expected_role_set & observed_role_set) / len(expected_role_set)) * 100.0
-    return role_completeness
+        observed = []
+    observed_set = {v for v in observed if not (isinstance(v, int | float) and v < 0)}
+    return (len(expected_set & observed_set) / len(expected_set)) * 100.0
 
 
 def _normalize_expected(
