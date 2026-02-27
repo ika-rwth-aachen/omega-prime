@@ -1,8 +1,9 @@
 """."""
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from enum import Enum
-from typing import Union
 
 import betterosi
 import polars as pl
@@ -117,11 +118,9 @@ def role_completeness(
 
 def _normalize_expected(
     values: Sequence[
-        Union[
-            betterosi.MovingObjectType,
-            betterosi.MovingObjectVehicleClassificationType,
-            betterosi.MovingObjectVehicleClassificationRole,
-        ]
+        betterosi.MovingObjectType
+        | betterosi.MovingObjectVehicleClassificationType
+        | betterosi.MovingObjectVehicleClassificationRole
     ],
 ) -> set[int]:
     expected: set[int] = set()
