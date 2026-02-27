@@ -21,16 +21,16 @@ ROLE_COMPLETENESS = "vehicle_role_completeness"
 def class_completeness(
     df: pl.LazyFrame,
     /,
-    expected_type: Sequence[betterosi.MovingObjectType],
-    expected_subtype: Sequence[betterosi.MovingObjectVehicleClassificationType] | None = None,
-    expected_role: Sequence[betterosi.MovingObjectVehicleClassificationRole] | None = None,
+    expected_types: Sequence[betterosi.MovingObjectType],
+    expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] | None = None,
+    expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] | None = None,
 ) -> QRT:
-    if not expected_type:
-        raise ValueError("expected_type must be provided")
+    if not expected_types:
+        raise ValueError("expected_types must be provided")
 
-    expected_set = _normalize_expected(expected_type)
+    expected_set = _normalize_expected(expected_types)
     if not expected_set:
-        raise ValueError("expected_type must contain at least one valid entry")
+        raise ValueError("expected_types must contain at least one valid entry")
 
     try:
         observed = df.select(pl.col("type").drop_nulls().unique()).collect().get_column("type").to_list()
@@ -42,21 +42,21 @@ def class_completeness(
 
     subtype_completeness_score = 100.0
     subtype_completeness_is_applicable = (
-        expected_subtype is not None
-        and len(expected_subtype) > 0
-        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_type
+        expected_subtypes is not None
+        and len(expected_subtypes) > 0
+        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_types
     )
     if subtype_completeness_is_applicable:
-        subtype_completeness_score = subtype_completeness(df, expected_subtype)
+        subtype_completeness_score = subtype_completeness(df, expected_subtypes)
 
     role_completeness_score = 100.0
     role_completeness_is_applicable = (
-        expected_role is not None
-        and len(expected_role) > 0
-        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_type
+        expected_roles is not None
+        and len(expected_roles) > 0
+        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_types
     )
     if role_completeness_is_applicable:
-        role_completeness_score = role_completeness(df, expected_role)
+        role_completeness_score = role_completeness(df, expected_roles)
 
     passes = (
         type_completeness > 99.999999999
@@ -80,14 +80,14 @@ def class_completeness(
 
 def subtype_completeness(
     df: pl.LazyFrame,
-    expected_subtype: Sequence[betterosi.MovingObjectVehicleClassificationType] | None,
+    expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] | None,
 ) -> float:
-    if not expected_subtype:
+    if not expected_subtypes:
         return 100.0
 
-    expected_subtype_set = _normalize_expected(expected_subtype)
+    expected_subtype_set = _normalize_expected(expected_subtypes)
     if not expected_subtype_set:
-        raise ValueError("expected_subtype must contain at least one valid entry")
+        raise ValueError("expected_subtypes must contain at least one valid entry")
 
     try:
         observed_subtype = df.select(pl.col("subtype").drop_nulls().unique()).collect().get_column("subtype").to_list()
@@ -100,14 +100,14 @@ def subtype_completeness(
 
 def role_completeness(
     df: pl.LazyFrame,
-    expected_role: Sequence[betterosi.MovingObjectVehicleClassificationRole] | None,
+    expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] | None,
 ) -> float:
-    if not expected_role:
+    if not expected_roles:
         return 100.0
 
-    expected_role_set = _normalize_expected(expected_role)
+    expected_role_set = _normalize_expected(expected_roles)
     if not expected_role_set:
-        raise ValueError("expected_role must contain at least one valid entry")
+        raise ValueError("expected_roles must contain at least one valid entry")
 
     try:
         observed_role = df.select(pl.col("role").drop_nulls().unique()).collect().get_column("role").to_list()
