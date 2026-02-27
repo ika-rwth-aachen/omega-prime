@@ -31,16 +31,11 @@ def class_completeness(
         raise ValueError("expected_classes must contain at least one valid entry")
 
     try:
-        observed = (
-            df.select(pl.col("type").drop_nulls().unique())
-            .collect()
-            .get_column("type")
-            .to_list()
-        )
+        observed = df.select(pl.col("type").drop_nulls().unique()).collect().get_column("type").to_list()
     except pl.exceptions.ColumnNotFoundError:
         observed = []
 
-    observed_set = {v for v in observed if not (isinstance(v, (int, float)) and v < 0)}
+    observed_set = {v for v in observed if not (isinstance(v, int | float) and v < 0)}
     class_completeness = (len(expected_set & observed_set) / len(expected_set)) * 100.0
 
     subtype_completeness_score = 100.0
@@ -92,15 +87,10 @@ def subtype_completeness(
         raise ValueError("expected_subtype must contain at least one valid entry")
 
     try:
-        observed_subtype = (
-            df.select(pl.col("subtype").drop_nulls().unique())
-            .collect()
-            .get_column("subtype")
-            .to_list()
-        )
+        observed_subtype = df.select(pl.col("subtype").drop_nulls().unique()).collect().get_column("subtype").to_list()
     except pl.exceptions.ColumnNotFoundError:
         observed_subtype = []
-    observed_subtype_set = {v for v in observed_subtype if not (isinstance(v, (int, float)) and v < 0)}
+    observed_subtype_set = {v for v in observed_subtype if not (isinstance(v, int | float) and v < 0)}
     subtype_completeness = (len(expected_subtype_set & observed_subtype_set) / len(expected_subtype_set)) * 100.0
     return subtype_completeness
 
@@ -117,15 +107,10 @@ def role_completeness(
         raise ValueError("expected_role must contain at least one valid entry")
 
     try:
-        observed_role = (
-            df.select(pl.col("role").drop_nulls().unique())
-            .collect()
-            .get_column("role")
-            .to_list()
-        )
+        observed_role = df.select(pl.col("role").drop_nulls().unique()).collect().get_column("role").to_list()
     except pl.exceptions.ColumnNotFoundError:
         observed_role = []
-    observed_role_set = {v for v in observed_role if not (isinstance(v, (int, float)) and v < 0)}
+    observed_role_set = {v for v in observed_role if not (isinstance(v, int | float) and v < 0)}
     role_completeness = (len(expected_role_set & observed_role_set) / len(expected_role_set)) * 100.0
     return role_completeness
 
@@ -145,7 +130,7 @@ def _normalize_expected(
             continue
         if isinstance(v, Enum):
             v = int(v)
-        if isinstance(v, (int, float)) and v < 0:
+        if isinstance(v, int | float) and v < 0:
             continue
         expected.add(v)
     return expected

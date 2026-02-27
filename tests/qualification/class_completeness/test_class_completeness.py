@@ -27,6 +27,7 @@ expected_fail = [
 vct = betterosi.MovingObjectVehicleClassificationType
 vcr = betterosi.MovingObjectVehicleClassificationRole
 
+
 @pytest.fixture()
 def class_df() -> pl.LazyFrame:
     return pl.DataFrame(
@@ -38,6 +39,7 @@ def class_df() -> pl.LazyFrame:
             ]
         }
     ).lazy()
+
 
 @pytest.fixture()
 def class_df_with_subtype() -> pl.LazyFrame:
@@ -56,6 +58,7 @@ def class_df_with_subtype() -> pl.LazyFrame:
         }
     ).lazy()
 
+
 @pytest.fixture()
 def class_df_with_role() -> pl.LazyFrame:
     return pl.DataFrame(
@@ -73,21 +76,26 @@ def class_df_with_role() -> pl.LazyFrame:
         }
     ).lazy()
 
+
 def test_pass(class_df) -> None:
     _df, result_dict = class_completeness(class_df, expected_classes=expected_pass)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
+
 
 def test_fail(class_df) -> None:
     _df, result_dict = class_completeness(class_df, expected_classes=expected_fail)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False)
 
+
 def test_record_pass(rec: Recording) -> None:
     _df, result_dict = class_completeness(rec.df.lazy(), expected_classes=expected_pass)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
 
+
 def test_record_fail(rec: Recording) -> None:
     _df, result_dict = class_completeness(rec.df.lazy(), expected_classes=expected_fail)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False)
+
 
 def test_subtype_pass(class_df_with_subtype) -> None:
     expected_subtypes = [vct.TYPE_CAR, vct.TYPE_BICYCLE]
@@ -99,6 +107,7 @@ def test_subtype_pass(class_df_with_subtype) -> None:
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=SUBTYPE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
 
+
 def test_subtype_fail(class_df_with_subtype) -> None:
     expected_subtypes = [vct.TYPE_CAR, vct.TYPE_BICYCLE, vct.TYPE_BUS]
     _df, result_dict = class_completeness(
@@ -106,8 +115,11 @@ def test_subtype_fail(class_df_with_subtype) -> None:
         expected_classes=expected_pass,
         expected_subtype=expected_subtypes,
     )
-    qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False, sub_metric_name=SUBTYPE_COMPLETENESS)
+    qualification_assert(
+        result_dict, CLASS_COMPLETENESS, 66.66666666666667, False, sub_metric_name=SUBTYPE_COMPLETENESS
+    )
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, False)
+
 
 def test_subtype_not_required(class_df) -> None:
     _df, result_dict = class_completeness(
@@ -117,6 +129,7 @@ def test_subtype_not_required(class_df) -> None:
     )
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=SUBTYPE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
+
 
 def test_role_pass(class_df_with_role) -> None:
     expected_roles = [vcr.ROLE_CIVIL, vcr.ROLE_POLICE]
@@ -128,6 +141,7 @@ def test_role_pass(class_df_with_role) -> None:
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True, sub_metric_name=ROLE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, True)
 
+
 def test_role_fail(class_df_with_role) -> None:
     expected_roles = [vcr.ROLE_CIVIL, vcr.ROLE_POLICE, vcr.ROLE_AMBULANCE]
     _df, result_dict = class_completeness(
@@ -137,6 +151,7 @@ def test_role_fail(class_df_with_role) -> None:
     )
     qualification_assert(result_dict, CLASS_COMPLETENESS, 66.66666666666667, False, sub_metric_name=ROLE_COMPLETENESS)
     qualification_assert(result_dict, CLASS_COMPLETENESS, 100.0, False)
+
 
 def test_role_not_required(class_df) -> None:
     _df, result_dict = class_completeness(
