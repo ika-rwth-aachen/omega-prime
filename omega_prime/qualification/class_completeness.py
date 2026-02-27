@@ -12,6 +12,7 @@ from ..metrics import metric
 from .common import STATUS, PASS, FAIL, QRT
 
 CLASS_COMPLETENESS = "class_completeness"
+TYPE_COMPLETENESS = "moving_object_type_completeness"
 SUBTYPE_COMPLETENESS = "vehicle_subtype_completeness"
 ROLE_COMPLETENESS = "vehicle_role_completeness"
 
@@ -20,16 +21,16 @@ ROLE_COMPLETENESS = "vehicle_role_completeness"
 def class_completeness(
     df: pl.LazyFrame,
     /,
-    expected_classes: Sequence[betterosi.MovingObjectType],
+    expected_type: Sequence[betterosi.MovingObjectType],
     expected_subtype: Sequence[betterosi.MovingObjectVehicleClassificationType] | None = None,
     expected_role: Sequence[betterosi.MovingObjectVehicleClassificationRole] | None = None,
 ) -> QRT:
-    if not expected_classes:
-        raise ValueError("expected_classes must be provided")
+    if not expected_type:
+        raise ValueError("expected_type must be provided")
 
-    expected_set = _normalize_expected(expected_classes)
+    expected_set = _normalize_expected(expected_type)
     if not expected_set:
-        raise ValueError("expected_classes must contain at least one valid entry")
+        raise ValueError("expected_type must contain at least one valid entry")
 
     try:
         observed = df.select(pl.col("type").drop_nulls().unique()).collect().get_column("type").to_list()
@@ -37,13 +38,13 @@ def class_completeness(
         observed = []
 
     observed_set = {v for v in observed if not (isinstance(v, int | float) and v < 0)}
-    class_completeness = (len(expected_set & observed_set) / len(expected_set)) * 100.0
+    type_completeness = (len(expected_set & observed_set) / len(expected_set)) * 100.0
 
     subtype_completeness_score = 100.0
     subtype_completeness_is_applicable = (
         expected_subtype is not None
         and len(expected_subtype) > 0
-        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_classes
+        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_type
     )
     if subtype_completeness_is_applicable:
         subtype_completeness_score = subtype_completeness(df, expected_subtype)
@@ -52,13 +53,13 @@ def class_completeness(
     role_completeness_is_applicable = (
         expected_role is not None
         and len(expected_role) > 0
-        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_classes
+        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_type
     )
     if role_completeness_is_applicable:
         role_completeness_score = role_completeness(df, expected_role)
 
     passes = (
-        class_completeness > 99.999999999
+        type_completeness > 99.999999999
         and (not subtype_completeness_is_applicable or subtype_completeness_score > 99.999999999)
         and (not role_completeness_is_applicable or role_completeness_score > 99.999999999)
     )
@@ -66,7 +67,8 @@ def class_completeness(
 
     summary = pl.DataFrame(
         {
-            CLASS_COMPLETENESS: class_completeness,
+            CLASS_COMPLETENESS: min(type_completeness, subtype_completeness_score, role_completeness_score),
+            TYPE_COMPLETENESS: type_completeness,
             SUBTYPE_COMPLETENESS: subtype_completeness_score if subtype_completeness_is_applicable else 100.0,
             ROLE_COMPLETENESS: role_completeness_score if role_completeness_is_applicable else 100.0,
             STATUS: [status],
