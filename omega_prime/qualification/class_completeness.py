@@ -22,26 +22,18 @@ def class_completeness(
     df: pl.LazyFrame,
     /,
     expected_types: Sequence[betterosi.MovingObjectType],
-    expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] | None = None,
-    expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] | None = None,
+    expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] = tuple(),
+    expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] = tuple(),
 ) -> QRT:
     type_completeness_score = type_completeness(df, expected_types)
 
     subtype_completeness_score = 100.0
-    subtype_completeness_is_applicable = (
-        expected_subtypes is not None
-        and len(expected_subtypes) > 0
-        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_types
-    )
+    subtype_completeness_is_applicable = betterosi.MovingObjectType.TYPE_VEHICLE in expected_types
     if subtype_completeness_is_applicable:
         subtype_completeness_score = subtype_completeness(df, expected_subtypes)
 
     role_completeness_score = 100.0
-    role_completeness_is_applicable = (
-        expected_roles is not None
-        and len(expected_roles) > 0
-        and betterosi.MovingObjectType.TYPE_VEHICLE in expected_types
-    )
+    role_completeness_is_applicable = betterosi.MovingObjectType.TYPE_VEHICLE in expected_types
     if role_completeness_is_applicable:
         role_completeness_score = role_completeness(df, expected_roles)
 
@@ -77,7 +69,7 @@ def type_completeness(
 
 def subtype_completeness(
     df: pl.LazyFrame,
-    expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] | None,
+    expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] = tuple(),
 ) -> float:
     if not expected_subtypes:
         return 100.0
@@ -86,7 +78,7 @@ def subtype_completeness(
 
 def role_completeness(
     df: pl.LazyFrame,
-    expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] | None,
+    expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] = tuple(),
 ) -> float:
     if not expected_roles:
         return 100.0
