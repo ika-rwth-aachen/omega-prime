@@ -6,3 +6,5 @@
    - Object type coverage
    - Record completeness
    - Temporal completeness
+   - Class completeness
+   - Duplicate record rate
