@@ -186,11 +186,7 @@ def test_subtype_fail(class_df_with_subtype) -> None:
 
 
 def test_subtype_not_required(class_df) -> None:
-    _df, result_dict = class_completeness(
-        class_df,
-        expected_types=expected_pass,
-        expected_subtypes=None,
-    )
+    _df, result_dict = class_completeness(class_df, expected_types=expected_pass)
 
     assert_class_completeness(
         result_dict,
@@ -242,11 +238,7 @@ def test_role_fail(class_df_with_role) -> None:
 
 
 def test_role_not_required(class_df) -> None:
-    _df, result_dict = class_completeness(
-        class_df,
-        expected_types=expected_pass,
-        expected_roles=None,
-    )
+    _df, result_dict = class_completeness(class_df, expected_types=expected_pass)
     assert_class_completeness(
         result_dict,
         expected_values={
