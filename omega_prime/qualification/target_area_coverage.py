@@ -12,11 +12,16 @@ from pyproj import CRS, Transformer
 from omega_prime import Recording
 
 from ..metrics import metric
+from .common import STATUS, PASS, FAIL, QRT
 
 
-@metric(computes_properties=["target_area_coverage", "target_area_frame_coverage"])
+TARGET_AREA_COVERAGE = "target_area_coverage"
+TARGET_AREA_FRAME_COVERAGE = "target_area_frame_coverage"
+
+
+@metric(computes_properties=[TARGET_AREA_COVERAGE, TARGET_AREA_FRAME_COVERAGE])
 def target_area_coverage(
-    df: pl.LazyFrame | pl.DataFrame,
+    df: pl.LazyFrame,
     /,
     expected_area_coords: Sequence[tuple[float, float]],
     threshold: float = 80.0,
@@ -24,7 +29,7 @@ def target_area_coverage(
     frame_column: str = "total_nanos",
     expected_area_crs: str | CRS | None = "EPSG:4326",
     recording: Recording | None = None,
-):
+) -> QRT:
     if len(expected_area_coords) < 3:
         raise ValueError("expected_area_coords must contain at least three coordinate pairs")
 
@@ -60,7 +65,7 @@ def target_area_coverage(
     else:
         coverage = 100.0 if expected_area == 0 else 0.0
 
-    status = "pass" if coverage >= threshold else "fail"
+    status = PASS if coverage >= threshold else FAIL
 
     frame_records: list[dict[str, Any]] = []
     total_frames = 0
@@ -102,19 +107,19 @@ def target_area_coverage(
             if total_frames > 0:
                 frame_coverage_percent = frames_inside / total_frames * 100.0
                 if frame_threshold is not None:
-                    frame_status = "pass" if frame_coverage_percent >= frame_threshold else "fail"
+                    frame_status = PASS if frame_coverage_percent >= frame_threshold else FAIL
 
     summary = pl.DataFrame(
         {
             "dataset_area": [dataset_area],
             "expected_area": [expected_area],
             "intersection_area": [intersection_area],
-            "target_area_coverage": [coverage],
+            TARGET_AREA_COVERAGE: [coverage],
+            TARGET_AREA_FRAME_COVERAGE: [frame_coverage_percent],
             "threshold": [threshold],
-            "status": [status],
+            STATUS: [status],
             "total_frames": [total_frames],
             "frames_inside": [frames_inside],
-            "frame_coverage": [frame_coverage_percent],
             "frame_threshold": [frame_threshold],
             "frame_status": [frame_status],
         }
@@ -135,8 +140,8 @@ def target_area_coverage(
         ).lazy()
 
     return df, {
-        "target_area_coverage": summary,
-        "target_area_frame_coverage": frame_df,
+        TARGET_AREA_COVERAGE: summary,
+        TARGET_AREA_FRAME_COVERAGE: frame_df,
     }
 
 
