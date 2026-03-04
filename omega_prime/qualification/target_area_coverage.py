@@ -89,9 +89,7 @@ def target_area_coverage(
             total_frames = len(frame_stats)
             for frame_val, stats in frame_stats.items():
                 inside_flag = stats["inside"] > 0
-                fraction_inside_percent = (
-                    stats["inside"] / stats["total"] * 100.0 if stats["total"] else 0.0
-                )
+                fraction_inside_percent = stats["inside"] / stats["total"] * 100.0 if stats["total"] else 0.0
                 if inside_flag:
                     frames_inside += 1
                 frame_records.append(
