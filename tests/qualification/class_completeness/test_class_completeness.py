@@ -116,7 +116,7 @@ def test_record_pass(rec: Recording) -> None:
     )
 
 
-def test_record_fail(rec: Recording) -> None:
+def test_record_subtype_fail(rec: Recording) -> None:
     _df, result_dict = class_completeness(
         rec.df.lazy(),
         expected_types=expected_pass,
@@ -135,7 +135,7 @@ def test_record_fail(rec: Recording) -> None:
     )
 
 
-def test_record_fail(rec: Recording) -> None:
+def test_record_type_fail(rec: Recording) -> None:
     _df, result_dict = class_completeness(rec.df.lazy(), expected_types=expected_fail)
 
     assert_class_completeness(
