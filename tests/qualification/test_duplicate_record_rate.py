@@ -5,6 +5,7 @@ import polars as pl
 
 from omega_prime.qualification.duplicate_record_rate import duplicate_record_rate
 
+
 @pytest.fixture()
 def duplicate_df_pass() -> pl.DataFrame:
     return pl.DataFrame(
@@ -23,6 +24,7 @@ def duplicate_df_fail() -> pl.DataFrame:
             "total_nanos": [0, 0, 0, 1, 1, 1],
         }
     )
+
 
 def test_pass(duplicate_df_pass) -> None:
     _df, result_dict = duplicate_record_rate(duplicate_df_pass, threshold=1.0)

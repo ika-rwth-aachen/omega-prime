@@ -18,9 +18,9 @@ def duplicate_record_rate(
 
     total_records = df.select(pl.len().alias("total_records")).collect()[0, "total_records"]
     duplicate_records = (
-        duplicate_detail.select(
-            pl.col("duplicate_records").sum().fill_null(0).alias("duplicate_records")
-        ).collect()[0, "duplicate_records"]
+        duplicate_detail.select(pl.col("duplicate_records").sum().fill_null(0).alias("duplicate_records")).collect()[
+            0, "duplicate_records"
+        ]
         if total_records
         else 0
     )
