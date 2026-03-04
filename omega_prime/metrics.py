@@ -198,7 +198,7 @@ def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps, time_buffer=2
 
 
 @metric(
-    requires_columns=["vel"],
+    requires_columns=["vel", "yaw"],
     computes_properties=["ttc", "thw"],
 )
 def ttc_and_thw(df: pl.LazyFrame, /, ego_id) -> tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]:
