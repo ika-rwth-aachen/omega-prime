@@ -3,6 +3,7 @@
 import pytest
 import polars as pl
 
+from omega_prime import Recording
 from omega_prime.qualification.duplicate_record_rate import duplicate_record_rate, DUPLICATE_RECORD_RATE
 
 from .conftest import qualification_assert
@@ -36,3 +37,8 @@ def test_pass(duplicate_df_pass) -> None:
 def test_fail(duplicate_df_fail) -> None:
     _df, result_dict = duplicate_record_rate(duplicate_df_fail)
     qualification_assert(result_dict, DUPLICATE_RECORD_RATE, 66.66666666666667, False)
+
+
+def test_record_pass(rec: Recording) -> None:
+    _df, result_dict = duplicate_record_rate(rec.df.lazy())
+    qualification_assert(result_dict, DUPLICATE_RECORD_RATE, 0.0, True)
