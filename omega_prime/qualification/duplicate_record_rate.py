@@ -14,18 +14,17 @@ def duplicate_record_rate(
     /,
 ) -> QRT:
     group_counts = df.group_by("idx", "total_nanos").agg(pl.len().alias("record_count"))
-    duplicate_detail = group_counts.filter(pl.col("record_count") > 1).with_columns(
-        (pl.col("record_count") - 1).alias("duplicate_records")
-    )
 
     total_records = get_num_rows(df)
-    duplicate_records = (
-        duplicate_detail.select(pl.col("duplicate_records").sum().fill_null(0).alias("duplicate_records")).collect()[
-            0, "duplicate_records"
-        ]
-        if total_records
-        else 0
+    duplicate_records_per_group = (
+        pl.when(pl.col("record_count") > 1)
+        .then(pl.col("record_count") - 1)
+        .otherwise(0)
+        .alias("duplicate_records_per_group")
     )
+    duplicate_records = group_counts.select(
+        duplicate_records_per_group.sum().fill_null(0).alias("duplicate_records")
+    ).collect()[0, "duplicate_records"]
 
     duplicate_rate = (duplicate_records / total_records * 100.0) if total_records else 0.0
     status = PASS if duplicate_rate <= 1.0 else FAIL
