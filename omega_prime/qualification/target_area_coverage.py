@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 
 import polars as pl
+from pyproj import CRS, Transformer
 from shapely.geometry import Polygon, box
 
 from ..metrics import metric
@@ -18,11 +19,14 @@ def target_area_coverage(
     /,
     expected_area_coords: Sequence[tuple[float, float]],
     threshold: float = 80.0,
+    expected_area_crs: str | CRS | None = None,
+    proj_string: str | None = None,
 ) -> QRT:
     if len(expected_area_coords) < 3:
         raise ValueError("expected_area_coords must contain at least three coordinate pairs")
 
-    expected_polygon = Polygon(expected_area_coords)
+    transformed_coords = _transform_expected_coords(expected_area_coords, expected_area_crs, proj_string)
+    expected_polygon = Polygon(transformed_coords)
     if expected_polygon.is_empty or not expected_polygon.is_valid:
         raise ValueError("expected_area_coords does not form a valid polygon")
 
@@ -64,3 +68,23 @@ def target_area_coverage(
     ).lazy()
 
     return df, {TARGET_AREA_COVERAGE: summary}
+
+
+def _transform_expected_coords(
+    expected_coords: Sequence[tuple[float, float]],
+    expected_area_crs: str | CRS | None,
+    proj_string: str | None,
+) -> list[tuple[float, float]]:
+    if expected_area_crs is None:
+        return list(expected_coords)
+    if proj_string is None:
+        raise ValueError("proj_string is required to transform expected_area_coords")
+
+    dataset_crs = CRS.from_proj4(proj_string)
+    source_crs = CRS.from_user_input(expected_area_crs)
+    if source_crs == dataset_crs:
+        return list(expected_coords)
+
+    transformer = Transformer.from_crs(source_crs, dataset_crs, always_xy=True)
+    xs, ys = zip(*expected_coords)
+    return list(zip(*transformer.transform(xs, ys)))
