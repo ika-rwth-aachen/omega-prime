@@ -5,6 +5,8 @@ import polars_st as st
 from .recording import Recording
 import graphlib
 import inspect
+import shapely
+from omega_prime.locator import ShapelyTrajectoryTools
 
 
 @dataclass
@@ -91,9 +93,9 @@ def distance_traveled(df) -> tuple[pl.DataFrame, dict[str, pl.DataFrame]]:
     return df.with_columns(
         (pl.col("x").diff() ** 2 + pl.col("y").diff() ** 2)
         .sqrt()
+        .over("idx")
         .fill_null(0.0)
         .cum_sum()
-        .over("idx", order_by="total_nanos")
         .alias("distance_traveled"),
     ), {}
 
@@ -195,7 +197,87 @@ def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps, time_buffer=2
     }
 
 
-metrics = [vel, distance_traveled, timegaps_and_min_timgaps, p_timegaps_and_min_p_timgaps]
+@metric(
+    requires_columns=["vel"],
+    computes_properties=["ttc", "thw"],
+)
+def ttc_and_thw(df: pl.LazyFrame, /, ego_id) -> tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]:
+    """
+    Computes TTC (Time To Collision) and THW (Time Headway) relative to the ID's trajectory.
+    """
+    # 1. Extract Ego Trajectory
+    ego_data = (
+        df.filter(pl.col("idx") == ego_id)
+        .select("x", "y", "total_nanos", "vel")
+        .sort("total_nanos")
+        .collect()
+    )
+    # Handle edge case where ego data is insufficient
+    schema = {"idx": pl.Int64, "total_nanos": pl.Int64, "ttc": pl.Float64, "thw": pl.Float64}
+    empty_df = pl.DataFrame([], schema=schema).lazy()
+    if ego_data.height < 2:
+        return df, {"ttc": empty_df, "thw": empty_df}
+
+    ego_linestring = shapely.geometry.LineString(list(zip(ego_data["x"], ego_data["y"])))
+    if ego_linestring.is_empty or ego_linestring.length == 0:
+         return df, {"ttc": empty_df, "thw": empty_df}
+
+    # 2. Logic to compute s (longitudinal pos) and heading of the path
+    def compute_frenet_frame(s: pl.Series) -> pl.Series:
+        points = shapely.points(s.struct.field("x").to_numpy(), s.struct.field("y").to_numpy())
+        st_coords = ShapelyTrajectoryTools.xy2st(ego_linestring, points)
+        pos_lon = st_coords[:, 0]
+        # Heading of path at s (radians)
+        ref_headings = ShapelyTrajectoryTools.st2xy(
+            ego_linestring, pos_lon, st_coords[:, 1], return_heading_of_ref_at_st=True
+        )
+        return pl.Series([
+            {"pos_lon": p, "path_heading": h} for p, h in zip(pos_lon, ref_headings)
+        ])
+
+    # 3. Join and Compute
+    # Pre-calculate ego s position for every timestamp for fast join
+    ego_points = shapely.points(ego_data["x"], ego_data["y"])
+    ego_pos_lon = ShapelyTrajectoryTools.xy2st(ego_linestring, ego_points)[:, 0]
+    ego_lookup = ego_data.with_columns(
+        pos_lon = pl.Series(ego_pos_lon)
+    ).lazy()
+
+    ttc_thw_calc = (
+        df
+        .join(ego_lookup.select("total_nanos", ego_vel="vel", ego_pos_lon="pos_lon"), on="total_nanos")
+        .filter(pl.col("idx") != ego_id)
+        .with_columns(
+            pl.struct(["x", "y"])
+            .map_batches(compute_frenet_frame, return_dtype=pl.Struct({"pos_lon": pl.Float64, "path_heading": pl.Float64}))
+            .alias("frenet")
+        ).unnest("frenet")
+        .with_columns(
+            # Both yaw and path_heading are in radians.
+            (pl.col("yaw") - pl.col("path_heading")).alias("curv_heading"),
+            (pl.col("pos_lon") - pl.col("ego_pos_lon")).alias("dist_lon")
+        )
+        .with_columns(
+            # Calculate longitudinal component of velocity vector based on path heading
+            (pl.col("curv_heading").cos() * pl.col("vel")).alias("vel_long") 
+        )
+        .with_columns(
+            (pl.col("dist_lon") / (pl.col("ego_vel") - pl.col("vel_long"))).alias("ttc"),
+            (pl.col("dist_lon") / pl.col("ego_vel")).alias("thw")
+        )
+        .filter(
+            (pl.col("dist_lon") > 0),
+            (pl.col("ttc") >= 0) | (pl.col("ttc").is_null())
+        )
+    )
+
+    return df, {
+        "ttc": ttc_thw_calc.select("idx", "total_nanos", "ttc"),
+        "thw": ttc_thw_calc.select("idx", "total_nanos", "thw")
+    }
+
+
+metrics = [vel, distance_traveled, timegaps_and_min_timgaps, p_timegaps_and_min_p_timgaps, ttc_and_thw]
 
 
 @dataclass
