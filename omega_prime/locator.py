@@ -56,8 +56,16 @@ class ShapelyTrajectoryTools:
                 l.interpolate(0, normalized=True).coords
             )
 
-        startvec = startvec / np.linalg.norm(startvec) * l_append
-        endvec = endvec / np.linalg.norm(endvec) * l_append
+        if np.all(startvec == 0):
+            startvec = startvec
+        else:
+            startvec = startvec / np.linalg.norm(startvec) * l_append
+
+        if np.all(endvec == 0):
+            endvec = endvec
+        else:
+            endvec = endvec / np.linalg.norm(endvec) * l_append
+
         cl = np.asarray(l.coords)
         cl = shapely.LineString(np.concatenate([startvec + cl[0, :], cl, endvec + cl[-1, :]]))
         return cl.simplify(tolerance=cls.simplify_tolerance) if simplify else cl
