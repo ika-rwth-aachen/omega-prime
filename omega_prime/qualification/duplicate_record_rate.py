@@ -6,6 +6,7 @@ from ..metrics import metric
 from .common import STATUS, PASS, FAIL, QRT, get_num_rows
 
 DUPLICATE_RECORD_RATE = "duplicate_record_rate"
+RECORD_COUNT = "record_count"
 
 
 @metric(computes_properties=[DUPLICATE_RECORD_RATE])
@@ -13,12 +14,12 @@ def duplicate_record_rate(
     df: pl.LazyFrame,
     /,
 ) -> QRT:
-    group_counts = df.group_by("idx", "total_nanos").agg(pl.len().alias("record_count"))
+    group_counts = df.group_by("idx", "total_nanos").agg(pl.len().alias(RECORD_COUNT))
 
     total_records = get_num_rows(df)
     duplicate_records_per_group = (
-        pl.when(pl.col("record_count") > 1)
-        .then(pl.col("record_count") - 1)
+        pl.when(pl.col(RECORD_COUNT) > 1)
+        .then(pl.col(RECORD_COUNT) - 1)
         .otherwise(0)
         .alias("duplicate_records_per_group")
     )
