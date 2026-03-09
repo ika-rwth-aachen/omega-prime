@@ -5,23 +5,27 @@ from datetime import datetime
 import polars as pl
 
 from ..metrics import metric
+from .common import STATUS, PASS, FAIL, QRT, get_num_rows
 
 
-@metric(computes_properties=["temporal_coverage"])
+TEMPORAL_COVERAGE = "temporal_coverage"
+
+
+@metric(computes_properties=[TEMPORAL_COVERAGE])
 def temporal_coverage(
-    df: pl.LazyFrame | pl.DataFrame,
+    df: pl.LazyFrame,
     /,
     expected_start: datetime | str,
     expected_end: datetime | str,
     threshold: float = 80.0,
-):
+) -> QRT:
     start_dt = _parse_datetime(expected_start, "expected_start")
     end_dt = _parse_datetime(expected_end, "expected_end")
     if end_dt <= start_dt:
         raise ValueError("expected_end must be after expected_start")
 
     required_seconds = (end_dt - start_dt).total_seconds()
-    row_count = df.select(pl.len().alias("row_count")).collect()[0, "row_count"]
+    row_count = get_num_rows(df)
     if row_count == 0:
         dataset_start = dataset_end = None
         coverage = 0.0
@@ -41,21 +45,16 @@ def temporal_coverage(
         overlap_seconds = max((overlap_end - overlap_start).total_seconds(), 0.0)
         coverage = (overlap_seconds / required_seconds * 100.0) if required_seconds > 0 else 100.0
 
+    status = PASS if coverage >= threshold else FAIL
+
     summary = pl.DataFrame(
         {
-            "expected_start": [start_dt],
-            "expected_end": [end_dt],
-            "dataset_start": [dataset_start],
-            "dataset_end": [dataset_end],
-            "overlap_duration_seconds": [overlap_seconds],
-            "required_duration_seconds": [required_seconds],
-            "temporal_coverage": [coverage],
-            "threshold": [threshold],
-            "status": ["pass" if coverage >= threshold else "fail"],
+            TEMPORAL_COVERAGE: [coverage],
+            STATUS: [status],
         }
     ).lazy()
 
-    return df, {"temporal_coverage": summary}
+    return df, {TEMPORAL_COVERAGE: summary}
 
 
 def _parse_datetime(value: datetime | str, name: str) -> datetime:
