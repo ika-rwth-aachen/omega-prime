@@ -1,10 +1,12 @@
 """."""
 
 from collections.abc import Sequence
+import math
 
 import polars as pl
 from pyproj import CRS, Transformer
-from shapely.geometry import Polygon, box
+from shapely.geometry import Point, Polygon
+from shapely.prepared import prep
 
 from ..metrics import metric
 from .common import STATUS, PASS, FAIL, QRT
@@ -21,48 +23,35 @@ def target_area_coverage(
     threshold: float = 80.0,
     expected_area_crs: str | CRS | None = None,
     proj_string: str | None = None,
+    proj_offset: tuple[float, float, float] | None = None,
 ) -> QRT:
     if len(expected_area_coords) < 3:
         raise ValueError("expected_area_coords must contain at least three coordinate pairs")
 
-    transformed_coords = _transform_expected_coords(expected_area_coords, expected_area_crs, proj_string)
+    transformed_coords = _transform_expected_coords(
+        expected_area_coords,
+        expected_area_crs,
+        proj_string,
+        proj_offset,
+    )
     expected_polygon = Polygon(transformed_coords)
     if expected_polygon.is_empty or not expected_polygon.is_valid:
         raise ValueError("expected_area_coords does not form a valid polygon")
 
-    bounds = df.select(
-        pl.min("x").alias("min_x"),
-        pl.max("x").alias("max_x"),
-        pl.min("y").alias("min_y"),
-        pl.max("y").alias("max_y"),
-    ).collect()
+    point_df = df.select("x", "y").collect()
+    total_points = point_df.height
+    points_inside = 0
+    if total_points > 0:
+        prepared_polygon = prep(expected_polygon)
+        points_inside = sum(prepared_polygon.covers(Point(x, y)) for x, y in point_df.iter_rows())
 
-    if bounds.height == 0:
-        dataset_polygon = Polygon()
-        dataset_area = 0.0
-        intersection_area = 0.0
-    else:
-        min_x, max_x, min_y, max_y = bounds.row(0)
-        dataset_polygon = box(min_x, min_y, max_x, max_y)
-        dataset_area = dataset_polygon.area
-        intersection_area = dataset_polygon.intersection(expected_polygon).area
-
-    expected_area = expected_polygon.area
-    union_area = dataset_area + expected_area - intersection_area
-    if union_area > 0:
-        coverage = (intersection_area / union_area) * 100.0
-    else:
-        coverage = 100.0 if expected_area == 0 else 0.0
+    coverage = points_inside * 100.0 / total_points if total_points > 0 else 100.0
 
     status = PASS if coverage >= threshold else FAIL
 
     summary = pl.DataFrame(
         {
-            "dataset_area": [dataset_area],
-            "expected_area": [expected_area],
-            "intersection_area": [intersection_area],
             TARGET_AREA_COVERAGE: [coverage],
-            "threshold": [threshold],
             STATUS: [status],
         }
     ).lazy()
@@ -74,6 +63,7 @@ def _transform_expected_coords(
     expected_coords: Sequence[tuple[float, float]],
     expected_area_crs: str | CRS | None,
     proj_string: str | None,
+    proj_offset: tuple[float, float, float] | None,
 ) -> list[tuple[float, float]]:
     if expected_area_crs is None:
         return list(expected_coords)
@@ -87,4 +77,18 @@ def _transform_expected_coords(
 
     transformer = Transformer.from_crs(source_crs, dataset_crs, always_xy=True)
     xs, ys = zip(*expected_coords)
-    return list(zip(*transformer.transform(xs, ys)))
+    transformed = list(zip(*transformer.transform(xs, ys)))
+    if proj_offset is None:
+        return transformed
+
+    offset_x, offset_y, offset_yaw = proj_offset
+    cos_yaw = math.cos(-offset_yaw)
+    sin_yaw = math.sin(-offset_yaw)
+    adjusted: list[tuple[float, float]] = []
+    for x, y in transformed:
+        x_shift = x - offset_x
+        y_shift = y - offset_y
+        x_rot = cos_yaw * x_shift - sin_yaw * y_shift
+        y_rot = sin_yaw * x_shift + cos_yaw * y_shift
+        adjusted.append((x_rot, y_rot))
+    return adjusted

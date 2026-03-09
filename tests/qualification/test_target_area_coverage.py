@@ -1,9 +1,13 @@
 """."""
 
 import polars as pl
-from pyproj import Transformer
+import pytest
 
-from omega_prime.qualification.target_area_coverage import target_area_coverage, TARGET_AREA_COVERAGE
+from omega_prime.qualification.target_area_coverage import (
+    _transform_expected_coords,
+    target_area_coverage,
+    TARGET_AREA_COVERAGE,
+)
 
 from .conftest import qualification_assert
 
@@ -14,7 +18,14 @@ EXPECTED_COORDS = [
     (10.0, 10.0),
     (0.0, 10.0),
 ]
-PROJ_MERCATOR = "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+
+PROJ_UTM32N = "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs"
+EXPECTED_COORDS_WGS84 = [
+    (6.050307, 50.779819),
+    (6.050280, 50.779298),
+    (6.050986, 50.779307),
+    (6.050927, 50.779789),
+]
 
 
 def test_pass() -> None:
@@ -49,28 +60,73 @@ def test_fail() -> None:
     qualification_assert(result_dict, TARGET_AREA_COVERAGE, 0.0, False)
 
 
-def test_transform_wgs84_to_dataset_crs() -> None:
-    expected_coords_wgs84 = [
-        (8.0, 50.0),
-        (8.001, 50.0),
-        (8.001, 50.001),
-        (8.0, 50.001),
+def test_transform_expected_coords_pass() -> None:
+    expected_coords_utm32n = [
+        (292061.502, 5629488.771),
+        (292057.287, 5629430.927),
+        (292107.088, 5629429.941),
+        (292105.068, 5629483.691),
     ]
-    transformer = Transformer.from_crs("EPSG:4326", PROJ_MERCATOR, always_xy=True)
-    lons, lats = zip(*expected_coords_wgs84)
-    xs, ys = transformer.transform(lons, lats)
+
+    transformed_coords = _transform_expected_coords(
+        EXPECTED_COORDS_WGS84,
+        expected_area_crs="EPSG:4326",
+        proj_string=PROJ_UTM32N,
+        proj_offset=None,
+    )
+
+    for transformed, expected in zip(transformed_coords, expected_coords_utm32n, strict=True):
+        assert transformed[0] == pytest.approx(expected[0])
+        assert transformed[1] == pytest.approx(expected[1])
+
+
+def test_target_area_coverage_with_projection_pass() -> None:
     df = pl.DataFrame(
         {
-            "x": [xs[0], xs[1], xs[2], xs[3]],
-            "y": [ys[0], ys[1], ys[2], ys[3]],
-            "total_nanos": [0, 0, 1, 1],
+            "x": [
+                292080.684,
+                292089.717,
+                292084.573,
+            ],
+            "y": [
+                5629461.727,
+                5629454.574,
+                5629460.124,
+            ],
         }
     ).lazy()
     _df, result_dict = target_area_coverage(
         df,
-        expected_area_coords=expected_coords_wgs84,
+        expected_area_coords=EXPECTED_COORDS_WGS84,
         threshold=100.0,
         expected_area_crs="EPSG:4326",
-        proj_string=PROJ_MERCATOR,
+        proj_string=PROJ_UTM32N,
     )
     qualification_assert(result_dict, TARGET_AREA_COVERAGE, 100.0, True)
+
+
+def test_target_area_coverage_with_projection_fail() -> None:
+    df = pl.DataFrame(
+        {
+            "x": [
+                292019.412,
+                292183.911,
+                292087.379,
+                292081.964,
+            ],
+            "y": [
+                5629435.334,
+                5629509.941,
+                5629457.897,
+                5629454.884,
+            ],
+        }
+    ).lazy()
+    _df, result_dict = target_area_coverage(
+        df,
+        expected_area_coords=EXPECTED_COORDS_WGS84,
+        threshold=100.0,
+        expected_area_crs="EPSG:4326",
+        proj_string=PROJ_UTM32N,
+    )
+    qualification_assert(result_dict, TARGET_AREA_COVERAGE, 50.0, False)
