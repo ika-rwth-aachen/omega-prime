@@ -1,6 +1,6 @@
 """."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import polars as pl
 
@@ -37,8 +37,8 @@ def temporal_coverage(
         ).collect()
         min_nanos = nanos_bounds[0, "min_nanos"]
         max_nanos = nanos_bounds[0, "max_nanos"]
-        dataset_start = datetime.utcfromtimestamp(min_nanos / 1_000_000_000)
-        dataset_end = datetime.utcfromtimestamp(max_nanos / 1_000_000_000)
+        dataset_start = datetime.fromtimestamp(min_nanos / 1_000_000_000, UTC)
+        dataset_end = datetime.fromtimestamp(max_nanos / 1_000_000_000, UTC)
 
         overlap_start = max(dataset_start, start_dt)
         overlap_end = min(dataset_end, end_dt)
@@ -59,10 +59,11 @@ def temporal_coverage(
 
 def _parse_datetime(value: datetime | str, name: str) -> datetime:
     if isinstance(value, datetime):
-        return value
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
     if isinstance(value, str):
         try:
-            return datetime.fromisoformat(value)
+            parsed = datetime.fromisoformat(value)
         except ValueError as exc:
             raise ValueError(f"{name} must be a datetime or ISO 8601 string") from exc
+        return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
     raise TypeError(f"{name} must be a datetime or ISO 8601 string")
