@@ -33,7 +33,6 @@ def test_pass() -> None:
         {
             "x": [0.0, 10.0, 0.0, 10.0],
             "y": [0.0, 0.0, 10.0, 10.0],
-            "total_nanos": [0, 0, 1, 1],
         }
     ).lazy()
     _df, result_dict = target_area_coverage(
@@ -49,7 +48,6 @@ def test_fail() -> None:
         {
             "x": [20.0, 30.0],
             "y": [20.0, 30.0],
-            "total_nanos": [0, 1],
         }
     ).lazy()
     _df, result_dict = target_area_coverage(
