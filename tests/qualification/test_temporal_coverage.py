@@ -14,7 +14,7 @@ from .conftest import qualification_assert
 def temporal_coverage_df() -> pl.LazyFrame:
     return pl.DataFrame(
         {
-            "total_nanos": [0, 10_000_000_000],
+            "total_nanos": [0, int(10 * 1e9)],  # 0s and 10s in nanoseconds since epoch
         }
     ).lazy()
 

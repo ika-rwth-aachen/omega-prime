@@ -37,8 +37,8 @@ def temporal_coverage(
         ).collect()
         min_nanos = nanos_bounds[0, "min_nanos"]
         max_nanos = nanos_bounds[0, "max_nanos"]
-        dataset_start = datetime.fromtimestamp(min_nanos / 1_000_000_000, UTC)
-        dataset_end = datetime.fromtimestamp(max_nanos / 1_000_000_000, UTC)
+        dataset_start = datetime.fromtimestamp(min_nanos * 1e-9, UTC)
+        dataset_end = datetime.fromtimestamp(max_nanos * 1e-9, UTC)
 
         overlap_start = max(dataset_start, start_dt)
         overlap_end = min(dataset_end, end_dt)
