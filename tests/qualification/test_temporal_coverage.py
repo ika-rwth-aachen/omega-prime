@@ -44,6 +44,15 @@ def test_fail(temporal_coverage_df: pl.LazyFrame) -> None:
     qualification_assert(result_dict, TEMPORAL_COVERAGE, 50.0, False)
 
 
+def test_invalid_expected_range(temporal_coverage_df: pl.LazyFrame) -> None:
+    with pytest.raises(ValueError, match="expected_end must be after expected_start"):
+        temporal_coverage(
+            temporal_coverage_df,
+            expected_start="1970-01-01T00:00:10",
+            expected_end="1970-01-01T00:00:10",
+        )
+
+
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
