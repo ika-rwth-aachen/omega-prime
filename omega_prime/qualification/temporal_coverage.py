@@ -59,11 +59,14 @@ def temporal_coverage(
 
 def _parse_datetime(value: datetime | str, name: str) -> datetime:
     if isinstance(value, datetime):
-        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+        return _ensure_utc(value)
     if isinstance(value, str):
         try:
             parsed = datetime.fromisoformat(value)
         except ValueError as exc:
             raise ValueError(f"{name} must be a datetime or ISO 8601 string") from exc
-        return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
+        return _ensure_utc(parsed)
     raise TypeError(f"{name} must be a datetime or ISO 8601 string")
+
+def _ensure_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
