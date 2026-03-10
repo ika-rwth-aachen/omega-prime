@@ -81,11 +81,18 @@ def _transform_expected_coords(
     if proj_offset is None:
         return transformed
 
+    return _apply_proj_offset(transformed, proj_offset)
+
+
+def _apply_proj_offset(
+    coords: Sequence[tuple[float, float]],
+    proj_offset: tuple[float, float, float],
+) -> list[tuple[float, float]]:
     offset_x, offset_y, offset_yaw = proj_offset
     cos_yaw = math.cos(-offset_yaw)
     sin_yaw = math.sin(-offset_yaw)
     adjusted: list[tuple[float, float]] = []
-    for x, y in transformed:
+    for x, y in coords:
         x_shift = x - offset_x
         y_shift = y - offset_y
         x_rot = cos_yaw * x_shift - sin_yaw * y_shift
