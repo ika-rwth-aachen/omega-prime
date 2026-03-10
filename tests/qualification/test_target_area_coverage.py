@@ -112,6 +112,19 @@ def test_transform_expected_coords_pass() -> None:
         assert transformed[1] == pytest.approx(expected[1])
 
 
+def test_transform_expected_coords_without_expected_area_crs_fails() -> None:
+    with pytest.raises(
+        ValueError,
+        match="expected_area_crs is required when proj_string or proj_offset is provided",
+    ):
+        _transform_expected_coords(
+            EXPECTED_COORDS,
+            expected_area_crs=None,
+            proj_string=PROJ_UTM32N,
+            proj_offset=(1.0, 2.0, math.pi / 4),
+        )
+
+
 def test_apply_proj_offset_pass() -> None:
     adjusted_coords = _apply_proj_offset(
         [(1.0, 0.0), (2.0, 0.0), (1.0, 1.0)],

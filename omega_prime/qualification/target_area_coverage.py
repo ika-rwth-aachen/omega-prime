@@ -66,6 +66,10 @@ def _transform_expected_coords(
     proj_offset: tuple[float, float, float] | None,
 ) -> list[tuple[float, float]]:
     if expected_area_crs is None:
+        if proj_string is not None or proj_offset is not None:
+            raise ValueError(
+                "expected_area_crs is required when proj_string or proj_offset is provided"
+            )
         return list(expected_coords)
     if proj_string is None:
         raise ValueError("proj_string is required to transform expected_area_coords")
@@ -73,6 +77,7 @@ def _transform_expected_coords(
     dataset_crs = CRS.from_proj4(proj_string)
     source_crs = CRS.from_user_input(expected_area_crs)
     if source_crs == dataset_crs:
+        # TODO: add test for this case
         return list(expected_coords)
 
     transformer = Transformer.from_crs(source_crs, dataset_crs, always_xy=True)
