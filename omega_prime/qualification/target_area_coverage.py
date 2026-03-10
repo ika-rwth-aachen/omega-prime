@@ -77,12 +77,11 @@ def _transform_expected_coords(
     dataset_crs = CRS.from_proj4(dataset_proj4)
     source_crs = CRS.from_user_input(expected_area_source_crs)
     if source_crs == dataset_crs:
-        # TODO: add test for this case
-        return list(expected_coords)
-
-    transformer = Transformer.from_crs(source_crs, dataset_crs, always_xy=True)
-    xs, ys = zip(*expected_coords)
-    transformed = list(zip(*transformer.transform(xs, ys)))
+        transformed = list(expected_coords)
+    else:
+        transformer = Transformer.from_crs(source_crs, dataset_crs, always_xy=True)
+        xs, ys = zip(*expected_coords)
+        transformed = list(zip(*transformer.transform(xs, ys)))
     if dataset_frame_offset is None:
         return transformed
 

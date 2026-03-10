@@ -29,6 +29,12 @@ EXPECTED_COORDS_WGS84 = [
     (6.050986, 50.779307),
     (6.050927, 50.779789),
 ]
+EXPECTED_COORDS_UTM32N = [
+    (292061.502, 5629488.771),
+    (292057.287, 5629430.927),
+    (292107.088, 5629429.941),
+    (292105.068, 5629483.691),
+]
 
 
 def test_pass() -> None:
@@ -93,12 +99,6 @@ def test_invalid_expected_area_polygon() -> None:
 
 
 def test_transform_expected_coords_pass() -> None:
-    expected_coords_utm32n = [
-        (292061.502, 5629488.771),
-        (292057.287, 5629430.927),
-        (292107.088, 5629429.941),
-        (292105.068, 5629483.691),
-    ]
 
     transformed_coords = _transform_expected_coords(
         EXPECTED_COORDS_WGS84,
@@ -107,9 +107,34 @@ def test_transform_expected_coords_pass() -> None:
         dataset_frame_offset=None,
     )
 
-    for transformed, expected in zip(transformed_coords, expected_coords_utm32n, strict=True):
+    for transformed, expected in zip(transformed_coords, EXPECTED_COORDS_UTM32N, strict=True):
         assert transformed[0] == pytest.approx(expected[0])
         assert transformed[1] == pytest.approx(expected[1])
+
+
+def test_transform_expected_coords_with_matching_crs() -> None:
+
+    transformed_coords = _transform_expected_coords(
+        EXPECTED_COORDS_UTM32N,
+        expected_area_source_crs="EPSG:32632",
+        dataset_proj4=PROJ_UTM32N,
+        dataset_frame_offset=None,
+    )
+
+    assert transformed_coords == EXPECTED_COORDS_UTM32N
+
+
+def test_transform_expected_coords_with_matching_crs_and_offset() -> None:
+    transformed_coords = _transform_expected_coords(
+        [(1.0, 0.0), (2.0, 0.0), (1.0, 1.0)],
+        expected_area_source_crs="EPSG:32632",
+        dataset_proj4=PROJ_UTM32N,
+        dataset_frame_offset=(1.0, 0.0, math.pi / 2),
+    )
+
+    assert transformed_coords[0] == pytest.approx((0.0, 0.0))
+    assert transformed_coords[1] == pytest.approx((0.0, -1.0))
+    assert transformed_coords[2] == pytest.approx((1.0, 0.0))
 
 
 def test_transform_expected_coords_without_expected_area_source_crs_fails() -> None:
