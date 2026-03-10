@@ -148,6 +148,19 @@ def test_transform_expected_coords_without_expected_area_source_crs_fails() -> N
         )
 
 
+def test_transform_expected_coords_without_dataset_proj4() -> None:
+    with pytest.raises(
+        ValueError,
+        match="dataset_proj4 is required to transform expected_area_coords",
+    ):
+        _transform_expected_coords(
+            EXPECTED_COORDS_WGS84,
+            expected_area_source_crs="EPSG:4326",
+            dataset_proj4=None,
+            dataset_frame_offset=None,
+        )
+
+
 def test_apply_proj_offset_pass() -> None:
     adjusted_coords = _apply_proj_offset(
         [(1.0, 0.0), (2.0, 0.0), (1.0, 1.0)],
