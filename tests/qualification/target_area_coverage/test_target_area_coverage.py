@@ -7,6 +7,7 @@ from omega_prime.qualification.target_area_coverage import target_area_coverage,
 from .conftest import EXPECTED_COORDS, EXPECTED_COORDS_WGS84, PROJ_UTM32N
 from ..conftest import qualification_assert
 
+
 def test_pass() -> None:
     df = pl.DataFrame(
         {

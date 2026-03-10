@@ -1,11 +1,11 @@
 """."""
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta, timezone
 
 import polars as pl
 import pytest
 
-from omega_prime.qualification.temporal_coverage import temporal_coverage, TEMPORAL_COVERAGE
+from omega_prime.qualification.temporal_coverage import _ensure_utc, temporal_coverage, TEMPORAL_COVERAGE
 
 from .conftest import qualification_assert
 
@@ -37,3 +37,20 @@ def test_fail(temporal_coverage_df: pl.LazyFrame) -> None:
         threshold=80.0,
     )
     qualification_assert(result_dict, TEMPORAL_COVERAGE, 50.0, False)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (
+            datetime(1970, 1, 1, 0, 0, 10),
+            datetime(1970, 1, 1, 0, 0, 10, tzinfo=UTC),
+        ),
+        (
+            datetime(1970, 1, 1, 2, 0, 10, tzinfo=timezone(timedelta(hours=2))),
+            datetime(1970, 1, 1, 0, 0, 10, tzinfo=UTC),
+        ),
+    ],
+)
+def test_ensure_utc(value: datetime, expected: datetime) -> None:
+    assert _ensure_utc(value) == expected

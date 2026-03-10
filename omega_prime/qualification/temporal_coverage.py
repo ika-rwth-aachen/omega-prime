@@ -68,5 +68,6 @@ def _parse_datetime(value: datetime | str, name: str) -> datetime:
         return _ensure_utc(parsed)
     raise TypeError(f"{name} must be a datetime or ISO 8601 string")
 
+
 def _ensure_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
