@@ -99,7 +99,6 @@ def test_invalid_expected_area_polygon() -> None:
 
 
 def test_transform_expected_coords_pass() -> None:
-
     transformed_coords = _transform_expected_coords(
         EXPECTED_COORDS_WGS84,
         expected_area_source_crs="EPSG:4326",
@@ -113,7 +112,6 @@ def test_transform_expected_coords_pass() -> None:
 
 
 def test_transform_expected_coords_with_matching_crs() -> None:
-
     transformed_coords = _transform_expected_coords(
         EXPECTED_COORDS_UTM32N,
         expected_area_source_crs="EPSG:32632",
