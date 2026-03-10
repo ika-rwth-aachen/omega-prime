@@ -44,6 +44,19 @@ def test_fail(temporal_coverage_df: pl.LazyFrame) -> None:
     qualification_assert(result_dict, TEMPORAL_COVERAGE, 50.0, False)
 
 
+def test_empty_df() -> None:
+    empty_df = pl.DataFrame({"total_nanos": []}, schema={"total_nanos": pl.Int64}).lazy()
+
+    _df, result_dict = temporal_coverage(
+        empty_df,
+        expected_start="1970-01-01T00:00:00",
+        expected_end="1970-01-01T00:00:10",
+        threshold=80.0,
+    )
+
+    qualification_assert(result_dict, TEMPORAL_COVERAGE, 0.0, False)
+
+
 def test_invalid_expected_range(temporal_coverage_df: pl.LazyFrame) -> None:
     with pytest.raises(ValueError, match="expected_end must be after expected_start"):
         temporal_coverage(
