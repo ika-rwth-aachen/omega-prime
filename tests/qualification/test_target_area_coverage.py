@@ -102,9 +102,9 @@ def test_transform_expected_coords_pass() -> None:
 
     transformed_coords = _transform_expected_coords(
         EXPECTED_COORDS_WGS84,
-        expected_area_crs="EPSG:4326",
-        proj_string=PROJ_UTM32N,
-        proj_offset=None,
+        expected_area_source_crs="EPSG:4326",
+        dataset_proj4=PROJ_UTM32N,
+        dataset_frame_offset=None,
     )
 
     for transformed, expected in zip(transformed_coords, expected_coords_utm32n, strict=True):
@@ -112,16 +112,16 @@ def test_transform_expected_coords_pass() -> None:
         assert transformed[1] == pytest.approx(expected[1])
 
 
-def test_transform_expected_coords_without_expected_area_crs_fails() -> None:
+def test_transform_expected_coords_without_expected_area_source_crs_fails() -> None:
     with pytest.raises(
         ValueError,
-        match="expected_area_crs is required when proj_string or proj_offset is provided",
+        match="expected_area_source_crs is required when dataset_proj4 or dataset_frame_offset is provided",
     ):
         _transform_expected_coords(
             EXPECTED_COORDS,
-            expected_area_crs=None,
-            proj_string=PROJ_UTM32N,
-            proj_offset=(1.0, 2.0, math.pi / 4),
+            expected_area_source_crs=None,
+            dataset_proj4=PROJ_UTM32N,
+            dataset_frame_offset=(1.0, 2.0, math.pi / 4),
         )
 
 
@@ -155,8 +155,8 @@ def test_target_area_coverage_with_projection_pass() -> None:
         df,
         expected_area_coords=EXPECTED_COORDS_WGS84,
         threshold=100.0,
-        expected_area_crs="EPSG:4326",
-        proj_string=PROJ_UTM32N,
+        expected_area_source_crs="EPSG:4326",
+        dataset_proj4=PROJ_UTM32N,
     )
     qualification_assert(result_dict, TARGET_AREA_COVERAGE, 100.0, True)
 
@@ -182,7 +182,7 @@ def test_target_area_coverage_with_projection_fail() -> None:
         df,
         expected_area_coords=EXPECTED_COORDS_WGS84,
         threshold=100.0,
-        expected_area_crs="EPSG:4326",
-        proj_string=PROJ_UTM32N,
+        expected_area_source_crs="EPSG:4326",
+        dataset_proj4=PROJ_UTM32N,
     )
     qualification_assert(result_dict, TARGET_AREA_COVERAGE, 50.0, False)
