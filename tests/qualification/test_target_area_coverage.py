@@ -61,6 +61,19 @@ def test_fail() -> None:
     qualification_assert(result_dict, TARGET_AREA_COVERAGE, 0.0, False)
 
 
+def test_too_few_expected_area_coords() -> None:
+    df = pl.DataFrame({"x": [0.0], "y": [0.0]}).lazy()
+
+    with pytest.raises(
+        ValueError,
+        match="expected_area_coords must contain at least three coordinate pairs",
+    ):
+        target_area_coverage(
+            df,
+            expected_area_coords=[(0.0, 0.0), (1.0, 1.0)],
+        )
+
+
 def test_transform_expected_coords_pass() -> None:
     expected_coords_utm32n = [
         (292061.502, 5629488.771),
