@@ -74,6 +74,24 @@ def test_too_few_expected_area_coords() -> None:
         )
 
 
+def test_invalid_expected_area_polygon() -> None:
+    df = pl.DataFrame({"x": [0.0], "y": [0.0]}).lazy()
+
+    with pytest.raises(
+        ValueError,
+        match="expected_area_coords does not form a valid polygon",
+    ):
+        target_area_coverage(
+            df,
+            expected_area_coords=[
+                (0.0, 0.0),
+                (1.0, 1.0),
+                (1.0, 0.0),
+                (0.0, 1.0),
+            ],
+        )
+
+
 def test_transform_expected_coords_pass() -> None:
     expected_coords_utm32n = [
         (292061.502, 5629488.771),
