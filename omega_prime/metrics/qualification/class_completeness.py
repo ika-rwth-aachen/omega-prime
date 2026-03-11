@@ -8,7 +8,7 @@ from enum import Enum
 import betterosi
 import polars as pl
 
-from ..metrics import metric
+from ..metric import metric
 from .common import STATUS, PASS, FAIL, QRT
 
 CLASS_COMPLETENESS = "class_completeness"

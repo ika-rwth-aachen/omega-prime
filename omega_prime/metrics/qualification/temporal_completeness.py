@@ -2,7 +2,7 @@
 
 import polars as pl
 
-from ..metrics import metric
+from ..metric import metric
 from .common import STATUS, PASS, FAIL, QRT, get_num_rows
 
 TEMPORAL_COMPLETENESS = "temporal_completeness"

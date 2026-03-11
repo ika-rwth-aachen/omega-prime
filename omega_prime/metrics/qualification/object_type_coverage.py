@@ -4,7 +4,7 @@ import polars as pl
 from collections.abc import Sequence
 from omega_prime import MovingObjectType
 
-from ..metrics import metric
+from ..metric import metric
 from .common import STATUS, PASS, FAIL, QRT
 
 OBJECT_TYPE_COVERAGE = "object_type_coverage"

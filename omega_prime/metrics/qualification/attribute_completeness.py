@@ -3,7 +3,7 @@
 import polars as pl
 from omega_prime.schemas import polars_schema
 from .common import STATUS, PASS, FAIL, QRT
-from ..metrics import metric
+from ..metric import metric
 
 
 ATTRIBUTE_COMPLETENESS = "attribute_completeness"

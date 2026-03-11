@@ -8,7 +8,7 @@ from pyproj import CRS, Transformer
 from shapely.geometry import Point, Polygon
 from shapely.prepared import prep
 
-from ..metrics import metric
+from ..metric import metric
 from .common import STATUS, PASS, FAIL, QRT
 
 

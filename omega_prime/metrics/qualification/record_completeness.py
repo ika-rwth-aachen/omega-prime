@@ -3,7 +3,7 @@
 import polars as pl
 from omega_prime.schemas import polars_schema
 from .common import STATUS, PASS, FAIL, QRT, get_num_rows
-from ..metrics import metric
+from ..metric import metric
 
 RECORD_COMPLETENESS = "record_completeness"
 
