@@ -1,7 +1,7 @@
 import polars as pl
 import pytest
 
-from omega_prime.qualification.non_default_attr_accuracy import get_default_value
+from omega_prime.metrics.qualification.non_default_attr_accuracy import get_default_value
 
 
 def test_get_default_value():

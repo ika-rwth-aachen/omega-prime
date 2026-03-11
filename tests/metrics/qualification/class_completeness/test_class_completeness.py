@@ -5,11 +5,11 @@ from omega_prime.recording import Recording
 import pytest
 import polars as pl
 
-from omega_prime.qualification.class_completeness import (
-    class_completeness,
+from omega_prime.metrics.qualification.class_completeness import (
     ROLE_COMPLETENESS,
     SUBTYPE_COMPLETENESS,
     TYPE_COMPLETENESS,
+    class_completeness,
 )
 
 from .conftest import assert_class_completeness

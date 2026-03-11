@@ -4,7 +4,7 @@ import pytest
 import polars as pl
 
 from omega_prime import Recording
-from omega_prime.qualification.duplicate_record_rate import duplicate_record_rate, DUPLICATE_RECORD_RATE
+from omega_prime.metrics.qualification.duplicate_record_rate import DUPLICATE_RECORD_RATE, duplicate_record_rate
 
 from .conftest import qualification_assert
 

@@ -2,7 +2,7 @@
 
 import polars as pl
 
-from omega_prime.qualification.target_area_coverage import target_area_coverage, TARGET_AREA_COVERAGE
+from omega_prime.metrics.qualification.target_area_coverage import TARGET_AREA_COVERAGE, target_area_coverage
 
 from .conftest import EXPECTED_COORDS, EXPECTED_COORDS_WGS84, PROJ_UTM32N
 from ..conftest import qualification_assert

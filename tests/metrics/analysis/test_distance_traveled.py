@@ -3,7 +3,7 @@
 import pytest
 
 from omega_prime import Recording
-from omega_prime.qualification.distance_traveled import distance_traveled
+from omega_prime.metrics.analysis.distance_traveled import distance_traveled
 
 
 def test_distance_traveled(rec: Recording) -> None:

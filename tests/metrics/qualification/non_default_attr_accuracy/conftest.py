@@ -2,8 +2,8 @@
 
 import pytest
 
-from omega_prime.qualification.common import STATUS, PASS, FAIL
-from omega_prime.qualification.non_default_attr_accuracy import NON_DEFAULT_ATTRIBUTES_ACCURACY
+from omega_prime.metrics.qualification.common import FAIL, PASS, STATUS
+from omega_prime.metrics.qualification.non_default_attr_accuracy import NON_DEFAULT_ATTRIBUTES_ACCURACY
 import polars as pl
 
 

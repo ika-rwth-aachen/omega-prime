@@ -1,17 +1,23 @@
 """."""
 
-from polars import LazyFrame
-
 from pathlib import Path
 
 import pytest
+from polars import LazyFrame
 
-from omega_prime.qualification.metric import Metric, QRT
+import omega_prime
+
+from omega_prime.metrics.metric import Metric, QRT
 
 
 @pytest.fixture(scope="session")
 def files_dir() -> Path:
-    return Path(__file__).parent / "files/"
+    return Path(__file__).parent.parent / "files/"
+
+
+@pytest.fixture(scope="session")
+def rec(files_dir: Path):
+    return omega_prime.Recording.from_file(str(files_dir / "pedestrian.osi"))
 
 
 class MetricFunctionSpy:

@@ -3,8 +3,9 @@
 import polars
 import pytest
 
-from omega_prime.qualification.metric import Metric
-from tests.qualification.metric.conftest import MetricFunctionSpy
+from omega_prime.metrics.metric import Metric
+
+from .conftest import MetricFunctionSpy
 
 
 def test_without_required_arg(metric: Metric) -> None:

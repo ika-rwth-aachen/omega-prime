@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from omega_prime.qualification.target_area_coverage import _apply_proj_offset
+from omega_prime.metrics.qualification.target_area_coverage import _apply_proj_offset
 
 
 def test_apply_proj_offset_pass() -> None:

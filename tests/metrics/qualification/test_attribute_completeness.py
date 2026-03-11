@@ -1,7 +1,7 @@
 """."""
 
 from omega_prime import Recording
-from omega_prime.qualification.attribute_completeness import attribute_completeness, ATTRIBUTE_COMPLETENESS
+from omega_prime.metrics.qualification.attribute_completeness import ATTRIBUTE_COMPLETENESS, attribute_completeness
 from omega_prime.schemas import polars_schema
 
 from .conftest import qualification_assert

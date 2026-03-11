@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from omega_prime.qualification.target_area_coverage import _transform_expected_coords
+from omega_prime.metrics.qualification.target_area_coverage import _transform_expected_coords
 
 from .conftest import EXPECTED_COORDS, EXPECTED_COORDS_WGS84, EXPECTED_COORDS_UTM32N, PROJ_UTM32N
 

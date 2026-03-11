@@ -1,6 +1,6 @@
 """."""
 
-from omega_prime.qualification.english_syntax import get_is_ending, format_items
+from omega_prime.metrics.qualification.english_syntax import format_items, get_is_ending
 
 
 def test_format_items() -> None:

@@ -5,7 +5,7 @@ import polars as pl
 
 from omega_prime import Recording
 
-from omega_prime.qualification.temporal_completeness import temporal_completeness, TEMPORAL_COMPLETENESS
+from omega_prime.metrics.qualification.temporal_completeness import TEMPORAL_COMPLETENESS, temporal_completeness
 
 from .conftest import qualification_assert
 

@@ -6,7 +6,7 @@ import polars as pl
 
 from .english_syntax import get_is_ending, format_items
 from ..metric import metric
-from ..schemas import polars_schema
+from ...schemas import polars_schema
 from .common import STATUS, PASS, FAIL, QRT, get_num_rows
 
 NON_DEFAULT_ATTRIBUTES_ACCURACY = "non_default_attributes_accuracy"

@@ -1,6 +1,6 @@
 """."""
 
-from omega_prime.qualification.metric import Metric
+from omega_prime.metrics.metric import Metric
 
 from .conftest import MetricFunctionSpy
 

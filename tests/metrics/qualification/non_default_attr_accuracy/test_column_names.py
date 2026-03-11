@@ -1,4 +1,4 @@
-from omega_prime.qualification.non_default_attr_accuracy import get_column_names
+from omega_prime.metrics.qualification.non_default_attr_accuracy import get_column_names
 
 
 def test_get_column_names() -> None:

@@ -1,9 +1,14 @@
+import polars as pl
+
+from ..metric import QRT, metric
+
+
 @metric(
     requires_columns=["distance_traveled", "vel"],
     requires_properties=["crossed", "timegaps"],
     computes_properties=["p_timegaps", "min_p_timegaps"],
 )
-def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps, time_buffer=2e9):
+def p_timegaps_and_min_p_timegaps(df: pl.LazyFrame, /, ego_id, crossed, timegaps, time_buffer=2e9) -> QRT:
     """Metrics that computes a predicted timegap between `ego_id` and all other objects. `time_buffer` gives the timespan in which intersection of trajectories is tested. The prediction is based on constant velocity following the same trajectory as observed."""
     p_timegaps = (
         crossed.join(timegaps, how="right", suffix="_overlap", on=["idx", "idx_ego"])

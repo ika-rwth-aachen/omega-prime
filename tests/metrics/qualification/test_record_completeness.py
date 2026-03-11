@@ -3,7 +3,7 @@
 import polars as pl
 
 from omega_prime import Recording
-from omega_prime.qualification.record_completeness import record_completeness, RECORD_COMPLETENESS
+from omega_prime.metrics.qualification.record_completeness import RECORD_COMPLETENESS, record_completeness
 
 from .conftest import qualification_assert
 

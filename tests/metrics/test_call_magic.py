@@ -5,7 +5,7 @@ import pytest
 
 from .conftest import MetricFunctionSpy
 
-from omega_prime.qualification.metric import Metric
+from omega_prime.metrics.metric import Metric
 
 
 def test_it(spy: MetricFunctionSpy, metric: Metric) -> None:

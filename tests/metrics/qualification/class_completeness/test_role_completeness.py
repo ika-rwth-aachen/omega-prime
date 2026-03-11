@@ -4,7 +4,7 @@ import betterosi
 import pytest
 import polars as pl
 
-from omega_prime.qualification.class_completeness import role_completeness
+from omega_prime.metrics.qualification.class_completeness import role_completeness
 
 
 vcr = betterosi.MovingObjectVehicleClassificationRole

@@ -3,7 +3,7 @@
 import pytest
 
 from omega_prime import Recording
-from omega_prime.qualification.vel import vel
+from omega_prime.metrics.analysis.vel import vel
 
 
 def test_vel(rec: Recording) -> None:

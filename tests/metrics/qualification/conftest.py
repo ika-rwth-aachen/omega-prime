@@ -1,20 +1,13 @@
 """."""
 
-from pathlib import Path
-
+import polars as pl
 import pytest
 
-import omega_prime
-from omega_prime.qualification.common import STATUS, PASS, FAIL
-import polars as pl
-
-
-@pytest.fixture(scope="session")
-def rec(files_dir: Path):
-    return omega_prime.Recording.from_file(str(files_dir / "pedestrian.osi"))
+from omega_prime.metrics.qualification.common import FAIL, PASS, STATUS
 
 
 def qualification_assert(qd: dict[str, pl.LazyFrame], metric_name: str, expected_value: float, is_pass: bool) -> None:
     result_df = qd[metric_name].collect()
     assert result_df[metric_name][0] == pytest.approx(expected_value)
-    assert result_df[STATUS][0] == PASS if is_pass else FAIL
+    expected_status = PASS if is_pass else FAIL
+    assert result_df[STATUS][0] == expected_status

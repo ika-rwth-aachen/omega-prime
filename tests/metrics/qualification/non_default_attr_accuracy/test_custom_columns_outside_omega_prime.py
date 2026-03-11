@@ -1,7 +1,7 @@
 import pytest
 
 from omega_prime import Recording
-from omega_prime.qualification.non_default_attr_accuracy import non_default_attributes_accuracy
+from omega_prime.metrics.qualification.non_default_attr_accuracy import non_default_attributes_accuracy
 from .conftest import this_assert
 
 

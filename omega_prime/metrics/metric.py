@@ -1,17 +1,17 @@
-import polars as pl
-from dataclasses import dataclass, field
 from collections.abc import Callable
-import polars_st as st
-from ..recording import Recording
-import graphlib
+from dataclasses import dataclass, field
 import inspect
+
+import polars as pl
+
+QRT = tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]
 
 
 @dataclass
 class Metric:
     """Class to compute metrics based on polars dataframes."""
 
-    compute_func: Callable[[pl.LazyFrame, ...], tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]]
+    compute_func: Callable[..., QRT]
     """The function that actually computes the metric"""
     computes_columns: list[str] = field(default_factory=list)
     """Names of the columns that will be added to the dataframe by this metrics"""
@@ -28,7 +28,10 @@ class Metric:
     _parameters: list = field(init=False)
     """All parameters of metrics that need to be set on computation"""
 
-    def compute_lazy(self, df: pl.LazyFrame, **kwargs) -> tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]:
+    def get_err_msg(self, error: TypeError) -> str:
+        return f"Missing parameter for Metric with compute_func {self.compute_func.__name__}: {repr(error)}"
+
+    def compute_lazy(self, df: pl.LazyFrame, **kwargs) -> QRT:
         try:
             df, properties = self.compute_func(df, **kwargs)
             assert isinstance(df, pl.LazyFrame)
@@ -39,9 +42,7 @@ class Metric:
             return df, properties
 
         except TypeError as e:
-            raise TypeError(
-                f"Missing parameter for Metric with compute_func {self.compute_func.__name__}: {repr(e)}"
-            ) from e
+            raise TypeError(self.get_err_msg(e)) from e
 
     def __post_init__(self):
         sig = inspect.signature(self.compute_func)
@@ -53,15 +54,13 @@ class Metric:
             v for k, v in parameters.items() if k not in ["df", "args", "kwargs"] + self.requires_properties
         ]
 
-    def __call__(self, df: pl.DataFrame, **kwargs):
+    def __call__(self, df: pl.DataFrame | pl.LazyFrame, **kwargs) -> QRT:
         try:
             if not isinstance(df, pl.LazyFrame):
                 df = pl.LazyFrame(df)
             return self.compute_lazy(df, **kwargs)
         except TypeError as e:
-            raise TypeError(
-                f"Missing paramter for Metric with compute_func {self.compute_func.__name__}: {repr(e)}"
-            ) from e
+            raise TypeError(self.get_err_msg(e)) from e
 
 
 def metric(
@@ -86,7 +85,4 @@ def metric(
         )
 
     return decorator
-
-
-
-metrics = [vel, distance_traveled, timegaps_and_min_timgaps, p_timegaps_and_min_p_timgaps]
+__all__ = ["Metric", "QRT", "metric"]

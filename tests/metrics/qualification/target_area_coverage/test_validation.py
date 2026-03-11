@@ -3,7 +3,7 @@
 import polars as pl
 import pytest
 
-from omega_prime.qualification.target_area_coverage import target_area_coverage
+from omega_prime.metrics.qualification.target_area_coverage import target_area_coverage
 
 
 def test_too_few_expected_area_coords() -> None:

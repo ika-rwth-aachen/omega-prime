@@ -1,6 +1,22 @@
+import graphlib
+from dataclasses import dataclass, field
+
+import polars as pl
+import polars_st as st
+
+from ..recording import Recording
+from .analysis.distance_traveled import distance_traveled
+from .analysis.predicted_timegaps import p_timegaps_and_min_p_timegaps
+from .analysis.timegaps import timegaps_and_min_timegaps
+from .analysis.vel import vel
+from .metric import Metric
+
+DEFAULT_METRICS = [vel, distance_traveled, timegaps_and_min_timegaps, p_timegaps_and_min_p_timegaps]
+
+
 @dataclass
 class MetricManager:
-    metrics: list[Metric] = field(default_factory=lambda: metrics)
+    metrics: list[Metric] = field(default_factory=lambda: DEFAULT_METRICS.copy())
     """List of metrics to compute"""
     exclude_columns: list[str] = field(default_factory=list)
     """List of columns computed by the metrics that do not need to be computed"""
@@ -14,6 +30,7 @@ class MetricManager:
     """Automatically derived list of parameters to keep"""
 
     def __post_init__(self):
+        self.metrics = list(self.metrics)
         self._dependencies = {
             val: [i]
             for i, m in enumerate(self.metrics)

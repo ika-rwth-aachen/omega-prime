@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta, timezone
 import polars as pl
 import pytest
 
-from omega_prime.qualification.temporal_coverage import (
+from omega_prime.metrics.qualification.temporal_coverage import (
     TEMPORAL_COVERAGE,
     _ensure_utc,
     _parse_datetime,

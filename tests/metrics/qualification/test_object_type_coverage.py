@@ -1,7 +1,7 @@
 """."""
 
 from omega_prime import Recording, MovingObjectType
-from omega_prime.qualification.object_type_coverage import object_type_coverage, OBJECT_TYPE_COVERAGE
+from omega_prime.metrics.qualification.object_type_coverage import OBJECT_TYPE_COVERAGE, object_type_coverage
 
 from .conftest import qualification_assert
 

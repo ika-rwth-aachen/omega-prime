@@ -1,10 +1,10 @@
 """."""
 
-from omega_prime.qualification.dependencies import append_if_absent, append_dependencies
-from omega_prime.qualification.timegaps import timegaps_and_min_timegaps
-from omega_prime.qualification.timegaps_predicted import p_timegaps_and_min_p_timegaps
-from omega_prime.qualification.vel import vel
-from omega_prime.qualification.distance_traveled import distance_traveled
+from omega_prime.metrics.analysis.distance_traveled import distance_traveled
+from omega_prime.metrics.analysis.predicted_timegaps import p_timegaps_and_min_p_timegaps
+from omega_prime.metrics.analysis.timegaps import timegaps_and_min_timegaps
+from omega_prime.metrics.analysis.vel import vel
+from omega_prime.metrics.metric_dependencies import append_dependencies, append_if_absent
 
 
 def test_get_append_if_absent() -> None:

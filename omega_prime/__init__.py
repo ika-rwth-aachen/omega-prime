@@ -1,9 +1,7 @@
 __pdoc__ = {}
 __pdoc__["converters"] = False
 """ .. include:: ./../README.md """
-from .metrics import metric
-
-from . import converters
+from . import converters, metrics
 from .map_odr import MapOdr
 from .locator import LaneRelation, Locator
 from .map import Lane, LaneBoundary, Map, MapOsi
@@ -36,7 +34,7 @@ __all__ = [
     "Locator",
     "LaneRelation",
     "converters",
-    "metric",
+    "metrics",
     "LaneBoundaryType",
     "LaneType",
     "LaneSubtype",

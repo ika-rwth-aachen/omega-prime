@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from .conftest import MetricFunctionSpy
 
-from omega_prime.qualification.metric import metric
+from omega_prime.metrics.metric import metric
 
 
 def test_metric_decorator(spy: MetricFunctionSpy) -> None:
