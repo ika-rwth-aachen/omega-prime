@@ -85,9 +85,9 @@ See [Tutorials / Locator](notebooks/tutorial_locator.ipynb) for examples of how 
 
 ## Metrics
 
-The `MetricsManager` makes use of [Polars feature of lazy evaulation](https://docs.pola.rs/user-guide/concepts/lazy-api/#previewing-the-query-plan) to enable efficient computation of many, possible, dependent metrics.
+The `MetricManager` makes use of [Polars feature of lazy evaulation](https://docs.pola.rs/user-guide/concepts/lazy-api/#previewing-the-query-plan) to enable efficient computation of many, possible, dependent metrics.
 The metrics computation can be defined by subclassing `Metric` or, more easily by using the decorator `@omega_prime.metrics.metric` a function that computes your metric based on the `Recording.df`.
 Moreover, the `Metric` lets you define dependencies between metrics, e.g., `distance_traveled` needs to be computed to compute `timegaps`. 
-The `MetricsManager` then handles the dependencies automatically, and makes sure only the things you actually need are computed.
+The `MetricManager` then handles the dependencies automatically, and makes sure only the things you actually need are computed.
 
 See [Tutorials / Metrics](notebooks/tutorial_metrics.ipynb) for examples of how to define and use the metric utilities.
