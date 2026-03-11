@@ -85,4 +85,6 @@ def metric(
         )
 
     return decorator
+
+
 __all__ = ["Metric", "QRT", "metric"]
