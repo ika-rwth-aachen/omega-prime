@@ -5,8 +5,8 @@ import pytest
 
 from omega_prime import Recording
 
-from omega_prime.qualification.timegaps import timegaps_and_min_timegaps
-from omega_prime.qualification.distance_traveled import distance_traveled
+from omega_prime.metrics.analysis.timegaps import timegaps_and_min_timegaps
+from omega_prime.metrics.analysis.distance_traveled import distance_traveled
 
 
 def test_it(cut_in: Recording) -> None:
