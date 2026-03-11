@@ -6,7 +6,6 @@ from .analysis.predicted_timegaps import p_timegaps_and_min_p_timegaps
 from .analysis.timegaps import timegaps_and_min_timegaps
 from .analysis.vel import vel
 from .metric import Metric, QRT, metric
-from .metric_dependencies import append_dependencies, append_if_absent
 from .metric_manager import MetricManager
 from .qualification.attribute_completeness import attribute_completeness
 from .qualification.class_completeness import class_completeness
@@ -23,8 +22,6 @@ __all__ = [
     "MetricManager",
     "QRT",
     "analysis",
-    "append_dependencies",
-    "append_if_absent",
     "attribute_completeness",
     "class_completeness",
     "distance_traveled",
