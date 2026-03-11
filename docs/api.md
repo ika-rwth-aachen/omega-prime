@@ -8,7 +8,7 @@
 
 ::: omega_prime.converters.converter
 
-::: omega_prime.metrics.metric_manager
+::: omega_prime.metrics
 
 ::: omega_prime.mapsegment
 ::: omega_prime.maposicenterlinesegmentation
