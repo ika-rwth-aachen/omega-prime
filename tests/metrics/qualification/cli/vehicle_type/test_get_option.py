@@ -9,7 +9,7 @@ from omega_prime.metrics.qualification.cli.vehicle_type import VehicleType
 def test_get_option() -> None:
     typer_option = VehicleType.get_option()
     assert isinstance(typer_option, typer.models.OptionInfo)
-    assert typer_option.help == "Select one or more vehicle classes."
+    assert typer_option.help == "Select one or more expected vehicle classes."
     assert typer_option.default == "--vehicle-class"
     assert typer_option.param_decls == ("-v",)
     click_type = typer_option.click_type
