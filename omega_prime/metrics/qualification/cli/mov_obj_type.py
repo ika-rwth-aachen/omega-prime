@@ -6,7 +6,7 @@ from betterosi import MovingObjectType
 
 from .common import to_osi_str
 
-H_MOV_OBJ_TYPE = "Select one or more moving object types."
+H_MOV_OBJ_TYPE = "Select one or more expected moving object types."
 
 
 class MovObjTypeCli:
