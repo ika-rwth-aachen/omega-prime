@@ -24,7 +24,7 @@ class VehicleRole:
         return typer.Option(
             "--vehicle-role",
             "-r",
-            help="Select one or more vehicle roles.",
+            help="Select one or more expected vehicle roles.",
             click_type=click.Choice(cls.CHOICES),
         )
 
