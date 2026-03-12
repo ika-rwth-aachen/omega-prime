@@ -21,7 +21,6 @@ H_COLS = "Select one or more column names."
 ctx_file_name = typer.Argument(dir_okay=False, file_okay=True, readable=True, help=H_FILE_NAME)
 opt_fps = typer.Option("--fps", "-fps", help="Expected frequency.")
 opt_columns = typer.Option("--columns", "-c", help=H_COLS, click_type=click.Choice(polars_schema.keys()))
-opt_ego_id = typer.Option("--ego-id", help="Ego ID (for timegaps).")
 
 
 class QualificationCli:
@@ -37,7 +36,6 @@ class QualificationCli:
         roles: Annotated[list[str], VehicleRole.get_option()] = VehicleRole.get_default(),
         fps: Annotated[float, opt_fps] = 30.0,
         columns: Annotated[list[str], opt_columns] = tuple(polars_schema.keys()),
-        ego_id: Annotated[int, opt_ego_id] = 0,
     ) -> None:
         self.file_path = file_path
         manager = get_metric_manager(cli_metrics)
@@ -47,7 +45,6 @@ class QualificationCli:
         expected_roles = VehicleRole.to_osi_list(roles)
         _df, results_dct = manager.compute(
             recording,
-            ego_id=ego_id,
             expected_types=expected_types,
             expected_subtypes=expected_subtypes,
             expected_roles=expected_roles,
