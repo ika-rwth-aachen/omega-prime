@@ -149,11 +149,12 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
         self.set_intersection_idx()
 
         if self.do_combine_intersections:
+            self.create_lane_segment_dict()
             self.add_non_intersecting_lanes_to_intersection()
             self.combine_intersections()
             self.set_intersection_idx()
-            self.create_intersection_dict()
 
+        self.create_intersection_dict()
         self.create_lane_segment_dict()
         self.find_isolated_connections()
         self.create_lane_segment_dict()
@@ -645,41 +646,46 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
             isolated_connections (list): A list of lists, where each inner list contains the indices of lanes that are part of an isolated connection.
         """
         G = self.create_non_intersecting_lane_graph()
-        isolated_connections = []
         new_connections = []
+        segment_name_type = type(next(iter(self.lane_segment_dict.values())))
+
+        # Classify each component before constructing ConnectionSegment objects.
         for component in nx.connected_components(G):
-            if len(component) > 0:
-                isolated_connections.append(
-                    ConnectionSegment(
-                        [self.lane_dict[i] for i in component], concave_hull_ratio=self.concave_hull_ratio
-                    )
-                )
-        # Check if any of the lanes in the isolated connections are part of an intersection
-        for connection in isolated_connections:
+            if not component:
+                continue
+
+            component_ids = list(component)
             pre = False
             suc = False
-            for lane_id in connection.lane_ids:
-                # Check if the lane has a predecessor or successor that is part of an intersection
+            intersection_idxs = set()
+
+            for lane_id in component_ids:
                 for successor in self.lane_successors_dict[lane_id]:
                     if successor in self.lane_segment_dict and self.lane_segment_dict[successor].segment is not None:
-                        connection.intersection_idxs.add(self.lane_segment_dict[successor].segment_idx)
+                        intersection_idxs.add(self.lane_segment_dict[successor].segment_idx)
                         suc = True
                 for predecessor in self.lane_predecessors_dict[lane_id]:
                     if (
                         predecessor in self.lane_segment_dict
                         and self.lane_segment_dict[predecessor].segment is not None
                     ):
-                        connection.intersection_idxs.add(self.lane_segment_dict[predecessor].segment_idx)
+                        intersection_idxs.add(self.lane_segment_dict[predecessor].segment_idx)
                         pre = True
 
-            if len(connection.intersection_idxs) == 1 and pre and suc:
-                # There is a predecessor and a successor that are part of an intersection so the connection is part of the intersection:
-                # Add all the lanes to the intersection:
-                for lane_id in connection.lane_ids:
-                    self.intersection_dict[list(connection.intersection_idxs)[0]].lanes.append(self.lane_dict[lane_id])
-                    self.intersection_dict[list(connection.intersection_idxs)[0]].lane_ids.append(lane_id)
-                    self.intersection_dict[list(connection.intersection_idxs)[0]].update_polygon()
+            if len(intersection_idxs) == 1 and pre and suc:
+                # Single bordering intersection on both ends: absorb the component into it.
+                inter = self.intersection_dict[list(intersection_idxs)[0]]
+                for lane_id in component_ids:
+                    inter.lanes.append(self.lane_dict[lane_id])
+                    inter.lane_ids.append(lane_id)
+                    # Keep lane_segment_dict current so subsequent components see these lanes as already assigned.
+                    self.lane_segment_dict[lane_id] = segment_name_type(lane_id, inter.idx, inter)
+                inter.update_polygon()
             else:
+                connection = ConnectionSegment(
+                    [self.lane_dict[i] for i in component_ids], concave_hull_ratio=self.concave_hull_ratio
+                )
+                connection.intersection_idxs = intersection_idxs
                 new_connections.append(connection)
 
         isolated_connections = new_connections
