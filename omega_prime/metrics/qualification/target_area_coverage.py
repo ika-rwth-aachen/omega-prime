@@ -5,8 +5,7 @@ import math
 
 import polars as pl
 from pyproj import CRS, Transformer
-from shapely.geometry import Point, Polygon
-from shapely.prepared import prep
+from shapely.geometry import MultiPoint, Polygon
 
 from ..metric import metric
 from .common import STATUS, PASS, FAIL, QRT
@@ -39,13 +38,14 @@ def target_area_coverage(
         raise ValueError("expected_area_coords does not form a valid polygon")
 
     point_df = df.select("x", "y").collect()
-    total_points = point_df.height
-    points_inside = 0
-    if total_points > 0:
-        prepared_polygon = prep(expected_polygon)
-        points_inside = sum(prepared_polygon.covers(Point(x, y)) for x, y in point_df.iter_rows())
-
-    coverage = points_inside * 100.0 / total_points if total_points > 0 else 100.0
+    covered_coords = list(point_df.iter_rows())
+    coverage = 0.0
+    if covered_coords:
+        covered_area = MultiPoint(covered_coords).convex_hull
+        if not covered_area.is_empty and covered_area.area > 0.0:
+            expected_area = expected_polygon.area
+            intersection_area = covered_area.intersection(expected_polygon).area
+            coverage = intersection_area * 100.0 / expected_area
 
     status = PASS if coverage >= threshold else FAIL
 
