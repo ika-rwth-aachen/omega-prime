@@ -7,7 +7,7 @@ import pytest
 from omega_prime.metrics.qualification.target_area_coverage import transform_expected_coords
 
 
-def test_transform_expected_coords_pass(
+def test_pass(
     expected_coords_wgs84: list[tuple[float, float]],
     expected_coords_utm32n: list[tuple[float, float]],
     proj_utm32n: str,
@@ -23,7 +23,7 @@ def test_transform_expected_coords_pass(
         assert transformed[1] == pytest.approx(expected[1])
 
 
-def test_transform_expected_coords_with_matching_crs(
+def test_with_matching_crs(
     expected_coords_utm32n: list[tuple[float, float]],
     proj_utm32n: str,
 ) -> None:
@@ -36,7 +36,7 @@ def test_transform_expected_coords_with_matching_crs(
     assert transformed_coords == expected_coords_utm32n
 
 
-def test_transform_expected_coords_with_matching_crs_and_offset(proj_utm32n: str) -> None:
+def test_with_matching_crs_and_offset(proj_utm32n: str) -> None:
     transformed_coords = transform_expected_coords(
         [(1.0, 0.0), (2.0, 0.0), (1.0, 1.0)],
         expected_area_source_crs="EPSG:32632",
@@ -49,7 +49,7 @@ def test_transform_expected_coords_with_matching_crs_and_offset(proj_utm32n: str
     assert transformed_coords[2] == pytest.approx((1.0, 0.0))
 
 
-def test_transform_expected_coords_without_expected_area_source_crs_fails(
+def test_without_expected_area_source_crs_fails(
     expected_coords_local: list[tuple[float, float]],
     proj_utm32n: str,
 ) -> None:
@@ -65,7 +65,7 @@ def test_transform_expected_coords_without_expected_area_source_crs_fails(
         )
 
 
-def test_transform_expected_coords_without_dataset_proj4(
+def test_without_dataset_proj4(
     expected_coords_wgs84: list[tuple[float, float]],
 ) -> None:
     with pytest.raises(
