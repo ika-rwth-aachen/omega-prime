@@ -10,6 +10,7 @@ from omega_prime.metrics.qualification.class_completeness import (
     SUBTYPE_COMPLETENESS,
     TYPE_COMPLETENESS,
     class_completeness,
+    type_completeness,
 )
 
 from .conftest import assert_class_completeness
@@ -248,3 +249,27 @@ def test_role_not_required(class_df) -> None:
         },
         is_pass=True,
     )
+
+
+def test_vehicle_specific_expectations_are_ignored_without_vehicle_type(class_df) -> None:
+    _df, result_dict = class_completeness(
+        class_df,
+        expected_types=[betterosi.MovingObjectType.TYPE_PEDESTRIAN],
+        expected_subtypes=[vct.TYPE_BUS],
+        expected_roles=[vcr.ROLE_AMBULANCE],
+    )
+
+    assert_class_completeness(
+        result_dict,
+        expected_values={
+            TYPE_COMPLETENESS: 100.0,
+            SUBTYPE_COMPLETENESS: 100.0,
+            ROLE_COMPLETENESS: 100.0,
+        },
+        is_pass=True,
+    )
+
+
+def test_type_completeness_requires_expected_types(class_df) -> None:
+    with pytest.raises(ValueError, match="expected_types must be provided"):
+        type_completeness(class_df, [])
