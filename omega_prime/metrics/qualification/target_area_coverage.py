@@ -39,13 +39,10 @@ def target_area_coverage(
 
     point_df = df.select("x", "y").collect()
     covered_coords = list(point_df.iter_rows())
-    coverage = 0.0
-    if covered_coords:
-        covered_area = MultiPoint(covered_coords).convex_hull
-        if not covered_area.is_empty and covered_area.area > 0.0:
-            expected_area = expected_polygon.area
-            intersection_area = covered_area.intersection(expected_polygon).area
-            coverage = intersection_area * 100.0 / expected_area
+    covered_area = MultiPoint(covered_coords).convex_hull
+    expected_area = expected_polygon.area
+    intersection_area = covered_area.intersection(expected_polygon).area
+    coverage = intersection_area * 100.0 / expected_area
 
     status = PASS if coverage >= threshold else FAIL
 
