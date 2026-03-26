@@ -35,7 +35,7 @@ def temporal_completeness(
     if total_tracks > 0:
         temporal_completeness = (1.0 - (below_count / total_tracks)) * 100.0
     else:
-        temporal_completeness = 100.0
+        temporal_completeness = 0.0
 
     summary = pl.DataFrame(
         {
