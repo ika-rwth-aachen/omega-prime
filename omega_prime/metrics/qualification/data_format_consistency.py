@@ -73,11 +73,7 @@ def _count_invalid_values(df: pl.LazyFrame, columns: list[str], schema: pl.Schem
             continue
 
         invalid_exprs.append(
-            pl.when(pl.col(column).is_null())
-            .then(0)
-            .otherwise((~value_check).cast(pl.Int64))
-            .sum()
-            .alias(column)
+            pl.when(pl.col(column).is_null()).then(0).otherwise((~value_check).cast(pl.Int64)).sum().alias(column)
         )
 
     invalid_counts = df.select(invalid_exprs).collect().row(0)
