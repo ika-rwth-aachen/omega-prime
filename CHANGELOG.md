@@ -1,6 +1,7 @@
 # 0.3.0
 
- - Added metrics (including tests) to the qualification methodology
+ - Add the `qualify` command to CLI.
+ - Added metrics to the qualification methodology
    - Attribute completeness
    - Non-default attribute accuracy
    - Object type coverage
