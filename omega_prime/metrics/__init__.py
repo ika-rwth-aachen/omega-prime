@@ -9,6 +9,7 @@ from .metric import Metric, QRT, metric
 from .metric_manager import MetricManager
 from .qualification.attribute_completeness import attribute_completeness
 from .qualification.class_completeness import class_completeness
+from .qualification.data_format_consistency import data_format_consistency
 from .qualification.duplicate_record_rate import duplicate_record_rate
 from .qualification.non_default_attr_accuracy import non_default_attributes_accuracy
 from .qualification.object_type_coverage import object_type_coverage
@@ -24,6 +25,7 @@ __all__ = [
     "analysis",
     "attribute_completeness",
     "class_completeness",
+    "data_format_consistency",
     "distance_traveled",
     "duplicate_record_rate",
     "metric",

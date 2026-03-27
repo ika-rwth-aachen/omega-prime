@@ -12,6 +12,7 @@ from .class_completeness import (
     type_completeness,
 )
 from .common import FAIL, PASS, QRT, STATUS, get_num_rows
+from .data_format_consistency import DATA_FORMAT_CONSISTENCY, data_format_consistency
 from .duplicate_record_rate import DUPLICATE_RECORD_RATE, duplicate_record_rate
 from .english_syntax import format_items, get_is_ending
 from .non_default_attr_accuracy import NON_DEFAULT_ATTRIBUTES_ACCURACY, non_default_attributes_accuracy
@@ -24,6 +25,7 @@ from .temporal_coverage import TEMPORAL_COVERAGE, temporal_coverage
 __all__ = [
     "ATTRIBUTE_COMPLETENESS",
     "CLASS_COMPLETENESS",
+    "DATA_FORMAT_CONSISTENCY",
     "DUPLICATE_RECORD_RATE",
     "FAIL",
     "NON_DEFAULT_ATTRIBUTES_ACCURACY",
@@ -40,6 +42,7 @@ __all__ = [
     "TYPE_COMPLETENESS",
     "attribute_completeness",
     "class_completeness",
+    "data_format_consistency",
     "duplicate_record_rate",
     "format_items",
     "get_is_ending",
