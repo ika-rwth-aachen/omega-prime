@@ -7,7 +7,7 @@ from betterosi import MovingObjectVehicleClassificationType as OsiCls
 from .common import to_osi_str
 
 
-class VehicleType:
+class VehicleTypeCli:
     # fmt: off
     CHOICES = (
         'bicycle', 'bus', 'car', 'compact-car', 'delivery-van', 'heavy-truck', 'luxury-car', 'medium-car',

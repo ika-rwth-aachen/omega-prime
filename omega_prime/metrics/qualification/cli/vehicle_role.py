@@ -7,7 +7,7 @@ from betterosi import MovingObjectVehicleClassificationRole as OsiRole
 from .common import to_osi_str
 
 
-class VehicleRole:
+class VehicleRoleCli:
     # fmt: off
     CHOICES = (
         'ambulance', 'civil', 'fire', 'garbage-collection', 'military', 'other', 'police', 'public-transport',
