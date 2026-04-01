@@ -1,7 +1,7 @@
 """."""
 
-from omega_prime.metrics.qualification.cli.vehicle_role import VehicleRole
+from omega_prime.metrics.qualification.cli.vehicle_role import VehicleRoleCli
 
 
 def test_get_default() -> None:
-    assert VehicleRole.get_default() == tuple()
+    assert VehicleRoleCli.get_default() == tuple()
