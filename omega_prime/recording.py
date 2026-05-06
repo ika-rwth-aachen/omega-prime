@@ -314,6 +314,10 @@ class Recording:
         df = self._attach_frame_column(df, mapping)
         df = self._ensure_polars_dataframe(df)
         if validate:
+            int_cols = ["idx", "type", "role", "subtype"]
+            for col in int_cols:
+                if col in df.columns:
+                    df = df.with_columns(pl.col(col).cast(pl.Int64))
             recording_moving_object_schema.validate(df, lazy=True)
 
         super().__init__()
