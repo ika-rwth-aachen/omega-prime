@@ -346,7 +346,7 @@ class Recording:
                 self._df.group_by("idx")
                 .agg(
                     pl.col("length", "width", "height").mean(),
-                    pl.col("type", "subtype", "role").median(),
+                    pl.col("type", "subtype", "role").mode().sort().first(),
                     pl.col("frame").min().alias("birth"),
                     pl.col("frame").max().alias("end"),
                     pl.col("total_nanos").min().alias("t_birth"),
