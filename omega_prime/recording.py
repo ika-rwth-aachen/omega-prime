@@ -503,7 +503,7 @@ class Recording:
             for gt in self.to_osi_gts():
                 w.add(gt)
             if isinstance(self.map, MapOdr):
-                w.add(self.map.to_osi(), topic="ground_truth_map", log_time=0)
+                w.add(self.map.to_osi(), topic="ground_truth_map", log_time=min(self.df["total_nanos"]))
             elif (
                 self.map is not None and not isinstance(self.map, MapOsi) and not isinstance(self.map, MapOsiCenterline)
             ):
