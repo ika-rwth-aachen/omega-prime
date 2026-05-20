@@ -499,11 +499,16 @@ class Recording:
         "Store Recording as an MCAP file."
         if Path(filepath).suffix != ".mcap":
             raise ValueError()
+        map_time = 0
+        if self._df.height != 0:
+            min_total_nanos = self._df["total_nanos"].drop_nulls().min()
+            if min_total_nanos is not None:
+                map_time = int(min_total_nanos)
         with betterosi.Writer(filepath) as w:
             for gt in self.to_osi_gts():
                 w.add(gt)
             if isinstance(self.map, MapOdr):
-                w.add(self.map.to_osi(), topic="ground_truth_map", log_time=0)
+                w.add(self.map.to_osi(), topic="ground_truth_map", log_time=map_time)
             elif (
                 self.map is not None and not isinstance(self.map, MapOsi) and not isinstance(self.map, MapOsiCenterline)
             ):
