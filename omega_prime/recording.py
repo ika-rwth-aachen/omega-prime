@@ -19,6 +19,7 @@ from matplotlib.patches import Polygon as PltPolygon
 from .map import MapOsi, MapOsiCenterline, ProjectionOffset
 from .map_odr import MapOdr
 from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
+from .mapodrsegmentation import MapODRSegmentation
 from .schemas import polars_schema, recording_moving_object_schema
 
 
@@ -1048,3 +1049,6 @@ class Recording:
         if isinstance(self.map, MapOsiCenterline):
             self.mapsegment = MapOsiCenterlineSegmentation(self)
             self.mapsegment.init_intersections()
+        elif isinstance(self.map, MapOdr):
+            self.mapsegment = MapODRSegmentation(self)
+            self.mapsegment.identify_segments()

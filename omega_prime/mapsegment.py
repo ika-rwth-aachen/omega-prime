@@ -142,6 +142,7 @@ class MapSegmentation(ABC):
         self.intersection_dict = {}
         self.lane_segment_dict = {}
         self.segments = []
+        self.segment_by_road_id = {}
         self.concave_hull_ratio = concave_hull_ratio
 
         segment_name = nt("SegmentName", ["lane_id", "segment_idx", "segment"])
@@ -224,3 +225,19 @@ class MapSegmentation(ABC):
             if lane_id not in self.lane_segment_dict or self.lane_segment_dict[lane_id].segment is None:
                 return False
         return True
+
+    def build_segment_by_road_id(self):
+        """Build a mapping from road_id (as str) to the owning Segment.
+
+        Works for both OSI (where update_road_ids() has aligned lane.idx.road_id
+        with the segment index) and ODR (where lane.idx.road_id is the original
+        ODR road ID string).
+        """
+        self.segment_by_road_id = {}
+        for segment in self.segments:
+            for lane in segment.lanes:
+                self.segment_by_road_id[str(lane.idx.road_id)] = segment
+
+    def get_segment(self, road_id) -> "Segment | None":
+        """Return the Segment for a given road_id, or None if not found."""
+        return self.segment_by_road_id.get(str(road_id))

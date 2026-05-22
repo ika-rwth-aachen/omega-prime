@@ -163,6 +163,7 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
         self.create_lane_segment_dict()
         self.update_road_ids()
         self.set_lane_intersection_relation()
+        self.build_segment_by_road_id()
 
         # from pathlib import Path
         # #Plot the graph G with x and y coordinates of the lanes
