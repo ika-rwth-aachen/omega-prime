@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 # ODR-specific Segment classes
 # ---------------------------------------------------------------------------
 
+
 class SegmentOdr(Segment):
     """Concrete Segment base for OpenDRIVE-based maps.
 
@@ -122,6 +123,7 @@ def _save_or_show(output_plot, filename: str):
 # MapODRSegmentation
 # ---------------------------------------------------------------------------
 
+
 class MapODRSegmentation(MapSegmentation):
     """Identifies intersections and road segments in an OpenDRIVE (MapOdr) map.
 
@@ -133,8 +135,7 @@ class MapODRSegmentation(MapSegmentation):
 
     def __init__(self, recording, concave_hull_ratio=0.3):
         assert recording.map is not None, (
-            "Recording does not contain a map. Please provide a recording with "
-            "a map to use MapODRSegmentation."
+            "Recording does not contain a map. Please provide a recording with a map to use MapODRSegmentation."
         )
         assert isinstance(recording.map, MapOdr), (
             "Map in recording is not of type MapOdr. Please provide a recording "
@@ -202,10 +203,7 @@ class MapODRSegmentation(MapSegmentation):
         segment_name = nt("SegmentName", ["lane_id", "segment_idx", "segment"])
         segment_list = self.intersections + self.isolated_connections
 
-        lane_segment_dict = {
-            lane_id: segment_name(lane_id, None, None)
-            for lane_id in self.lane_dict.keys()
-        }
+        lane_segment_dict = {lane_id: segment_name(lane_id, None, None) for lane_id in self.lane_dict.keys()}
 
         for segment in segment_list:
             for lane in segment.lanes:
