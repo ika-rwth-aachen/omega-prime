@@ -71,7 +71,7 @@ def transform_expected_coords(
     if dataset_proj4 == "":
         raise ValueError("dataset_proj4 is required to transform expected_area_coords")
 
-    dataset_crs = CRS.from_proj4(dataset_proj4)
+    dataset_crs = CRS.from_user_input(dataset_proj4)
     source_crs = CRS.from_user_input(expected_area_source_crs)
     if source_crs == dataset_crs:
         transformed = list(expected_coords)

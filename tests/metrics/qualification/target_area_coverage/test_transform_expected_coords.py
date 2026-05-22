@@ -36,6 +36,21 @@ def test_with_matching_crs(
     assert transformed_coords == expected_coords_utm32n
 
 
+def test_accepts_dataset_crs_user_input(
+    expected_coords_wgs84: list[tuple[float, float]],
+    expected_coords_utm32n: list[tuple[float, float]],
+) -> None:
+    transformed_coords = transform_expected_coords(
+        expected_coords_wgs84,
+        expected_area_source_crs="EPSG:4326",
+        dataset_proj4="EPSG:32632",
+    )
+
+    for transformed, expected in zip(transformed_coords, expected_coords_utm32n, strict=True):
+        assert transformed[0] == pytest.approx(expected[0])
+        assert transformed[1] == pytest.approx(expected[1])
+
+
 def test_with_matching_crs_and_offset(proj_utm32n: str) -> None:
     transformed_coords = transform_expected_coords(
         [(1.0, 0.0), (2.0, 0.0), (1.0, 1.0)],
