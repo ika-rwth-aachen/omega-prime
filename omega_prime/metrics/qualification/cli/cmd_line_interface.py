@@ -47,6 +47,7 @@ class QualificationCli:
         subtypes: list[str],
         roles: list[str],
         fps: float,
+        timing_tolerance: float,
         columns: list[str],
         expected_start: datetime | None,
         expected_end: datetime | None,
@@ -67,7 +68,7 @@ class QualificationCli:
             metric_kwargs |= ObjectTypeCoverageCli.build_kwargs(types)
 
         if CliMetric.TEMPORAL_COMPLETENESS in selected_metrics:
-            metric_kwargs |= TemporalCompletenessCli.build_kwargs(fps)
+            metric_kwargs |= TemporalCompletenessCli.build_kwargs(fps, timing_tolerance)
 
         if CliMetric.NON_DEFAULT_ATTRIBUTES_ACCURACY in selected_metrics:
             metric_kwargs |= NonDefaultAttributesAccuracyCli.build_kwargs(columns)
@@ -92,6 +93,7 @@ class QualificationCli:
         subtypes: Annotated[list[str], VehicleTypeCli.get_option()] = VehicleTypeCli.get_default(),
         roles: Annotated[list[str], VehicleRoleCli.get_option()] = VehicleRoleCli.get_default(),
         fps: Annotated[float, opt_fps] = 30.0,
+        timing_tolerance: Annotated[float, TemporalCompletenessCli.get_timing_tolerance_option()] = 0.05,
         columns: Annotated[list[str], opt_columns] = tuple(polars_schema.keys()),
         expected_start: Annotated[datetime | None, TemporalCoverageCli.get_expected_start_option()] = None,
         expected_end: Annotated[datetime | None, TemporalCoverageCli.get_expected_end_option()] = None,
@@ -111,6 +113,7 @@ class QualificationCli:
             subtypes=subtypes,
             roles=roles,
             fps=fps,
+            timing_tolerance=timing_tolerance,
             columns=list(columns),
             expected_start=expected_start,
             expected_end=expected_end,

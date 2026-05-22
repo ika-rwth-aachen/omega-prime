@@ -13,12 +13,14 @@ def temporal_completeness(
     df: pl.LazyFrame,
     /,
     expected_frequency: float,
+    timing_tolerance: float = 0.05,
 ) -> QRT:
     if expected_frequency <= 0.0:
         raise ValueError(f"expected_frequency must be > 0, got {expected_frequency}")
+    if timing_tolerance < 0.0:
+        raise ValueError(f"timing_tolerance must be >= 0, got {timing_tolerance}")
 
     delta_target = 1.0 / expected_frequency
-    track_threshold = 0.95
 
     idx_and_time = df.select("idx", "total_nanos").sort(["idx", "total_nanos"])
     deltas = idx_and_time.with_columns((pl.col("total_nanos").diff().over("idx") / 1e9).alias("delta_t"))
@@ -26,7 +28,7 @@ def temporal_completeness(
     per_track_rms = valid_deltas.group_by("idx").agg(
         (((pl.col("delta_t") - delta_target) / delta_target).pow(2).mean().sqrt()).alias("delta_rms")
     )
-    below_count_query = per_track_rms.select((pl.col("delta_rms") > (1 - track_threshold)).sum().alias("below_count"))
+    below_count_query = per_track_rms.select((pl.col("delta_rms") > timing_tolerance).sum().alias("below_count"))
 
     below_count = int(below_count_query.collect().item(0, 0))
 

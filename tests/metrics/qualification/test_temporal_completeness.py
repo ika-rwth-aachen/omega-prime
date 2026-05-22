@@ -54,6 +54,11 @@ def test_fail(temporal_df_mixed: pl.LazyFrame) -> None:
     qualification_assert(result, TEMPORAL_COMPLETENESS, 50.0, False)
 
 
+def test_pass_with_timing_tolerance(temporal_df_mixed: pl.LazyFrame) -> None:
+    _df, result = temporal_completeness(temporal_df_mixed, expected_frequency=10.0, timing_tolerance=1.0)
+    qualification_assert(result, TEMPORAL_COMPLETENESS, 100.0, True)
+
+
 def test_record(rec: Recording) -> None:
     df, result = temporal_completeness(rec.df.lazy(), expected_frequency=30.0)
     qualification_assert(result, TEMPORAL_COMPLETENESS, 100.0, True)
@@ -74,3 +79,8 @@ def test_empty_df() -> None:
 def test_invalid_expected_frequency(temporal_df_pass: pl.LazyFrame, expected_frequency: float) -> None:
     with pytest.raises(ValueError, match="expected_frequency must be > 0"):
         temporal_completeness(temporal_df_pass, expected_frequency=expected_frequency)
+
+
+def test_invalid_timing_tolerance(temporal_df_pass: pl.LazyFrame) -> None:
+    with pytest.raises(ValueError, match="timing_tolerance must be >= 0"):
+        temporal_completeness(temporal_df_pass, expected_frequency=10.0, timing_tolerance=-0.1)
