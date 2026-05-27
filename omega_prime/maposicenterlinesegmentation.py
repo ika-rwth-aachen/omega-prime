@@ -5,7 +5,6 @@ import shapely
 from shapely.strtree import STRtree
 from shapely.geometry import Point
 from collections import namedtuple as nt
-from omega_prime.locator import Locator
 from matplotlib import pyplot as plt
 from pathlib import Path
 import shapely
@@ -81,7 +80,6 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
 
     def __init__(self, recording, lane_buffer=None, intersection_overlap_buffer=None, concave_hull_ratio=0.3):
         super().__init__(recording, concave_hull_ratio=concave_hull_ratio)
-        self.locator = Locator.from_map(recording.map)
         self.isolated_connections = []
         self.G = None
         self.lane_buffer = lane_buffer if lane_buffer is not None else 0.3
@@ -130,6 +128,10 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
     def _get_lane_on_intersection(self, lane) -> bool:
         """Get the on_intersection status of OSI centerline lane."""
         return lane.on_intersection if hasattr(lane, "on_intersection") else False
+
+    def _located_lane_id_to_segment_lane_id(self, located_lane_id):
+        """OSI segment dictionaries are keyed by bare lane_id values."""
+        return located_lane_id.lane_id if hasattr(located_lane_id, "lane_id") else located_lane_id
 
     def init_intersections(self):
         """
@@ -280,67 +282,6 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
                     lane_dict[lane_id].append(other_lane_id)
 
         return lane_dict
-
-    def trajectory_segment_detection(self, trajectory):
-        """
-        Splits a trajectory into segments based on the lane it is located on
-
-        Args:
-            trajectory (np.ndarray): A NumPy array of shape (n, 3) representing the trajectory, where each row is a (frame, x, y) coordinate.
-
-        Returns:
-            list: A list of tuples, where each tuple contains a segment of the trajectory and the segment it intersects with.
-        """
-        segments = []
-        current_segment = []
-        xy = trajectory[:, 1:3]  # Extract x and y coordinates
-        sts = self.locator.xys2sts(xy)
-        lane_ids = sts["roadlane_id"].to_numpy()
-        segment_idx = [self.lane_segment_dict[lane_id.lane_id].segment.idx for lane_id in lane_ids]
-
-        trajectory = np.column_stack((trajectory[:, 0], trajectory[:, 1], trajectory[:, 2], lane_ids, segment_idx))
-
-        # Create spatial index for intersection polygons
-        intersection_polygons = []
-        intersection_ids = []
-        buffer = 5
-
-        for segment in self.segments:
-            if segment.type == MapSegmentType.JUNCTION and hasattr(segment, "polygon"):
-                intersection_polygons.append(segment.polygon.buffer(buffer))
-                intersection_ids.append(segment.idx)
-
-        if intersection_polygons:
-            # Use spatial index for efficient intersection queries
-            tree = STRtree(intersection_polygons)
-
-            # Process points in batches for better performance
-            for i, (frame, x, y, _, _) in enumerate(trajectory):
-                point = Point(x, y)
-
-                # Query spatial index instead of checking all polygons
-                candidates = tree.query(point)
-
-                for idx in candidates:
-                    if intersection_polygons[idx].contains(point):
-                        trajectory[i, 4] = intersection_ids[idx]
-                        break
-
-        # Rest of the method for creating segments
-        prev_seg_id = -1
-        for i, (frame, x, y, _, segment_idx) in enumerate(trajectory):
-            if prev_seg_id == segment_idx:
-                current_segment.append((frame, x, y))
-            else:
-                if current_segment:
-                    segments.append((np.array(current_segment), self.segments[prev_seg_id]))
-                current_segment = [(frame, x, y)]
-                prev_seg_id = segment_idx
-
-        if current_segment:
-            segments.append((np.array(current_segment), self.segments[prev_seg_id]))
-
-        return segments
 
     def get_intersecting_lanes(self, buffer: float = None):
         """

@@ -5,6 +5,8 @@ from typing import Any
 import shapely
 import numpy as np
 
+from .locator import Locator
+
 
 class MapSegmentType(Enum):
     """Classification of MapSegments."""
@@ -144,6 +146,7 @@ class MapSegmentation(ABC):
         self.segments = []
         self.segment_by_road_id = {}
         self.concave_hull_ratio = concave_hull_ratio
+        self.locator = Locator.from_map(recording.map)
 
         segment_name = nt("SegmentName", ["lane_id", "segment_idx", "segment"])
         for lane in self.lanes.values():
@@ -225,6 +228,96 @@ class MapSegmentation(ABC):
             if lane_id not in self.lane_segment_dict or self.lane_segment_dict[lane_id].segment is None:
                 return False
         return True
+
+    def _located_lane_id_to_segment_lane_id(self, located_lane_id):
+        """Convert a locator lane ID to the key used by ``lane_segment_dict``."""
+        return located_lane_id
+
+    def _get_located_lane(self, located_lane_id, segment_lane_id):
+        lane = self.lanes.get(located_lane_id)
+        if lane is not None:
+            return lane
+
+        lane = self.lane_dict.get(segment_lane_id)
+        if lane is not None:
+            return lane
+
+        for candidate in self.lanes.values():
+            if self._get_lane_id(candidate) == segment_lane_id:
+                return candidate
+        return None
+
+    def trajectory_segment_detection(self, trajectory):
+        """Split a trajectory into chunks by the map segment of the located lane.
+
+        Args:
+            trajectory: ``np.ndarray`` with shape ``(n, 3)`` and columns
+                ``(frame, x, y)``.
+
+        Returns:
+            A list of ``(trajectory_chunk, segment)`` tuples. Each chunk contains
+            the original ``(frame, x, y)`` rows for one continuous segment.
+        """
+        if not isinstance(trajectory, np.ndarray):
+            raise ValueError("trajectory must be a numpy array with shape (n, 3)")
+        if trajectory.ndim != 2 or trajectory.shape[1] != 3:
+            raise ValueError("trajectory must be a numpy array with shape (n, 3)")
+        if trajectory.shape[0] == 0:
+            return []
+
+        sts = self.locator.xys2sts(trajectory[:, 1:3])
+        located_lane_ids = sts["roadlane_id"].to_numpy()
+
+        resolved_segments = []
+        for i, located_lane_id in enumerate(located_lane_ids):
+            segment_lane_id = self._located_lane_id_to_segment_lane_id(located_lane_id)
+            entry = self.lane_segment_dict.get(segment_lane_id)
+            if entry is None:
+                raise RuntimeError(
+                    "Could not assign trajectory point to a segment: "
+                    f"point index {i}, frame {trajectory[i, 0]}, located lane {located_lane_id!r} "
+                    f"is not present in lane_segment_dict"
+                )
+            if entry.segment is None:
+                raise RuntimeError(
+                    "Could not assign trajectory point to a segment: "
+                    f"point index {i}, frame {trajectory[i, 0]}, located lane {located_lane_id!r} "
+                    "has no assigned segment"
+                )
+
+            lane = self._get_located_lane(located_lane_id, segment_lane_id)
+            if lane is None:
+                raise RuntimeError(
+                    "Could not assign trajectory point to a segment: "
+                    f"point index {i}, frame {trajectory[i, 0]}, located lane {located_lane_id!r} "
+                    "could not be resolved to a lane object"
+                )
+
+            polygon = getattr(lane, "polygon", None)
+            if polygon is not None:
+                point = shapely.Point(trajectory[i, 1], trajectory[i, 2])
+                if not polygon.covers(point):
+                    raise RuntimeError(
+                        "Could not assign trajectory point to a segment: "
+                        f"point index {i}, frame {trajectory[i, 0]}, point ({trajectory[i, 1]}, {trajectory[i, 2]}) "
+                        f"is outside located lane {located_lane_id!r}"
+                    )
+
+            resolved_segments.append(entry.segment)
+
+        segments = []
+        current_segment = resolved_segments[0]
+        current_rows = [trajectory[0]]
+        for row, segment in zip(trajectory[1:], resolved_segments[1:]):
+            if segment is current_segment:
+                current_rows.append(row)
+            else:
+                segments.append((np.array(current_rows), current_segment))
+                current_segment = segment
+                current_rows = [row]
+
+        segments.append((np.array(current_rows), current_segment))
+        return segments
 
     def build_segment_by_road_id(self):
         """Build a mapping from road_id (as str) to the owning Segment.

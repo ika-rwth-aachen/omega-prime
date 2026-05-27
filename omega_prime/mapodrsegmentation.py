@@ -63,7 +63,7 @@ class IntersectionOdr(SegmentOdr):
             ax.fill(*self.polygon.exterior.xy, color="green", alpha=0.2, zorder=5)
             ax.plot(*self.polygon.exterior.xy, color="green", alpha=0.7, zorder=10)
         except Exception:
-            logger.warning(f"IntersectionOdr {self.idx} has no polygon")
+            logger.warning(f"IntersectionOdr {self.idx} (ODR junction {self.odr_junction_id}) has no polygon")
         plt.title(f"Intersection {self.idx} ({len(self.lanes)} lanes)")
         plt.xlabel("X Coordinate")
         plt.ylabel("Y Coordinate")
@@ -97,7 +97,7 @@ class ConnectionSegmentOdr(SegmentOdr):
             ax.fill(*self.polygon.exterior.xy, color="steelblue", alpha=0.2, zorder=5)
             ax.plot(*self.polygon.exterior.xy, color="steelblue", alpha=0.7, zorder=10)
         except Exception:
-            logger.warning(f"ConnectionSegmentOdr {self.idx} has no polygon")
+            logger.warning(f"ConnectionSegmentOdr {self.idx} (ODR road {self.odr_road_id}) has no polygon")
         plt.title(f"Connection {self.idx} ({len(self.lanes)} lanes)")
         plt.xlabel("X Coordinate")
         plt.ylabel("Y Coordinate")
@@ -252,6 +252,7 @@ class MapODRSegmentation(MapSegmentation):
                 junction_id = road_junction_map[road_id]
                 junction_lanes[junction_id].append(lane)
 
+        segment_failures = []
         intersections = []
         for junction_id, lanes in junction_lanes.items():
             try:
@@ -262,7 +263,9 @@ class MapODRSegmentation(MapSegmentation):
                 )
                 intersections.append(seg)
             except Exception as e:
-                logger.warning(f"Could not create IntersectionOdr for junction {junction_id}: {e}")
+                message = f"Could not create IntersectionOdr for ODR junction {junction_id}: {e}"
+                logger.warning(message)
+                segment_failures.append(message)
 
         # Step 4: group non-junction lanes by road_id → ConnectionSegmentOdr
         junction_road_ids = set(road_junction_map.keys())
@@ -282,7 +285,9 @@ class MapODRSegmentation(MapSegmentation):
                 )
                 isolated_connections.append(seg)
             except Exception as e:
-                logger.warning(f"Could not create ConnectionSegmentOdr for road {road_id}: {e}")
+                message = f"Could not create ConnectionSegmentOdr for ODR road {road_id}: {e}"
+                logger.warning(message)
+                segment_failures.append(message)
 
         # Step 5: store segments with IDs from one namespace. OpenDRIVE road and
         # junction IDs can overlap, so keep those source IDs separately.
@@ -295,7 +300,17 @@ class MapODRSegmentation(MapSegmentation):
         self.build_segment_by_road_id()
 
         self.create_lane_segment_dict()
-        self.check_if_all_lanes_are_on_segment()
+        unassigned_lane_ids = [lane_id for lane_id, entry in self.lane_segment_dict.items() if entry.segment is None]
+        if segment_failures or unassigned_lane_ids:
+            details = []
+            if segment_failures:
+                details.append("segment creation failures: " + "; ".join(segment_failures))
+            if unassigned_lane_ids:
+                preview = ", ".join(str(lane_id) for lane_id in unassigned_lane_ids[:20])
+                if len(unassigned_lane_ids) > 20:
+                    preview += f", ... ({len(unassigned_lane_ids)} total)"
+                details.append("unassigned lanes: " + preview)
+            raise RuntimeError("MapODRSegmentation did not assign all lanes to segments: " + " | ".join(details))
 
     # ------------------------------------------------------------------
     # Visualisation
@@ -325,14 +340,9 @@ class MapODRSegmentation(MapSegmentation):
         fig, ax = plt.subplots(1, 1)
         ax.set_aspect(1)
 
-        # Lane centerlines – colour by intersection / approaching status
+        # Lane centerlines - colour by intersection status.
         for lane in self.lanes.values():
-            if lane.on_intersection:
-                c = "green"
-            elif getattr(lane, "is_approaching", None):
-                c = "orange"
-            else:
-                c = "black"
+            c = "green" if lane.on_intersection else "black"
             ax.plot(*lane.centerline.xy, color=c, alpha=0.4, zorder=-10)
 
         if plot_lane_ids:
@@ -362,7 +372,9 @@ class MapODRSegmentation(MapSegmentation):
                     ax.fill(*conn.polygon.exterior.xy, color="steelblue", alpha=0.1, zorder=5)
                     ax.plot(*conn.polygon.exterior.xy, color="steelblue", alpha=0.5, zorder=10, linewidth=0.8)
                 except Exception:
-                    logger.warning(f"ConnectionSegmentOdr {conn.idx} has no plottable polygon")
+                    logger.warning(
+                        f"ConnectionSegmentOdr {conn.idx} (ODR road {conn.odr_road_id}) has no plottable polygon"
+                    )
 
         # Trajectory overlay
         if trajectory is not None:
@@ -376,7 +388,6 @@ class MapODRSegmentation(MapSegmentation):
         plt.legend(
             handles=[
                 plt.Line2D([0], [0], color="green", label="Intersection lane"),
-                plt.Line2D([0], [0], color="orange", label="Approaching lane"),
                 plt.Line2D([0], [0], color="black", label="Road lane"),
             ],
             fontsize=7,
