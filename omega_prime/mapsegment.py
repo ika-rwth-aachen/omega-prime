@@ -1,11 +1,34 @@
 from enum import Enum
 from abc import ABC, abstractmethod
 from collections import namedtuple as nt
+from pathlib import Path
 from typing import Any
 import shapely
 import numpy as np
+from matplotlib import pyplot as plt
 
 from .locator import Locator
+
+
+def _save_or_show(output_plot, filename: str):
+    """Save figure to *output_plot* directory/file, or show it if *output_plot* is None."""
+    try:
+        if output_plot is None:
+            plt.show()
+        else:
+            output_path = Path(output_plot)
+            if output_path.is_dir() or not output_path.suffix:
+                output_path.mkdir(parents=True, exist_ok=True)
+                plt.savefig(output_path / filename)
+            elif output_path.suffix in (".pdf", ".png", ".svg"):
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                plt.savefig(output_path)
+            else:
+                raise ValueError(
+                    f"output_plot must be a directory or a file path (.pdf/.png/.svg), got: {output_plot}"
+                )
+    finally:
+        plt.close()
 
 
 class MapSegmentType(Enum):
@@ -124,6 +147,60 @@ class Segment(ABC):
         else:
             return None
 
+    def _plot_lane_label(self, lane):
+        return str(self._get_lane_id(lane))
+
+    def _plot_filename_prefix(self):
+        return self.__class__.__name__
+
+    def _plot_color(self):
+        if self.type == MapSegmentType.JUNCTION:
+            return "green"
+        if self.type == MapSegmentType.STRAIGHT:
+            return "steelblue"
+        return "blue"
+
+    def _plot_title(self):
+        if self.type == MapSegmentType.JUNCTION:
+            segment_type = "Intersection"
+        elif self.type == MapSegmentType.STRAIGHT:
+            segment_type = "Connection"
+        else:
+            segment_type = "Segment"
+        return f"{segment_type} {self.idx} ({len(self.lanes)} lanes)"
+
+    def plot(self, output_plot: Path = None):
+        """Plot this segment with its lane centerlines, lane labels, and polygon."""
+        _, ax = plt.subplots(1, 1)
+        ax.set_aspect(1)
+        color = self._plot_color()
+
+        for lane in self.lanes:
+            geometry = self._get_lane_geometry(lane)
+            ax.plot(*np.asarray(geometry.xy)[:2], color=color)
+
+        for lane in self.lanes:
+            geometry = self._get_lane_geometry(lane)
+            m = int(np.ceil(len(geometry.xy[0]) / 2))
+            ax.annotate(
+                self._plot_lane_label(lane),
+                xy=(geometry.xy[0][m], geometry.xy[1][m]),
+                fontsize=2,
+                color="black",
+                zorder=3,
+            )
+
+        try:
+            ax.fill(*self.polygon.exterior.xy, color=color, alpha=0.15, zorder=5)
+            ax.plot(*self.polygon.exterior.xy, color=color, alpha=0.7, zorder=10)
+        except Exception:
+            pass
+
+        plt.title(self._plot_title())
+        plt.xlabel("X Coordinate")
+        plt.ylabel("Y Coordinate")
+        _save_or_show(output_plot, f"{self._plot_filename_prefix()}{self.idx}.pdf")
+
 
 class MapSegmentation(ABC):
     """
@@ -196,6 +273,33 @@ class MapSegmentation(ABC):
     def _get_lane_on_intersection(self, lane) -> bool:
         """Get the on_intersection status of a lane. Map-type specific."""
         pass
+
+    def _get_lane_is_approaching(self, lane) -> bool:
+        """Get the approaching status of a lane."""
+        return getattr(lane, "is_approaching", False)
+
+    def _plot_lane_label(self, lane):
+        return str(self._get_lane_id(lane))
+
+    def _plot_map_title(self):
+        return "Map Segmentation"
+
+    def _plot_map_filename(self):
+        return "Map_Segmentation.pdf"
+
+    def _plot_lane_color(self, lane):
+        if self._get_lane_on_intersection(lane):
+            return "green"
+        if self._get_lane_is_approaching(lane):
+            return "orange"
+        return "black"
+
+    def _plot_legend_handles(self):
+        return [
+            plt.Line2D([0], [0], color="green", label="Intersection lane"),
+            plt.Line2D([0], [0], color="orange", label="Approaching lane"),
+            plt.Line2D([0], [0], color="black", label="Road lane"),
+        ]
 
     # Concrete methods using abstract methods
     def create_lane_dict(self):
@@ -334,3 +438,88 @@ class MapSegmentation(ABC):
     def get_segment(self, road_id) -> "Segment | None":
         """Return the Segment for a given road_id, or None if not found."""
         return self.segment_by_road_id.get(str(road_id))
+
+    def plot(
+        self,
+        output_plot: Path = None,
+        trajectory=None,
+        plot_lane_ids=False,
+        plot_intersection_polygons=False,
+        plot_connection_polygons=False,
+    ):
+        """Plot the segmented map with lane colors, optional polygons, and optional trajectory."""
+        _, ax = plt.subplots(1, 1)
+        ax.set_aspect(1)
+
+        for lane in self.lanes.values():
+            ax.plot(
+                *self._get_lane_centerline(lane).xy,
+                color=self._plot_lane_color(lane),
+                alpha=0.4,
+                zorder=-10,
+            )
+
+        if plot_lane_ids:
+            for lane in self.lanes.values():
+                midpoint = self._get_lane_centerline(lane).interpolate(0.5, normalized=True)
+                ax.annotate(self._plot_lane_label(lane), xy=(midpoint.x, midpoint.y), fontsize=2, color="black")
+
+        for intersection in self.intersections:
+            ax.annotate(
+                intersection.idx,
+                xy=intersection.get_center_point(),
+                fontsize=4,
+                color="darkgreen",
+                fontweight="bold",
+            )
+            if plot_intersection_polygons:
+                self._plot_segment_polygon(ax, intersection, "green", 0.15, 0.7)
+
+        for connection in getattr(self, "isolated_connections", []):
+            ax.annotate(connection.idx, xy=connection.get_center_point(), fontsize=4, color="steelblue")
+            if plot_connection_polygons:
+                self._plot_segment_polygon(ax, connection, "steelblue", 0.1, 0.5)
+
+        self._plot_traffic_lights(ax)
+
+        if trajectory is not None:
+            ax.plot(trajectory[:, 1], trajectory[:, 2], color="yellow", alpha=0.8, linewidth=2, label="Trajectory")
+            ax.plot(trajectory[0, 1], trajectory[0, 2], "go", markersize=8, label="Start")
+            ax.plot(trajectory[-1, 1], trajectory[-1, 2], "ro", markersize=8, label="End")
+
+        plt.title(self._plot_map_title())
+        plt.xlabel("X Coordinate (m)", fontsize=10)
+        plt.ylabel("Y Coordinate (m)", fontsize=10)
+        plt.legend(handles=self._plot_legend_handles(), fontsize=7)
+        plt.grid(True, alpha=0.3)
+        plt.axis("equal")
+        _save_or_show(output_plot, self._plot_map_filename())
+
+    def _plot_segment_polygon(self, ax, segment, color, fill_alpha, line_alpha):
+        try:
+            segment.update_polygon()
+            ax.fill(*segment.polygon.exterior.xy, color=color, alpha=fill_alpha, zorder=5)
+            ax.plot(*segment.polygon.exterior.xy, color=color, alpha=line_alpha, zorder=10, linewidth=1)
+        except Exception:
+            pass
+
+    def _plot_traffic_lights(self, ax):
+        for traffic_light in getattr(self, "trafficlight", {}).values():
+            position = getattr(getattr(traffic_light, "base", None), "position", None)
+            if position is None:
+                continue
+            ax.plot(
+                position.x,
+                position.y,
+                marker="o",
+                color="red",
+                markersize=2,
+                label=f"Traffic Light {traffic_light.id}",
+            )
+
+    def plot_intersections(self, output_plot: Path = None):
+        """Plot each intersection and isolated connection segment separately."""
+        for intersection in self.intersections:
+            intersection.plot(output_plot)
+        for connection in getattr(self, "isolated_connections", []):
+            connection.plot(output_plot)

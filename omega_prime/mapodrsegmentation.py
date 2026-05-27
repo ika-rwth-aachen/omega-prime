@@ -1,11 +1,6 @@
 import logging
 from collections import defaultdict, namedtuple as nt
-from pathlib import Path
-
-import numpy as np
 import shapely
-from matplotlib import pyplot as plt
-
 from omega_prime.map_odr import MapOdr
 from omega_prime.mapsegment import MapSegmentation, MapSegmentType, Segment
 
@@ -35,6 +30,9 @@ class SegmentOdr(Segment):
         # MapOdr carries no traffic-light data currently – no-op stub
         pass
 
+    def _plot_lane_label(self, lane):
+        return f"{lane.idx.road_id}/{lane.idx.lane_id}"
+
 
 class IntersectionOdr(SegmentOdr):
     """Represents an OpenDRIVE junction (intersection)."""
@@ -44,30 +42,6 @@ class IntersectionOdr(SegmentOdr):
         self.odr_junction_id = odr_junction_id
         self.type = MapSegmentType.JUNCTION
 
-    def plot(self, output_plot: Path = None):
-        fig, ax = plt.subplots(1, 1)
-        ax.set_aspect(1)
-        ax.set_title(f"Intersection {self.idx}")
-        for lane in self.lanes:
-            ax.plot(*np.asarray(lane.centerline.xy)[:2], color="green")
-        for lane in self.lanes:
-            m = int(np.ceil(len(lane.centerline.xy[0]) / 2))
-            ax.annotate(
-                f"{lane.idx.road_id}/{lane.idx.lane_id}",
-                xy=(lane.centerline.xy[0][m], lane.centerline.xy[1][m]),
-                fontsize=2,
-                color="black",
-                zorder=3,
-            )
-        try:
-            ax.fill(*self.polygon.exterior.xy, color="green", alpha=0.2, zorder=5)
-            ax.plot(*self.polygon.exterior.xy, color="green", alpha=0.7, zorder=10)
-        except Exception:
-            logger.warning(f"IntersectionOdr {self.idx} (ODR junction {self.odr_junction_id}) has no polygon")
-        plt.title(f"Intersection {self.idx} ({len(self.lanes)} lanes)")
-        plt.xlabel("X Coordinate")
-        plt.ylabel("Y Coordinate")
-        _save_or_show(output_plot, f"IntersectionOdr{self.idx}.pdf")
 
 
 class ConnectionSegmentOdr(SegmentOdr):
@@ -78,47 +52,7 @@ class ConnectionSegmentOdr(SegmentOdr):
         self.odr_road_id = odr_road_id
         self.type = MapSegmentType.STRAIGHT
 
-    def plot(self, output_plot: Path = None):
-        fig, ax = plt.subplots(1, 1)
-        ax.set_aspect(1)
-        ax.set_title(f"Connection {self.idx}")
-        for lane in self.lanes:
-            ax.plot(*np.asarray(lane.centerline.xy)[:2], color="steelblue")
-        for lane in self.lanes:
-            m = int(np.ceil(len(lane.centerline.xy[0]) / 2))
-            ax.annotate(
-                f"{lane.idx.road_id}/{lane.idx.lane_id}",
-                xy=(lane.centerline.xy[0][m], lane.centerline.xy[1][m]),
-                fontsize=2,
-                color="black",
-                zorder=3,
-            )
-        try:
-            ax.fill(*self.polygon.exterior.xy, color="steelblue", alpha=0.2, zorder=5)
-            ax.plot(*self.polygon.exterior.xy, color="steelblue", alpha=0.7, zorder=10)
-        except Exception:
-            logger.warning(f"ConnectionSegmentOdr {self.idx} (ODR road {self.odr_road_id}) has no polygon")
-        plt.title(f"Connection {self.idx} ({len(self.lanes)} lanes)")
-        plt.xlabel("X Coordinate")
-        plt.ylabel("Y Coordinate")
-        _save_or_show(output_plot, f"ConnectionSegmentOdr{self.idx}.pdf")
 
-
-def _save_or_show(output_plot, filename: str):
-    """Save figure to *output_plot* directory/file, or show it if *output_plot* is None."""
-    if output_plot is None:
-        plt.show()
-    else:
-        output_path = Path(output_plot)
-        if output_path.is_dir() or not output_path.suffix:
-            output_path.mkdir(parents=True, exist_ok=True)
-            plt.savefig(output_path / filename)
-        elif output_path.suffix in (".pdf", ".png", ".svg"):
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            plt.savefig(output_path)
-        else:
-            raise ValueError(f"output_plot must be a directory or a file path (.pdf/.png/.svg), got: {output_plot}")
-    plt.close()
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +109,23 @@ class MapODRSegmentation(MapSegmentation):
 
     def _get_lane_on_intersection(self, lane) -> bool:
         return lane.on_intersection
+
+    def _plot_lane_label(self, lane):
+        return f"{lane.idx.road_id}/{lane.idx.lane_id}"
+
+    def _plot_map_title(self):
+        return "MapODR - Segmentation"
+
+    def _plot_map_filename(self):
+        return "MapODR_Segmentation.pdf"
+
+    def _plot_legend_handles(self):
+        from matplotlib import pyplot as plt
+
+        return [
+            plt.Line2D([0], [0], color="green", label="Intersection lane"),
+            plt.Line2D([0], [0], color="black", label="Road lane"),
+        ]
 
     # ------------------------------------------------------------------
     # ODR-specific helpers
@@ -312,98 +263,3 @@ class MapODRSegmentation(MapSegmentation):
                 details.append("unassigned lanes: " + preview)
             raise RuntimeError("MapODRSegmentation did not assign all lanes to segments: " + " | ".join(details))
 
-    # ------------------------------------------------------------------
-    # Visualisation
-    # ------------------------------------------------------------------
-
-    def plot(
-        self,
-        output_plot: Path = None,
-        trajectory=None,
-        plot_lane_ids: bool = False,
-        plot_intersection_polygons: bool = True,
-        plot_connection_polygons: bool = False,
-    ):
-        """Plot the segmented map with colour-coded lanes and segment outlines.
-
-        Args:
-            output_plot: Directory or file path to save the figure. If ``None``
-                the figure is shown interactively.
-            trajectory: Optional ``np.ndarray`` of shape ``(n, 3)`` with columns
-                ``(frame, x, y)`` to overlay on the map.
-            plot_lane_ids: Annotate each lane with its ``road_id/lane_id``.
-            plot_intersection_polygons: Draw the convex hull of each
-                intersection in red.
-            plot_connection_polygons: Draw the convex hull of each connection
-                segment in blue.
-        """
-        fig, ax = plt.subplots(1, 1)
-        ax.set_aspect(1)
-
-        # Lane centerlines - colour by intersection status.
-        for lane in self.lanes.values():
-            c = "green" if lane.on_intersection else "black"
-            ax.plot(*lane.centerline.xy, color=c, alpha=0.4, zorder=-10)
-
-        if plot_lane_ids:
-            for lane in self.lanes.values():
-                mid = lane.centerline.interpolate(0.5, normalized=True)
-                ax.annotate(
-                    f"{lane.idx.road_id}/{lane.idx.lane_id}",
-                    xy=(mid.x, mid.y),
-                    fontsize=2,
-                    color="black",
-                )
-
-        # Intersections
-        for inter in self.intersections:
-            ax.annotate(inter.idx, xy=inter.get_center_point(), fontsize=4, color="darkgreen", fontweight="bold")
-            if plot_intersection_polygons:
-                inter.update_polygon()
-                ax.fill(*inter.polygon.exterior.xy, color="green", alpha=0.15, zorder=5)
-                ax.plot(*inter.polygon.exterior.xy, color="green", alpha=0.7, zorder=10, linewidth=1)
-
-        # Connection segments
-        for conn in self.isolated_connections:
-            ax.annotate(conn.idx, xy=conn.get_center_point(), fontsize=4, color="steelblue")
-            if plot_connection_polygons:
-                conn.update_polygon()
-                try:
-                    ax.fill(*conn.polygon.exterior.xy, color="steelblue", alpha=0.1, zorder=5)
-                    ax.plot(*conn.polygon.exterior.xy, color="steelblue", alpha=0.5, zorder=10, linewidth=0.8)
-                except Exception:
-                    logger.warning(
-                        f"ConnectionSegmentOdr {conn.idx} (ODR road {conn.odr_road_id}) has no plottable polygon"
-                    )
-
-        # Trajectory overlay
-        if trajectory is not None:
-            ax.plot(trajectory[:, 1], trajectory[:, 2], color="yellow", alpha=0.8, linewidth=2, label="Trajectory")
-            ax.plot(trajectory[0, 1], trajectory[0, 2], "go", markersize=8, label="Start")
-            ax.plot(trajectory[-1, 1], trajectory[-1, 2], "ro", markersize=8, label="End")
-
-        plt.title("MapODR – Segmentation")
-        plt.xlabel("X Coordinate (m)", fontsize=10)
-        plt.ylabel("Y Coordinate (m)", fontsize=10)
-        plt.legend(
-            handles=[
-                plt.Line2D([0], [0], color="green", label="Intersection lane"),
-                plt.Line2D([0], [0], color="black", label="Road lane"),
-            ],
-            fontsize=7,
-        )
-        plt.grid(True, alpha=0.3)
-        plt.axis("equal")
-        _save_or_show(output_plot, "MapODR_Segmentation.pdf")
-
-    def plot_intersections(self, output_plot: Path = None):
-        """Save one plot per intersection and connection segment.
-
-        Args:
-            output_plot: Directory to save individual plots into, or ``None``
-                to show each interactively.
-        """
-        for intersection in self.intersections:
-            intersection.plot(output_plot)
-        for connection in self.isolated_connections:
-            connection.plot(output_plot)
