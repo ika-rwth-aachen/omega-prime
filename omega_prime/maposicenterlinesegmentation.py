@@ -752,12 +752,10 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
                 logger.warning(f"Traffic light {self.trafficlight[tl_idx].id} not found in any lane")
 
 
-
 class Intersection(SegmentOsiCenterline):
     def __init__(self, lanes, idx=None, concave_hull_ratio=0.3):
         super().__init__(lanes, idx, concave_hull_ratio=concave_hull_ratio)
         self.type = MapSegmentType.JUNCTION
-
 
 
 class ConnectionSegment(SegmentOsiCenterline):
@@ -768,4 +766,3 @@ class ConnectionSegment(SegmentOsiCenterline):
 
     def _plot_filename_prefix(self):
         return "Connection"
-

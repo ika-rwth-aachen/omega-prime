@@ -43,7 +43,6 @@ class IntersectionOdr(SegmentOdr):
         self.type = MapSegmentType.JUNCTION
 
 
-
 class ConnectionSegmentOdr(SegmentOdr):
     """Represents a non-junction road segment in an OpenDRIVE map."""
 
@@ -51,8 +50,6 @@ class ConnectionSegmentOdr(SegmentOdr):
         super().__init__(lanes, idx, concave_hull_ratio=concave_hull_ratio)
         self.odr_road_id = odr_road_id
         self.type = MapSegmentType.STRAIGHT
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -262,4 +259,3 @@ class MapODRSegmentation(MapSegmentation):
                     preview += f", ... ({len(unassigned_lane_ids)} total)"
                 details.append("unassigned lanes: " + preview)
             raise RuntimeError("MapODRSegmentation did not assign all lanes to segments: " + " | ".join(details))
-

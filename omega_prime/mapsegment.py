@@ -24,9 +24,7 @@ def _save_or_show(output_plot, filename: str):
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 plt.savefig(output_path)
             else:
-                raise ValueError(
-                    f"output_plot must be a directory or a file path (.pdf/.png/.svg), got: {output_plot}"
-                )
+                raise ValueError(f"output_plot must be a directory or a file path (.pdf/.png/.svg), got: {output_plot}")
     finally:
         plt.close()
 
