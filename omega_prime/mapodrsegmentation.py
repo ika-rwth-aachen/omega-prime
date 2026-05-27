@@ -39,8 +39,9 @@ class SegmentOdr(Segment):
 class IntersectionOdr(SegmentOdr):
     """Represents an OpenDRIVE junction (intersection)."""
 
-    def __init__(self, lanes, idx=None, concave_hull_ratio=0.3):
+    def __init__(self, lanes, idx=None, concave_hull_ratio=0.3, odr_junction_id=None):
         super().__init__(lanes, idx, concave_hull_ratio=concave_hull_ratio)
+        self.odr_junction_id = odr_junction_id
         self.type = MapSegmentType.JUNCTION
 
     def plot(self, output_plot: Path = None):
@@ -72,8 +73,9 @@ class IntersectionOdr(SegmentOdr):
 class ConnectionSegmentOdr(SegmentOdr):
     """Represents a non-junction road segment in an OpenDRIVE map."""
 
-    def __init__(self, lanes, idx=None, concave_hull_ratio=0.3):
+    def __init__(self, lanes, idx=None, concave_hull_ratio=0.3, odr_road_id=None):
         super().__init__(lanes, idx, concave_hull_ratio=concave_hull_ratio)
+        self.odr_road_id = odr_road_id
         self.type = MapSegmentType.STRAIGHT
 
     def plot(self, output_plot: Path = None):
@@ -108,7 +110,7 @@ def _save_or_show(output_plot, filename: str):
         plt.show()
     else:
         output_path = Path(output_plot)
-        if output_path.is_dir():
+        if output_path.is_dir() or not output_path.suffix:
             output_path.mkdir(parents=True, exist_ok=True)
             plt.savefig(output_path / filename)
         elif output_path.suffix in (".pdf", ".png", ".svg"):
@@ -234,7 +236,7 @@ class MapODRSegmentation(MapSegmentation):
            ``IntersectionOdr`` per junction.
         4. Group remaining lanes by ``road_id`` → one ``ConnectionSegmentOdr``
            per road.
-        5. Assign sequential indices and build ``lane_segment_dict``.
+        5. Assign unique sequential segment indices and build ``lane_segment_dict``.
         """
         self.create_lane_dict()
         self.get_lane_successors_and_predecessors()
@@ -250,19 +252,14 @@ class MapODRSegmentation(MapSegmentation):
                 junction_id = road_junction_map[road_id]
                 junction_lanes[junction_id].append(lane)
 
-        # junction_id → roads belonging to it (needed for segment_by_road_id)
-        junction_road_ids_map: dict[str, list[str]] = defaultdict(list)
-        for road_id, junction_id in road_junction_map.items():
-            junction_road_ids_map[junction_id].append(road_id)
-
         intersections = []
         for junction_id, lanes in junction_lanes.items():
             try:
-                try:
-                    idx = int(junction_id)
-                except (ValueError, TypeError):
-                    idx = None  # will be patched below if non-numeric
-                seg = IntersectionOdr(lanes, idx=idx, concave_hull_ratio=self.concave_hull_ratio)
+                seg = IntersectionOdr(
+                    lanes,
+                    concave_hull_ratio=self.concave_hull_ratio,
+                    odr_junction_id=junction_id,
+                )
                 intersections.append(seg)
             except Exception as e:
                 logger.warning(f"Could not create IntersectionOdr for junction {junction_id}: {e}")
@@ -278,25 +275,22 @@ class MapODRSegmentation(MapSegmentation):
         isolated_connections = []
         for road_id, lanes in road_lanes.items():
             try:
-                try:
-                    idx = int(road_id)
-                except (ValueError, TypeError):
-                    idx = None
-                seg = ConnectionSegmentOdr(lanes, idx=idx, concave_hull_ratio=self.concave_hull_ratio)
+                seg = ConnectionSegmentOdr(
+                    lanes,
+                    concave_hull_ratio=self.concave_hull_ratio,
+                    odr_road_id=road_id,
+                )
                 isolated_connections.append(seg)
             except Exception as e:
                 logger.warning(f"Could not create ConnectionSegmentOdr for road {road_id}: {e}")
 
-        # Step 5: store segments; idx is already set to road_id / junction_id above.
-        # Fall back to sequential idx for any segment where int conversion failed.
+        # Step 5: store segments with IDs from one namespace. OpenDRIVE road and
+        # junction IDs can overlap, so keep those source IDs separately.
         self.intersections = intersections
         self.isolated_connections = isolated_connections
         self.segments = intersections + isolated_connections
-        _next_fallback = max((s.idx for s in self.segments if s.idx is not None), default=-1) + 1
-        for segment in self.segments:
-            if segment.idx is None:
-                segment.idx = _next_fallback
-                _next_fallback += 1
+        for idx, segment in enumerate(self.segments):
+            segment.idx = idx
 
         self.build_segment_by_road_id()
 

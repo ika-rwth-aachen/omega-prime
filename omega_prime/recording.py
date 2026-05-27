@@ -356,11 +356,11 @@ class Recording:
                 .with_columns(
                     pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x), return_dtype=object),
                     pl.col("subtype").map_elements(
-                        lambda x: (betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None),
+                        lambda x: betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None,
                         return_dtype=object,
                     ),
                     pl.col("role").map_elements(
-                        lambda x: (betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None),
+                        lambda x: betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None,
                         return_dtype=object,
                     ),
                 )
