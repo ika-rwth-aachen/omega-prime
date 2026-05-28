@@ -32,7 +32,7 @@ def _save_or_show(output_plot, filename: str):
 class MapSegmentType(Enum):
     """Classification of MapSegments."""
 
-    NO_JUNCTION = "NO_JUNCTION"
+    NO_JUNCTION = "no_junction"
     JUNCTION = "junction"
     ROUNDABOUT = "roundabout"
     RAMP_ON = "ramp_on"
