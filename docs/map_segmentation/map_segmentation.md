@@ -24,7 +24,7 @@ The map segmentation system uses an abstract base class pattern to support multi
 
 Segments are currently assigned as:
 - `MapSegmentType.JUNCTION`: intersection or OpenDRIVE junction segments
-- `MapSegmentType.STRAIGHT`: non-junction connection segments
+- `MapSegmentType.NO_JUNCTION`: non-junction connection segments
 
 Other enum values exist, such as `RAMP_ON`, `RAMP_OFF`, and `ROUNDABOUT`, but are not currently assigned by these pipelines.
 
@@ -117,7 +117,7 @@ OpenDRIVE traffic-light mapping is currently a no-op in `SegmentOdr`.
 
 ### Shared Parameters
 
-- `concave_hull_ratio` (default `0.3`): passed to segment polygon generation.
+- `concave_hull_ratio` (default `0.3`): controls the tightness of the concave hull computed for each segment polygon. A value of `0.0` produces the tightest possible fit (approaching the input geometry); `1.0` degenerates to a convex hull. The default of `0.3` provides a good balance between tightly wrapping curved or branching lane geometry, which a convex hull would over-approximate, and robustness against noisy or very short centerlines.
 
 ### OSI Centerline Parameters
 
@@ -148,6 +148,14 @@ All segment classes hold:
 - `polygon`
 
 Segment polygons are concave hulls of lane centerlines using `concave_hull_ratio`; if concave hull generation fails, the code falls back to a convex hull.
+
+A **concave hull** is used rather than a convex hull because road geometry is inherently non-convex:
+
+- Lane centerlines within a segment can curve, run in parallel with gaps between them, or radiate outward from an intersection node. A convex hull would fill in all of that empty space, producing a polygon that extends well beyond the actual lane footprint.
+- The polygon is used in `trajectory_segment_detection()` to verify that a located point actually lies within the segment. An over-extended convex hull would cause road users travelling on a neighbouring segment to be falsely assigned to the wrong segment.
+- At multi-road intersections, the incoming and outgoing lanes spread outward, making the true segment footprint concave. Using a convex hull there would swallow territory belonging to the adjacent connection segments.
+
+The convex hull fallback is retained for degenerate geometries (e.g. collinear or very short lanes) where Shapely's `concave_hull` raises a `GEOSException` or returns an empty geometry.
 
 OSI behavior:
 - Segment IDs are sequential.

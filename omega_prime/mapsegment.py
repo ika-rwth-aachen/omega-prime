@@ -32,7 +32,7 @@ def _save_or_show(output_plot, filename: str):
 class MapSegmentType(Enum):
     """Classification of MapSegments."""
 
-    STRAIGHT = "straight"
+    NO_JUNCTION = "NO_JUNCTION"
     JUNCTION = "junction"
     ROUNDABOUT = "roundabout"
     RAMP_ON = "ramp_on"
@@ -154,14 +154,14 @@ class Segment(ABC):
     def _plot_color(self):
         if self.type == MapSegmentType.JUNCTION:
             return "green"
-        if self.type == MapSegmentType.STRAIGHT:
+        if self.type == MapSegmentType.NO_JUNCTION:
             return "steelblue"
         return "blue"
 
     def _plot_title(self):
         if self.type == MapSegmentType.JUNCTION:
             segment_type = "Intersection"
-        elif self.type == MapSegmentType.STRAIGHT:
+        elif self.type == MapSegmentType.NO_JUNCTION:
             segment_type = "Connection"
         else:
             segment_type = "Segment"

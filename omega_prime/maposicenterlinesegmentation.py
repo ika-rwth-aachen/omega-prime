@@ -761,7 +761,7 @@ class Intersection(SegmentOsiCenterline):
 class ConnectionSegment(SegmentOsiCenterline):
     def __init__(self, lanes, idx=None, concave_hull_ratio=0.3):
         super().__init__(lanes, idx, concave_hull_ratio=concave_hull_ratio)
-        self.type = MapSegmentType.STRAIGHT
+        self.type = MapSegmentType.NO_JUNCTION
         self.intersection_idxs = set()
 
     def _plot_filename_prefix(self):

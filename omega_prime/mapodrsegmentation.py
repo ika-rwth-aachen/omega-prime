@@ -49,7 +49,7 @@ class ConnectionSegmentOdr(SegmentOdr):
     def __init__(self, lanes, idx=None, concave_hull_ratio=0.3, odr_road_id=None):
         super().__init__(lanes, idx, concave_hull_ratio=concave_hull_ratio)
         self.odr_road_id = odr_road_id
-        self.type = MapSegmentType.STRAIGHT
+        self.type = MapSegmentType.NO_JUNCTION
 
 
 # ---------------------------------------------------------------------------
