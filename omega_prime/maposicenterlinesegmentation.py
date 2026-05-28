@@ -5,7 +5,6 @@ import shapely
 from shapely.strtree import STRtree
 from shapely.geometry import Point
 from collections import namedtuple as nt
-from omega_prime.locator import Locator
 from matplotlib import pyplot as plt
 from pathlib import Path
 import shapely
@@ -81,7 +80,6 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
 
     def __init__(self, recording, lane_buffer=None, intersection_overlap_buffer=None, concave_hull_ratio=0.3):
         super().__init__(recording, concave_hull_ratio=concave_hull_ratio)
-        self.locator = Locator.from_map(recording.map)
         self.isolated_connections = []
         self.G = None
         self.lane_buffer = lane_buffer if lane_buffer is not None else 0.3
@@ -131,6 +129,16 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
         """Get the on_intersection status of OSI centerline lane."""
         return lane.on_intersection if hasattr(lane, "on_intersection") else False
 
+    def _located_lane_id_to_segment_lane_id(self, located_lane_id):
+        """OSI segment dictionaries are keyed by bare lane_id values."""
+        return located_lane_id.lane_id if hasattr(located_lane_id, "lane_id") else located_lane_id
+
+    def _plot_map_title(self):
+        return "Map with Intersections"
+
+    def _plot_map_filename(self):
+        return "Map_with_Intersection.pdf"
+
     def init_intersections(self):
         """
         Initializes the intersections in the map.
@@ -163,6 +171,7 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
         self.create_lane_segment_dict()
         self.update_road_ids()
         self.set_lane_intersection_relation()
+        self.build_segment_by_road_id()
 
         # from pathlib import Path
         # #Plot the graph G with x and y coordinates of the lanes
@@ -279,67 +288,6 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
                     lane_dict[lane_id].append(other_lane_id)
 
         return lane_dict
-
-    def trajectory_segment_detection(self, trajectory):
-        """
-        Splits a trajectory into segments based on the lane it is located on
-
-        Args:
-            trajectory (np.ndarray): A NumPy array of shape (n, 3) representing the trajectory, where each row is a (frame, x, y) coordinate.
-
-        Returns:
-            list: A list of tuples, where each tuple contains a segment of the trajectory and the segment it intersects with.
-        """
-        segments = []
-        current_segment = []
-        xy = trajectory[:, 1:3]  # Extract x and y coordinates
-        sts = self.locator.xys2sts(xy)
-        lane_ids = sts["roadlane_id"].to_numpy()
-        segment_idx = [self.lane_segment_dict[lane_id.lane_id].segment.idx for lane_id in lane_ids]
-
-        trajectory = np.column_stack((trajectory[:, 0], trajectory[:, 1], trajectory[:, 2], lane_ids, segment_idx))
-
-        # Create spatial index for intersection polygons
-        intersection_polygons = []
-        intersection_ids = []
-        buffer = 5
-
-        for segment in self.segments:
-            if segment.type == MapSegmentType.JUNCTION and hasattr(segment, "polygon"):
-                intersection_polygons.append(segment.polygon.buffer(buffer))
-                intersection_ids.append(segment.idx)
-
-        if intersection_polygons:
-            # Use spatial index for efficient intersection queries
-            tree = STRtree(intersection_polygons)
-
-            # Process points in batches for better performance
-            for i, (frame, x, y, _, _) in enumerate(trajectory):
-                point = Point(x, y)
-
-                # Query spatial index instead of checking all polygons
-                candidates = tree.query(point)
-
-                for idx in candidates:
-                    if intersection_polygons[idx].contains(point):
-                        trajectory[i, 4] = intersection_ids[idx]
-                        break
-
-        # Rest of the method for creating segments
-        prev_seg_id = -1
-        for i, (frame, x, y, _, segment_idx) in enumerate(trajectory):
-            if prev_seg_id == segment_idx:
-                current_segment.append((frame, x, y))
-            else:
-                if current_segment:
-                    segments.append((np.array(current_segment), self.segments[prev_seg_id]))
-                current_segment = [(frame, x, y)]
-                prev_seg_id = segment_idx
-
-        if current_segment:
-            segments.append((np.array(current_segment), self.segments[prev_seg_id]))
-
-        return segments
 
     def get_intersecting_lanes(self, buffer: float = None):
         """
@@ -766,8 +714,8 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
             # Mark intersection lanes
             for lane in intersection.lanes:
                 lane_id = self._get_lane_id(lane)
-                if lane_id in self.lanes:
-                    self._set_lane_on_intersection(self.lanes[lane_id], True)
+                if lane_id in self.lane_dict:
+                    self._set_lane_on_intersection(self.lane_dict[lane_id], True)
 
                 # Process predecessors for each lane in the intersection
                 for predecessor_id in self._get_lane_predecessors(lane):
@@ -803,218 +751,18 @@ class MapOsiCenterlineSegmentation(MapSegmentation):
             if not traffic_light_found:
                 logger.warning(f"Traffic light {self.trafficlight[tl_idx].id} not found in any lane")
 
-    def plot(
-        self,
-        output_plot: Path = None,
-        trajectory=None,
-        plot_lane_ids=False,
-        plot_intersection_polygons=False,
-        plot_connection_polygons=False,
-    ):
-        """
-        Plots the intersections and saves the plot to the specified output path.
-        A Trajectory can be given to plot it on the map. The Trajectory should be a numpy array of shape (n,3) where each row is (frame, x, y)
-        Args:
-            output_plot (Path): Path to a folder where the plot will be saved. If None, the plot will be shown instead.
-            trajectory (numpy.ndarray): The trajectory to be plotted. If None, no trajectory will be plotted.
-            plot_lane_ids (bool): Whether to plot lane IDs on the map.
-            plot_intersection_polygons (bool): Whether to plot intersection polygons.
-            plot_connection_polygons (bool): Whether to plot connection polygons.
-        Returns:
-            None
-        """
-        # Plot the map by plotting all the centerlines:
-        fig, ax = plt.subplots(1, 1)
-        ax.set_aspect(1)
-
-        for lane in self.lanes.values():
-            c = "blue"
-            if lane.on_intersection:
-                c = "green"
-            elif lane.is_approaching:
-                c = "orange"
-            else:
-                c = "black"
-            ax.plot(*lane.centerline.xy, color=c, alpha=0.3, zorder=-10)
-
-        if plot_lane_ids:
-            lane_midpoints = [
-                (lane.idx, lane.centerline.interpolate(0.5, normalized=True)) for lane in self.lanes.values()
-            ]
-            for lane_id, midpoint in lane_midpoints:
-                ax.annotate(lane_id, xy=(midpoint.x, midpoint.y), fontsize=2, color="black")
-
-        for inter in self.intersections:
-            ax.annotate(inter.idx, xy=inter.get_center_point(), fontsize=2, color="black")
-
-            if plot_intersection_polygons:
-                # Plot the polygon into the intersection
-                inter.update_polygon()
-                ax.plot(*inter.polygon.exterior.xy, color="red", alpha=0.5, zorder=10)
-
-        for combi in self.isolated_connections:
-            ax.annotate(combi.idx, xy=combi.get_center_point(), fontsize=2, color="black")
-            # Plot the polygon into the intersection
-            if plot_connection_polygons:
-                combi.update_polygon()
-                try:
-                    ax.plot(*combi.polygon.exterior.xy, color="blue", alpha=0.5, zorder=10)
-                except:
-                    logger.warning(f"Connection {combi.idx} has no polygon")
-                    pass
-
-        for tl_idx in self.trafficlight:
-            position = shapely.Point(
-                self.trafficlight[tl_idx].base.position.x, self.trafficlight[tl_idx].base.position.y
-            )
-            ax.plot(
-                position.x,
-                position.y,
-                marker="o",
-                color="red",
-                markersize=2,
-                label=f"Traffic Light {self.trafficlight[tl_idx].id}",
-            )
-
-        # Plot the trajectory if it is given
-        if trajectory is not None:
-            plt.plot(
-                trajectory[:, 1],
-                trajectory[:, 2],
-                color="yellow",
-                alpha=0.8,
-                linewidth=3,
-                label="Host Vehicle Trajectory",
-            )
-
-            # Mark start and end points
-            plt.plot(trajectory[0, 1], trajectory[0, 2], "go", markersize=10, label="Start")
-            plt.plot(trajectory[-1, 1], trajectory[-1, 2], "ro", markersize=10, label="End")
-
-        ax.set_xlim(*ax.get_xlim())
-        ax.set_ylim(*ax.get_ylim())
-        plt.title("Map with Intersections")
-        plt.xlabel("X Coordinate (m)", fontsize=12)
-        plt.ylabel("Y Coordinate (m)", fontsize=12)
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.axis("equal")
-        if output_plot is None:
-            plt.show()
-        else:
-            if isinstance(output_plot, Path):
-                output_plot.mkdir(parents=True, exist_ok=True)
-                plt.savefig(output_plot / "Map_with_Intersection.pdf")
-            else:
-                isinstance(output_plot, str)
-                output_path = Path(output_plot)
-                if output_path.is_dir():
-                    output_path.mkdir(parents=True, exist_ok=True)
-                    plt.savefig(output_path / "Map_with_Intersection.pdf")
-                elif output_path.suffix == ".pdf":
-                    output_path.parent.mkdir(parents=True, exist_ok=True)
-                    plt.savefig(output_path)
-        plt.close()
-
-    def plot_intersections(self, output_plot: Path):
-        """
-        Plots all intersections and saves them to the output path.
-        Args:
-            output_plot (Path): Path to a folder where the plots will be saved.
-        Returns:
-            None
-        """
-        for i, intersection in enumerate(self.intersections):
-            intersection.plot(output_plot)
-        for i, connection in enumerate(self.isolated_connections):
-            connection.plot(output_plot)
-
 
 class Intersection(SegmentOsiCenterline):
     def __init__(self, lanes, idx=None, concave_hull_ratio=0.3):
         super().__init__(lanes, idx, concave_hull_ratio=concave_hull_ratio)
         self.type = MapSegmentType.JUNCTION
 
-    def plot(self, output_plot: Path):
-        fig, ax = plt.subplots(1, 1)
-        ax.set_aspect(1)
-        # Add the index of the center line to the plot
-        ax.set_title(f"Intersection {self.idx}")
-        for lane in self.lanes:
-            ax.plot(*np.asarray(lane.centerline.xy)[:2], color="blue")
-        for lane in self.lanes:
-            m = int(np.ceil(len(lane.centerline.xy[0]) / 2))
-            ax.annotate(
-                lane.idx.lane_id,
-                xy=(lane.centerline.xy[0][m], lane.centerline.xy[1][m]),
-                fontsize=2,
-                color="black",
-                zorder=3,
-            )
-        # Plot the polygon into the intersection
-        try:
-            ax.plot(*self.polygon.exterior.xy, color="red", alpha=0.5, zorder=10)
-        except:
-            logging.warning(f"Intersection {self.idx} has no polygon")
-            pass
-        ax.set_aspect(1)
-        plt.title(f"Intersection with {len(self.lanes)} lanes")
-        plt.xlabel("X Coordinate")
-        plt.ylabel("Y Coordinate")
-        if output_plot is None:
-            plt.show()
-        elif isinstance(output_plot, Path) and output_plot.is_dir():
-            output_plot.mkdir(parents=True, exist_ok=True)
-            plt.savefig(output_plot / f"Intersection{self.idx}.pdf")
-        else:
-            raise ValueError("output_plot must be a Path to a directory or None")
-        plt.close()
-
 
 class ConnectionSegment(SegmentOsiCenterline):
     def __init__(self, lanes, idx=None, concave_hull_ratio=0.3):
         super().__init__(lanes, idx, concave_hull_ratio=concave_hull_ratio)
-        self.type = MapSegmentType.STRAIGHT
+        self.type = MapSegmentType.NO_JUNCTION
         self.intersection_idxs = set()
 
-    def plot(self, output_plot: Path):
-        """Plots the Connection segment
-
-        Args:
-            output_plot (Path): Path to the output directory.
-        Returns:
-            None
-        """
-        fig, ax = plt.subplots(1, 1)
-        ax.set_aspect(1)
-        # Add the index of the center line to the plot
-        ax.set_title(f"Connection segment {self.idx}")
-        for lane in self.lanes:
-            ax.plot(*np.asarray(lane.centerline.xy)[:2], color="blue")
-        for lane in self.lanes:
-            m = int(np.ceil(len(lane.centerline.xy[0]) / 2))
-            ax.annotate(
-                lane.idx.lane_id,
-                xy=(lane.centerline.xy[0][m], lane.centerline.xy[1][m]),
-                fontsize=2,
-                color="black",
-                zorder=3,
-            )
-        # Plot the polygon into the intersection
-        try:
-            ax.plot(*self.polygon.exterior.xy, color="red", alpha=0.5, zorder=10)
-        except:
-            logging.warning(f"Connection {self.idx} has no polygon")
-            pass
-        ax.set_aspect(1)
-        plt.title(f"Connection with {len(self.lanes)} lanes")
-        plt.xlabel("X Coordinate")
-        plt.ylabel("Y Coordinate")
-        if output_plot is None:
-            plt.show()
-        elif isinstance(output_plot, Path) and output_plot.is_dir():
-            output_plot.mkdir(parents=True, exist_ok=True)
-            plt.savefig(output_plot / f"Connection{self.idx}.pdf")
-        else:
-            raise ValueError("output_plot must be a Path to a directory or None")
-        plt.close()
+    def _plot_filename_prefix(self):
+        return "Connection"

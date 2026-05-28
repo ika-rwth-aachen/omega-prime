@@ -44,9 +44,11 @@ class LxdConverter(DatasetConverter):
             pl.col("class")
             .map_elements(
                 (
-                    lambda x: betterosi.MovingObjectType.TYPE_VEHICLE
-                    if x in vehicles
-                    else betterosi.MovingObjectType.TYPE_PEDESTRIAN
+                    lambda x: (
+                        betterosi.MovingObjectType.TYPE_VEHICLE
+                        if x in vehicles
+                        else betterosi.MovingObjectType.TYPE_PEDESTRIAN
+                    )
                 ),
                 return_dtype=int,
             )
