@@ -19,6 +19,7 @@ from matplotlib.patches import Polygon as PltPolygon
 from .map import MapOsi, MapOsiCenterline, ProjectionOffset
 from .map_odr import MapOdr
 from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
+from .mapodrsegmentation import MapODRSegmentation
 from .schemas import polars_schema, recording_moving_object_schema
 
 
@@ -350,7 +351,7 @@ class Recording:
                 self._df.group_by("idx")
                 .agg(
                     pl.col("length", "width", "height").mean(),
-                    pl.col("type", "subtype", "role").median(),
+                    pl.col("type", "subtype", "role").mode().sort().first(),
                     pl.col("frame").min().alias("birth"),
                     pl.col("frame").max().alias("end"),
                     pl.col("total_nanos").min().alias("t_birth"),
@@ -359,11 +360,11 @@ class Recording:
                 .with_columns(
                     pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x), return_dtype=object),
                     pl.col("subtype").map_elements(
-                        lambda x: (betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None),
+                        lambda x: betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None,
                         return_dtype=object,
                     ),
                     pl.col("role").map_elements(
-                        lambda x: (betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None),
+                        lambda x: betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None,
                         return_dtype=object,
                     ),
                 )
@@ -503,11 +504,16 @@ class Recording:
         "Store Recording as an MCAP file."
         if Path(filepath).suffix != ".mcap":
             raise ValueError()
+        map_time = 0
+        if self._df.height != 0:
+            min_total_nanos = self._df["total_nanos"].drop_nulls().min()
+            if min_total_nanos is not None:
+                map_time = int(min_total_nanos)
         with betterosi.Writer(filepath) as w:
             for gt in self.to_osi_gts():
                 w.add(gt)
             if isinstance(self.map, MapOdr):
-                w.add(self.map.to_osi(), topic="ground_truth_map", log_time=0)
+                w.add(self.map.to_osi(), topic="ground_truth_map", log_time=map_time)
             elif (
                 self.map is not None and not isinstance(self.map, MapOsi) and not isinstance(self.map, MapOsiCenterline)
             ):
@@ -1047,3 +1053,6 @@ class Recording:
         if isinstance(self.map, MapOsiCenterline):
             self.mapsegment = MapOsiCenterlineSegmentation(self)
             self.mapsegment.init_intersections()
+        elif isinstance(self.map, MapOdr):
+            self.mapsegment = MapODRSegmentation(self)
+            self.mapsegment.identify_segments()

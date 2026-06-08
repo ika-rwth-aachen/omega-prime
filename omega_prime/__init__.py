@@ -8,6 +8,7 @@ from .map import Lane, LaneBoundary, Map, MapOsi
 from .recording import MovingObject, Recording
 from .mapsegment import MapSegmentation
 from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
+from .mapodrsegmentation import MapODRSegmentation
 
 
 from importlib.metadata import version
@@ -43,4 +44,5 @@ __all__ = [
     "MovingObjectRole",
     "MapSegmentation",
     "MapOsiCenterlineSegmentation",
+    "MapODRSegmentation",
 ]
