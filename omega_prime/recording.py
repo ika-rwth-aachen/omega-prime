@@ -314,11 +314,14 @@ class Recording:
         nanos2frame, mapping = self._build_frame_mapping(df)
         df = self._attach_frame_column(df, mapping)
         df = self._ensure_polars_dataframe(df)
+        
+        # Ensure integer columns are Int64 as required by schema
+        int_cols = ["idx", "type", "role", "subtype"]
+        cast_exprs = [pl.col(col).cast(pl.Int64) for col in int_cols if col in df.columns]
+        if cast_exprs:
+            df = df.with_columns(*cast_exprs)
+        
         if validate:
-            int_cols = ["idx", "type", "role", "subtype"]
-            for col in int_cols:
-                if col in df.columns:
-                    df = df.with_columns(pl.col(col).cast(pl.Int64))
             recording_moving_object_schema.validate(df, lazy=True)
 
         super().__init__()
