@@ -195,7 +195,45 @@ def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps, time_buffer=2
     }
 
 
-metrics = [vel, distance_traveled, timegaps_and_min_timgaps, p_timegaps_and_min_p_timgaps]
+@metric(
+    requires_columns=["vel", "distance_traveled"],
+    requires_properties=["crossed", "timegaps"],
+    computes_properties=["ttc_and_thw"],
+)
+def ttc_and_thw(df, /, ego_id, crossed, timegaps):
+    """Metric that computes TTC and THW between `ego_id` and all other objects."""
+    ttc_df = (
+        crossed.join(timegaps, how="right", suffix="_overlap", on=["idx", "idx_ego"])
+        .with_columns(
+            dist_ego=pl.col("distance_traveled_ego_overlap") - pl.col("distance_traveled_ego"),
+            dist_obj=pl.col("distance_traveled_overlap") - pl.col("distance_traveled"),
+        )
+        .with_columns(
+            lon_dist=pl.col("dist_ego") - pl.col("dist_obj")
+        )
+        .with_columns(
+            TTC=pl.when((pl.col("lon_dist") > 0) & (pl.col("vel_ego") > pl.col("vel")))
+            .then(pl.col("lon_dist") / (pl.col("vel_ego") - pl.col("vel")))
+            .otherwise(None),
+            THW=pl.when(pl.col("lon_dist") > 0)
+            .then(pl.col("lon_dist") / pl.col("vel_ego"))
+            .otherwise(None),
+        )
+        .group_by("idx_ego", "idx", "total_nanos_ego")
+        .agg(
+            pl.col("TTC", "THW", "total_nanos")
+            .sort_by(pl.col("TTC").abs(), descending=False, nulls_last=True)
+            .first()
+        )
+        .sort("idx_ego", "idx", "total_nanos_ego")
+    )
+
+    return df, {
+        "ttc_and_thw": ttc_df,
+    }
+
+
+metrics = [vel, distance_traveled, timegaps_and_min_timgaps, p_timegaps_and_min_p_timgaps, ttc_and_thw]
 
 
 @dataclass
