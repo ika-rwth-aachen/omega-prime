@@ -208,22 +208,16 @@ def ttc_and_thw(df, /, ego_id, crossed, timegaps):
             dist_ego=pl.col("distance_traveled_ego_overlap") - pl.col("distance_traveled_ego"),
             dist_obj=pl.col("distance_traveled_overlap") - pl.col("distance_traveled"),
         )
-        .with_columns(
-            lon_dist=pl.col("dist_ego") - pl.col("dist_obj")
-        )
+        .with_columns(lon_dist=pl.col("dist_ego") - pl.col("dist_obj"))
         .with_columns(
             TTC=pl.when((pl.col("lon_dist") > 0) & (pl.col("vel_ego") > pl.col("vel")))
             .then(pl.col("lon_dist") / (pl.col("vel_ego") - pl.col("vel")))
             .otherwise(None),
-            THW=pl.when(pl.col("lon_dist") > 0)
-            .then(pl.col("lon_dist") / pl.col("vel_ego"))
-            .otherwise(None),
+            THW=pl.when(pl.col("lon_dist") > 0).then(pl.col("lon_dist") / pl.col("vel_ego")).otherwise(None),
         )
         .group_by("idx_ego", "idx", "total_nanos_ego")
         .agg(
-            pl.col("TTC", "THW", "total_nanos")
-            .sort_by(pl.col("TTC").abs(), descending=False, nulls_last=True)
-            .first()
+            pl.col("TTC", "THW", "total_nanos").sort_by(pl.col("TTC").abs(), descending=False, nulls_last=True).first()
         )
         .sort("idx_ego", "idx", "total_nanos_ego")
     )
