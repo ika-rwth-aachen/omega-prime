@@ -264,9 +264,18 @@ class Recording:
     @staticmethod
     def _ensure_polars_dataframe(df: typing.Any) -> pl.DataFrame:
         "Ensure that the input data is a Polars DataFrame with the correct schema, converting if necessary."
-        if isinstance(df, pl.DataFrame):
-            return df
-        return pl.DataFrame(df, schema_overrides=polars_schema)
+        if not isinstance(df, pl.DataFrame):
+            df = pl.DataFrame(df, schema_overrides=polars_schema)
+            
+        cast_exprs = [
+            pl.col(col).cast(dtype) 
+            for col, dtype in polars_schema.items() 
+            if col in df.columns and df.schema[col] != dtype
+        ]
+        if cast_exprs:
+            df = df.with_columns(*cast_exprs)
+            
+        return df
 
     @staticmethod
     def _build_frame_mapping(df: pl.DataFrame) -> tuple[dict[int, int], pl.DataFrame]:
@@ -314,12 +323,6 @@ class Recording:
         nanos2frame, mapping = self._build_frame_mapping(df)
         df = self._attach_frame_column(df, mapping)
         df = self._ensure_polars_dataframe(df)
-
-        # Ensure integer columns are Int64 as required by schema
-        int_cols = ["idx", "type", "role", "subtype"]
-        cast_exprs = [pl.col(col).cast(pl.Int64) for col in int_cols if col in df.columns]
-        if cast_exprs:
-            df = df.with_columns(*cast_exprs)
 
         if validate:
             recording_moving_object_schema.validate(df, lazy=True)
