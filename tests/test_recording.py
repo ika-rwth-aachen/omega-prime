@@ -1,5 +1,4 @@
 import polars as pl
-import pytest
 from omega_prime.recording import Recording
 from omega_prime.schemas import polars_schema
 
