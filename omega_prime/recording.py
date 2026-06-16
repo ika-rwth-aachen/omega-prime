@@ -266,15 +266,15 @@ class Recording:
         "Ensure that the input data is a Polars DataFrame with the correct schema, converting if necessary."
         if not isinstance(df, pl.DataFrame):
             df = pl.DataFrame(df, schema_overrides=polars_schema)
-            
+
         cast_exprs = [
-            pl.col(col).cast(dtype) 
-            for col, dtype in polars_schema.items() 
+            pl.col(col).cast(dtype)
+            for col, dtype in polars_schema.items()
             if col in df.columns and df.schema[col] != dtype
         ]
         if cast_exprs:
             df = df.with_columns(*cast_exprs)
-            
+
         return df
 
     @staticmethod
