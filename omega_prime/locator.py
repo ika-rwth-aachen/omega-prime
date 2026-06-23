@@ -5,7 +5,6 @@ from typing import Any
 import networkx as nx
 import numpy as np
 import shapely
-import xarray as xr
 from matplotlib.patches import Polygon as PltPolygon
 from strenum import StrEnum
 import polars as pl
@@ -216,14 +215,15 @@ class Locator:
         return nx.shortest_path(self.g, start_id, end_id)
 
     def sts2xys(self, sts):
-        xys = np.zeros((len(sts.s), 2), dtype=float) * np.nan
-        l_ids = np.array([self.external2internal_laneid[i] for i in sts.roadlane_id.values])
+        s_arr = sts["s"].to_numpy()
+        xys = np.zeros((len(s_arr), 2), dtype=float) * np.nan
+        l_ids = np.array([self.external2internal_laneid[i] for i in sts["roadlane_id"].to_numpy()])
         for l_id in set(l_ids):
             point_idxs = np.argwhere(l_ids == l_id)[:, 0]
-            rel_sts = sts.isel(dict(time=point_idxs))
+            rel_sts = sts[point_idxs]
             l = self.extended_centerlines[l_id]
             xys[point_idxs, 0], xys[point_idxs, 1] = ShapelyTrajectoryTools.st2xy(
-                l, rel_sts.s.values + ShapelyTrajectoryTools.l_append, rel_sts.t.values
+                l, rel_sts["s"].to_numpy() + ShapelyTrajectoryTools.l_append, rel_sts["t"].to_numpy()
             )
         return xys
 
@@ -236,11 +236,11 @@ class Locator:
         sla = np.zeros(len(single_lane_association), dtype=tuple)
         for i, v in enumerate(single_lane_association):
             sla[i] = v
-        sts = xr.Dataset(
+        sts = pl.DataFrame(
             {
-                "s": ("time", [lon_distances[lidx][i] for i, lidx in enumerate(single_lane_association)]),
-                "t": ("time", [lat_distances[lidx][i] for i, lidx in enumerate(single_lane_association)]),
-                "roadlane_id": ("time", sla),
+                "s": [lon_distances[lidx][i] for i, lidx in enumerate(single_lane_association)],
+                "t": [lat_distances[lidx][i] for i, lidx in enumerate(single_lane_association)],
+                "roadlane_id": sla,
             }
         )
         return sts
@@ -316,15 +316,13 @@ class Locator:
         moving = mv._df.filter(pl.any_horizontal((pl.col("x", "y").diff() != 0).fill_null(True)).alias("is_moving"))[
             "total_nanos", "x", "y", "polygon"
         ]
-        xrd = (
-            self.xys2sts(moving["x", "y"].to_numpy(), polygons=moving["polygon"] if use_polygon else None)
-            .assign_coords({"time": moving["total_nanos"].to_numpy()})
-            .set_coords("time")
-        )
+        sts = self.xys2sts(moving["x", "y"].to_numpy(), polygons=moving["polygon"] if use_polygon else None)
+        sts = sts.with_columns(time=pl.Series(moving["total_nanos"]))
+
         if moving.height < mv._df.height:
-            xrd = xrd.sel({"time": mv._df["total_nanos"].to_numpy()}, method="ffill", drop=True)
-            xrd["time"] = mv._df["total_nanos"].to_numpy()
-        return xrd
+            full_time = pl.DataFrame({"time": mv._df["total_nanos"]})
+            sts = full_time.join_asof(sts.sort("time"), on="time", strategy="backward")
+        return sts
 
     def query_centerlines(self, point, range_percentage=0.1):
         """

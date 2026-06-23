@@ -271,11 +271,11 @@ def ttc_and_thw(df, /, ego_id, crossed, timegaps):
     """Metric that computes TTC and THW between `ego_id` and all other objects.
 
     Longitudinal distance is the arc-length gap along the ego's curvilinear
-    trajectory axis (obj.pos_lon - ego.pos_lon), matching the legacy xarray
+    trajectory axis (obj.pos_lon - ego.pos_lon), matching the legacy
     implementation.
 
     Object velocity is projected onto that axis via vel_lon = cos(curv_heading)
-    * vel, which is the correct longitudinal component. The legacy xarray code
+    * vel, which is the correct longitudinal component. The legacy code
     used sin() (the lateral component) — that was a bug; this version fixes it.
     """
     # Pull pos_lon and vel_lon for objects and ego separately so we can form

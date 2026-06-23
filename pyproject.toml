@@ -39,7 +39,6 @@ dependencies = [
     'polars',
     'polars-st',
     'altair',
-    'xarray',
     'pyproj',
     'betterosi (>=0.8.4, <1)',
     'lxd-io>=0.4.6',
@@ -83,7 +82,7 @@ lint.isort.combine-as-imports = true
 using = "PEP631"
 ignore_licenses = ["mpl"]
 ignore_packages = [
-    "tzdata", "types-python-dateutil", "xarray", "multidict" # APACHE SOFTWARE LICENSE
+    "tzdata", "types-python-dateutil", "multidict" # APACHE SOFTWARE LICENSE
 ]
 zero = true
 
