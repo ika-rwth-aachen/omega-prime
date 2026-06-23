@@ -15,12 +15,10 @@ def test_ttc_and_thw_synthetic():
         }
     )
 
-    crossed = pl.DataFrame() # Not used by the new ttc_and_thw logic!
+    crossed = pl.DataFrame()  # Not used by the new ttc_and_thw logic!
 
     # 'timegaps' acts as the point where the ego and object trajectories overlap
-    timegaps = pl.DataFrame(
-        {"idx_ego": [1], "idx": [2], "total_nanos_ego": [0], "total_nanos": [0]}
-    )
+    timegaps = pl.DataFrame({"idx_ego": [1], "idx": [2], "total_nanos_ego": [0], "total_nanos": [0]})
 
     # Expected TTC: object is 20m ahead, relative velocity is 5m/s -> 4.0 seconds.
     # Expected THW: object is 20m ahead, ego velocity is 10m/s -> 2.0 seconds.
@@ -47,9 +45,7 @@ def test_ttc_and_thw_synthetic_no_overlap():
 
     crossed = pl.DataFrame()
 
-    timegaps = pl.DataFrame(
-        {"idx_ego": [1], "idx": [2], "total_nanos_ego": [0], "total_nanos": [0]}
-    )
+    timegaps = pl.DataFrame({"idx_ego": [1], "idx": [2], "total_nanos_ego": [0], "total_nanos": [0]})
 
     df_out, result = ttc_and_thw(df.lazy(), ego_id=1, crossed=crossed, timegaps=timegaps.lazy())
     ttc_df = result["ttc_and_thw"].collect()

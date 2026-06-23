@@ -127,17 +127,9 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
     """
     # Collect only the ego rows to build the curvilinear reference line.
     # This is a small, targeted collect — the rest of the frame stays lazy.
-    ego_xy = (
-        df.filter(pl.col("idx") == ego_id)
-        .sort("total_nanos")
-        .select(["x", "y"])
-        .collect()
-        .to_numpy()
-    )
+    ego_xy = df.filter(pl.col("idx") == ego_id).sort("total_nanos").select(["x", "y"]).collect().to_numpy()
 
-    ego_curvilinear = ShapelyTrajectoryTools.extend_linestring(
-        shapely.LineString(ego_xy), l_append=100
-    )
+    ego_curvilinear = ShapelyTrajectoryTools.extend_linestring(shapely.LineString(ego_xy), l_append=100)
 
     # Collect the full frame so we can run Shapely operations row-wise.
     # map_batches on a LazyFrame forces a collect internally anyway; being
@@ -170,11 +162,13 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
     vel_arr = collected["vel"].to_numpy()
     vel_lon = np.cos(curv_heading_rad) * vel_arr
 
-    result = collected.with_columns([
-        pl.Series("pos_lon", pos_lon, dtype=pl.Float64),
-        pl.Series("curv_heading", curv_heading_rad, dtype=pl.Float64),
-        pl.Series("vel_lon", vel_lon, dtype=pl.Float64),
-    ])
+    result = collected.with_columns(
+        [
+            pl.Series("pos_lon", pos_lon, dtype=pl.Float64),
+            pl.Series("curv_heading", curv_heading_rad, dtype=pl.Float64),
+            pl.Series("vel_lon", vel_lon, dtype=pl.Float64),
+        ]
+    )
 
     return result.lazy(), {}
 
@@ -295,11 +289,13 @@ def ttc_and_thw(df, /, ego_id, crossed, timegaps):
     ego_curv = (
         df.filter(pl.col("idx") == ego_id)
         .select(["total_nanos", "pos_lon", "vel_lon"])
-        .rename({
-            "total_nanos": "total_nanos_ego",
-            "pos_lon": "pos_lon_ego",
-            "vel_lon": "vel_lon_ego",
-        })
+        .rename(
+            {
+                "total_nanos": "total_nanos_ego",
+                "pos_lon": "pos_lon_ego",
+                "vel_lon": "vel_lon_ego",
+            }
+        )
     )
 
     ttc_df = (
@@ -325,24 +321,16 @@ def ttc_and_thw(df, /, ego_id, crossed, timegaps):
             lon_dist=(pl.col("pos_lon") - pl.col("pos_lon_ego")),
         )
         .with_columns(
-            TTC=pl.when(
-                (pl.col("lon_dist") > 0)
-                & (pl.col("vel_lon_ego") > pl.col("vel_lon"))
-            )
+            TTC=pl.when((pl.col("lon_dist") > 0) & (pl.col("vel_lon_ego") > pl.col("vel_lon")))
             .then(pl.col("lon_dist") / (pl.col("vel_lon_ego") - pl.col("vel_lon")))
             .otherwise(None),
-            THW=pl.when(
-                (pl.col("lon_dist") > 0)
-                & (pl.col("vel_lon_ego") > 0)
-            )
+            THW=pl.when((pl.col("lon_dist") > 0) & (pl.col("vel_lon_ego") > 0))
             .then(pl.col("lon_dist") / pl.col("vel_lon_ego"))
             .otherwise(None),
         )
         .group_by("idx_ego", "idx", "total_nanos_ego")
         .agg(
-            pl.col("TTC", "THW", "total_nanos")
-            .sort_by(pl.col("TTC").abs(), descending=False, nulls_last=True)
-            .first()
+            pl.col("TTC", "THW", "total_nanos").sort_by(pl.col("TTC").abs(), descending=False, nulls_last=True).first()
         )
         .sort("idx_ego", "idx", "total_nanos_ego")
     )
