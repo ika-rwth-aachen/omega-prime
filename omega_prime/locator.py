@@ -232,7 +232,7 @@ class Locator:
         l_ids = np.array([self.external2internal_laneid[i] for i in sts["roadlane_id"].to_numpy()])
         for l_id in set(l_ids):
             point_idxs = np.argwhere(l_ids == l_id)[:, 0]
-            rel_sts = sts[point_idxs]
+            rel_sts = sts.gather(point_idxs)
             l = self.extended_centerlines[l_id]
             xys[point_idxs, 0], xys[point_idxs, 1] = ShapelyTrajectoryTools.st2xy(
                 l, rel_sts["s"].to_numpy() + ShapelyTrajectoryTools.l_append, rel_sts["t"].to_numpy()

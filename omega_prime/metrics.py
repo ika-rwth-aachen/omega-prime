@@ -7,7 +7,7 @@ import graphlib
 import inspect
 import numpy as np
 import shapely
-from omega_prime.locator import ShapelyTrajectoryTools
+from .locator import ShapelyTrajectoryTools
 
 
 @dataclass
@@ -301,13 +301,13 @@ def ttc_and_thw(df, /, ego_id, crossed, timegaps):
     ttc_df = (
         # Start from timegaps (one row per ego-timestep / object pair at the
         # crossing point) — this gives us the reference total_nanos_ego.
-        timegaps
+        timegaps.sort(["idx", "total_nanos_ego"])
         # Attach object curvilinear state at the moment nearest total_nanos_ego.
         # We use an asof join on total_nanos so we get the object's pos_lon at
         # the ego timestamp even if the object's own timestamps don't align
         # perfectly.
         .join_asof(
-            obj_curv.sort("total_nanos_obj"),
+            obj_curv.sort(["idx", "total_nanos_obj"]),
             left_on="total_nanos_ego",
             right_on="total_nanos_obj",
             by_left="idx",
