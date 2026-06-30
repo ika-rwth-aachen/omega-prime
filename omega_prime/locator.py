@@ -62,8 +62,10 @@ class ShapelyTrajectoryTools:
         return cl.simplify(tolerance=cls.simplify_tolerance) if simplify else cl
 
     @classmethod
-    def get_linestring_coordinate_s(cls, l: shapely.LineString):
-        return shapely.line_locate_point(l, shapely.points(l.coords))
+    def get_line_point_distances(cls, l: shapely.LineString):
+        with np.errstate(invalid="ignore"):
+            dists = shapely.line_locate_point(l, shapely.points(l.coords))
+            return dists[~np.isnan(dists)]
 
     @classmethod
     def st2xy(cls, l: shapely.LineString, s, t, return_heading_of_ref_at_st=False):
@@ -107,7 +109,16 @@ class ShapelyTrajectoryTools:
             return np.stack([out_lon, out_lat], axis=1)
 
         valid_xy_points = xy_points[valid_mask]
-        lon_distances = l.project(valid_xy_points)
+        with np.errstate(invalid="ignore"):
+            lon_distances = shapely.line_locate_point(l, valid_xy_points)
+
+        nan_mask = np.isnan(lon_distances)
+        if np.any(nan_mask):
+            valid_mask_indices = np.where(valid_mask)[0]
+            valid_mask[valid_mask_indices[nan_mask]] = False
+            valid_xy_points = valid_xy_points[~nan_mask]
+            lon_distances = lon_distances[~nan_mask]
+
         is_driver_side_of_centerline = shapely.is_ccw(
             shapely.linearrings(
                 np.array(
@@ -123,7 +134,7 @@ class ShapelyTrajectoryTools:
 
         delta_s = np.zeros_like(lon_distances)
         if line_point_distances is None:
-            lane_point_distances = cls.get_linestring_coordinate_s(l)
+            lane_point_distances = cls.get_line_point_distances(l)
         else:
             lane_point_distances = line_point_distances
         delta_s_idxs = cls.needs_angle_adjustment(lane_point_distances, lon_distances)
@@ -162,14 +173,16 @@ class ShapelyTrajectoryTools:
 
 def get_lane_centerline(right_border: shapely.LineString, left_border: shapely.LineString) -> shapely.LineString:
     """middle line between (interpolated) boundaries, oriented in direction of lane"""
-    ses = np.unique(
-        np.concatenate(
-            [
-                shapely.line_locate_point(left_border, shapely.points(right_border.coords), normalized=True),
-                shapely.line_locate_point(right_border, shapely.points(left_border.coords), normalized=True),
-            ]
+    with np.errstate(invalid="ignore"):
+        ses = np.unique(
+            np.concatenate(
+                [
+                    shapely.line_locate_point(left_border, shapely.points(right_border.coords), normalized=True),
+                    shapely.line_locate_point(right_border, shapely.points(left_border.coords), normalized=True),
+                ]
+            )
         )
-    )
+    ses = ses[~np.isnan(ses)]
 
     points = np.zeros((len(ses), 2))
     for i, (rbp, lbp) in enumerate(
@@ -218,9 +231,12 @@ class Locator:
             self.str_tree = shapely.STRtree([l.polygon for l in self.all_lanes])
         else:
             self.str_tree = shapely.STRtree([l.centerline for l in self.all_lanes])
-        self.lane_point_distances = [
-            np.unique(shapely.line_locate_point(cl, shapely.points(cl.coords))) for cl in self.extended_centerlines
-        ]
+        with np.errstate(invalid="ignore"):
+            self.lane_point_distances = []
+            for cl in self.extended_centerlines:
+                dists = shapely.line_locate_point(cl, shapely.points(cl.coords))
+                self.lane_point_distances.append(np.unique(dists[~np.isnan(dists)]))
+
         self.g = self._get_routing_graph()
 
     def get_route(self, start_id, end_id):
