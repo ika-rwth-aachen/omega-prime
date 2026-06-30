@@ -94,22 +94,32 @@ class ShapelyTrajectoryTools:
     @classmethod
     def xy2st(cls, l: shapely.LineString, x_or_xy, y=None, line_point_distances=None):
         if y is None:
-            xy_points = x_or_xy
+            xy_points = np.asarray(x_or_xy)
         else:
             xy_points = shapely.points(np.stack([x_or_xy, y], axis=1))
-        lon_distances = l.project(xy_points)
+
+        valid_mask = ~shapely.is_empty(xy_points)
+        out_shape = xy_points.shape
+        out_lon = np.full(out_shape, np.nan, dtype=np.float64)
+        out_lat = np.full(out_shape, np.nan, dtype=np.float64)
+
+        if not np.any(valid_mask):
+            return np.stack([out_lon, out_lat], axis=1)
+
+        valid_xy_points = xy_points[valid_mask]
+        lon_distances = l.project(valid_xy_points)
         is_driver_side_of_centerline = shapely.is_ccw(
             shapely.linearrings(
                 np.array(
                     [
                         [np.asarray(o.coords)[0, :2] for o in l.interpolate(np.clip(lon_distances - 0.1, 0, np.inf))],
                         [np.asarray(o.coords)[0, :2] for o in l.interpolate(np.clip(lon_distances + 0.1, 0, l.length))],
-                        [np.asarray(o.coords)[0, :2] for o in xy_points],
+                        [np.asarray(o.coords)[0, :2] for o in valid_xy_points],
                     ]
                 ).transpose(1, 0, 2)
             )
         )
-        lat_distances = l.distance(xy_points) * (-is_driver_side_of_centerline.astype(int) * 2 + 1)
+        lat_distances = l.distance(valid_xy_points) * (-is_driver_side_of_centerline.astype(int) * 2 + 1)
 
         delta_s = np.zeros_like(lon_distances)
         if line_point_distances is None:
@@ -118,7 +128,7 @@ class ShapelyTrajectoryTools:
             lane_point_distances = line_point_distances
         delta_s_idxs = cls.needs_angle_adjustment(lane_point_distances, lon_distances)
         if np.sum(delta_s_idxs) > 0:
-            points = np.stack([p.centroid.coords for p in xy_points[delta_s_idxs]])[:, 0, :2]
+            points = np.stack([p.centroid.coords for p in valid_xy_points[delta_s_idxs]])[:, 0, :2]
             lon_dist_to_fix = lon_distances[delta_s_idxs]
             before_nearest_points = np.stack(
                 [np.asarray(o.coords)[0, :2] for o in l.interpolate(np.clip(lon_dist_to_fix - cls.epsi, 0, l.length))]
@@ -145,7 +155,9 @@ class ShapelyTrajectoryTools:
             gamma[~iz] = np.sin(before_in_angle[~iz]) / aia_sin[~iz]
             after_length = 2 * cls.epsi * (1 - (1 / (gamma + 1)))
             delta_s[delta_s_idxs] = cls.epsi - after_length
-        return np.stack([lon_distances - delta_s, lat_distances]).T
+        out_lon[valid_mask] = lon_distances - delta_s
+        out_lat[valid_mask] = lat_distances
+        return np.stack([out_lon, out_lat], axis=1)
 
 
 def get_lane_centerline(right_border: shapely.LineString, left_border: shapely.LineString) -> shapely.LineString:
