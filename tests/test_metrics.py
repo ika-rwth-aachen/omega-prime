@@ -28,9 +28,9 @@ def test_ttc_and_thw_synthetic():
     df_out, result = ttc_and_thw(df.lazy(), ego_id=1, crossed=crossed, timegaps=timegaps.lazy())
     ttc_df = result["ttc_and_thw"].collect()
 
-    assert ttc_df.height == 1
-    assert ttc_df["TTC"][0] == 4.0
-    assert ttc_df["THW"][0] == 2.0
+assert ttc_df.height == 1
+assert ttc_df["TTC"][0] == pytest.approx(4.0)
+assert ttc_df["THW"][0] == pytest.approx(2.0)
 
 
 @pytest.mark.filterwarnings("ignore:Sortedness of columns cannot be checked:UserWarning")
@@ -53,9 +53,9 @@ def test_ttc_and_thw_synthetic_no_overlap():
     df_out, result = ttc_and_thw(df.lazy(), ego_id=1, crossed=crossed, timegaps=timegaps.lazy())
     ttc_df = result["ttc_and_thw"].collect()
 
-    assert ttc_df.height == 1
-    assert ttc_df["TTC"][0] is None
-    assert ttc_df["THW"][0] == 2.0  # THW is independent of relative speed
+assert ttc_df.height == 1
+assert ttc_df["TTC"][0] is None
+assert ttc_df["THW"][0] == pytest.approx(2.0)  # THW is independent of relative speed
 
 
 def test_curvilinear_projection_synthetic():
