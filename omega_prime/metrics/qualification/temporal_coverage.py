@@ -1,6 +1,6 @@
 """."""
 
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 import polars as pl
 
@@ -37,8 +37,8 @@ def temporal_coverage(
         ).collect()
         min_nanos = nanos_bounds[0, "min_nanos"]
         max_nanos = nanos_bounds[0, "max_nanos"]
-        dataset_start = datetime.fromtimestamp(min_nanos * 1e-9, UTC)
-        dataset_end = datetime.fromtimestamp(max_nanos * 1e-9, UTC)
+        dataset_start = datetime.fromtimestamp(min_nanos * 1e-9, timezone.utc)
+        dataset_end = datetime.fromtimestamp(max_nanos * 1e-9, timezone.utc)
 
         overlap_start = max(dataset_start, start_dt)
         overlap_end = min(dataset_end, end_dt)
@@ -70,4 +70,4 @@ def _parse_datetime(value: datetime | str, name: str) -> datetime:
 
 
 def _ensure_utc(value: datetime) -> datetime:
-    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
