@@ -65,7 +65,7 @@ omega-prime = "omega_prime.cli:main"
 
 [tool.ruff]
 lint.ignore = ["E741", "E701", "E501", "I001"]
-target-version = "py311"
+target-version = "py310"
 line-length = 120
 lint.select = [
     "F401",  # Unused imports
