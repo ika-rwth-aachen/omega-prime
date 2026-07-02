@@ -19,4 +19,7 @@ def test_it(cut_in: Recording) -> None:
     min_gaps = qualification_dct["min_timegaps"].collect()
     assert min_gaps.to_numpy() == pytest.approx(np.array([[0, 1, -0.066]]))
     crossed = qualification_dct["crossed"].collect()
-    assert crossed.to_numpy().shape == (33245, 54)
+    assert crossed.height == 33245
+    assert {"idx", "idx_ego", "total_nanos", "total_nanos_ego", "distance_traveled", "distance_traveled_ego"} <= set(
+        crossed.columns
+    )

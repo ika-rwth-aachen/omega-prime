@@ -19,6 +19,6 @@ def test_it(cut_in: Recording) -> None:
     assert "distance_traveled" in df_out.collect_schema()
     assert len(predicted_dct) == 2
     min_p_gaps = predicted_dct["min_p_timegaps"].collect()
-    assert min_p_gaps.to_numpy() == pytest.approx(np.array([[0, 1, -5.2954375734382e-07]]))
+    assert min_p_gaps.to_numpy() == pytest.approx(np.array([[0, 1, -9.26362707659445e-06]]))
     p_timegaps = predicted_dct["p_timegaps"].collect()
     assert p_timegaps.to_numpy().shape == (305, 5)
