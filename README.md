@@ -24,6 +24,7 @@ see [Data Model & Specification](https://ika-rwth-aachen.github.io/omega-prime/o
       - ASAM OpenDRIVE map
       - [LevelXData datasets](https://levelxdata.com/) through [lxd-io](https://github.com/lenvt/lxd-io)
       - Extend yourself by subclassing [DatasetConverter](omega_prime/converters/converter.py)
+      - Use [omega-prime-ros](https://github.com/ika-rwth-aachen/omega-prime-ros) to convert ROS 2 bag files into omega-prime 
       - Use [omega-prime-trajdata](https://github.com/ika-rwth-aachen/omega-prime-trajdata) to convert motion prediction datasets into omega-prime 
   - 🗺️ **Map Association**: Associate Object Location with Lanes from OpenDRIVE or OSI Maps (see [./docs/notebooks/tutorial_locator.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/docs/notebooks/tutorial_locatory.ipynb))
   - 📺 **Plotting** of data: interactive top view plots using [altair](https://altair-viz.github.io/)
@@ -34,10 +35,6 @@ see [Data Model & Specification](https://ika-rwth-aachen.github.io/omega-prime/o
     - 2D-birds-eye-view visibility with [omega-prime-visibility](https://github.com/ika-rwth-aachen/omega-prime-visibility)
   - 🚀 **Fast Processing** directly on DataFrames using [polars](https://pola.rs/), [polars-st](https://oreilles.github.io/polars-st/)
   - ⌨️ **CLI** to convert, validate and visualize omega-prime files
-
-### ROS 2 Conversion
-  - Tooling for conversion from ROS 2 bag-files containing [perception_msgs::ObjectList](https://github.com/ika-rwth-aachen/perception_interfaces/blob/main/perception_msgs/msg/ObjectList.msg) messages to omega-prime MCAP is available in `tools/ros2_conversion/`.
-  - A Dockerfile and  [usage instructions](tools/ros2_conversion/README.md) are provided explaining how to run the export end-to-end.
 
 The data model and format utilize [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) and [ASAM Open-Simulation-Interface GroundTruth messages](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/V3.7.0/specification/index.html). omega-prime sets requirements on presence and quality of ASAM OSI GroundTruth messages and ASAM OpenDRIVE files and defines a file format for the exchange and storage of these.
 
