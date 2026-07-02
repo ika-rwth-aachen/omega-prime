@@ -1,4 +1,4 @@
-# 0.3.0
+# 0.3.4
 
  - Add the `qualify` command to CLI.
  - Added metrics to the qualification methodology
