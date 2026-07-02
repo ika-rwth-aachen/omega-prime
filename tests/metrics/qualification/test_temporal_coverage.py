@@ -1,6 +1,6 @@
 """."""
 
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import polars as pl
 import pytest
@@ -71,11 +71,11 @@ def test_invalid_expected_range(temporal_coverage_df: pl.LazyFrame) -> None:
     [
         (
             datetime(1970, 1, 1, 0, 0, 10),
-            datetime(1970, 1, 1, 0, 0, 10, tzinfo=UTC),
+            datetime(1970, 1, 1, 0, 0, 10, tzinfo=timezone.utc),
         ),
         (
             datetime(1970, 1, 1, 2, 0, 10, tzinfo=timezone(timedelta(hours=2))),
-            datetime(1970, 1, 1, 0, 0, 10, tzinfo=UTC),
+            datetime(1970, 1, 1, 0, 0, 10, tzinfo=timezone.utc),
         ),
     ],
 )
@@ -88,15 +88,15 @@ def test_ensure_utc(value: datetime, expected: datetime) -> None:
     [
         (
             datetime(1970, 1, 1, 0, 0, 10),
-            datetime(1970, 1, 1, 0, 0, 10, tzinfo=UTC),
+            datetime(1970, 1, 1, 0, 0, 10, tzinfo=timezone.utc),
         ),
         (
             "1970-01-01T00:00:10",
-            datetime(1970, 1, 1, 0, 0, 10, tzinfo=UTC),
+            datetime(1970, 1, 1, 0, 0, 10, tzinfo=timezone.utc),
         ),
         (
             "1970-01-01T02:00:10+02:00",
-            datetime(1970, 1, 1, 0, 0, 10, tzinfo=UTC),
+            datetime(1970, 1, 1, 0, 0, 10, tzinfo=timezone.utc),
         ),
     ],
 )
