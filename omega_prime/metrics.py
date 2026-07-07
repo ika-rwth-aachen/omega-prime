@@ -119,7 +119,7 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
     Computes three intermediate columns:
       - pos_lon:      arc-length position along the ego's trajectory line
       - curv_heading: object heading relative to the reference tangent at its
-                      projected position, in radians
+                       projected position, in radians
       - vel_lon:      longitudinal velocity component (cos(curv_heading) * vel)
 
     These are intermediate-only columns: consumed by ttc_and_thw and then
@@ -131,12 +131,13 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
 
     ego_curvilinear = ShapelyTrajectoryTools.extend_linestring(shapely.LineString(ego_xy), l_append=100)
 
-    # Collect the full frame so we can run Shapely operations row-wise.
-    # map_batches on a LazyFrame forces a collect internally anyway; being
-    # explicit here makes the behaviour clear and avoids Polars warnings.
-    collected = df.collect()
+    # Collect only the scalar columns needed for Shapely operations, deliberately
+    # excluding heavy geometry/polygon columns that are not used here.
+    # Row order is preserved by the LazyFrame plan, so the resulting Series can
+    # be attached back to `df` safely via with_columns.
+    minimal = df.select(["x", "y", "yaw", "vel"]).collect()
 
-    xy = collected.select(["x", "y"]).to_numpy()
+    xy = minimal.select(["x", "y"]).to_numpy()
     points = shapely.points(xy[:, 0], xy[:, 1])
 
     # st[:, 0] = arc-length (pos_lon), st[:, 1] = lateral offset
@@ -152,25 +153,25 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
     )
 
     # yaw in the Recording dataframe is already in radians.
-    yaw_rad = collected["yaw"].to_numpy()
+    yaw_rad = minimal["yaw"].to_numpy()
     # curv_heading: how much the object's heading deviates from the reference
     # tangent. 0 means perfectly aligned, ±pi/2 means perpendicular.
     curv_heading_rad = heading_ref_rad - yaw_rad
 
     # Longitudinal velocity: projection of speed onto the reference tangent.
     # cos(0) = 1 for aligned traffic, cos(pi/2) = 0 for crossing traffic.
-    vel_arr = collected["vel"].to_numpy()
+    vel_arr = minimal["vel"].to_numpy()
     vel_lon = np.cos(curv_heading_rad) * vel_arr
 
-    result = collected.with_columns(
+    # Attach the computed arrays back to the original LazyFrame without
+    # materialising its heavy columns (geometry/polygon stay lazy).
+    return df.with_columns(
         [
             pl.Series("pos_lon", pos_lon, dtype=pl.Float64),
             pl.Series("curv_heading", curv_heading_rad, dtype=pl.Float64),
             pl.Series("vel_lon", vel_lon, dtype=pl.Float64),
         ]
-    )
-
-    return result.lazy(), {}
+    ), {}
 
 
 @metric(
@@ -264,10 +265,10 @@ def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps, time_buffer=2
 
 @metric(
     requires_columns=["vel_lon", "pos_lon", "distance_traveled", "vel"],
-    requires_properties=["crossed", "timegaps"],
+    requires_properties=["timegaps"],
     computes_properties=["ttc_and_thw"],
 )
-def ttc_and_thw(df, /, ego_id, crossed, timegaps):
+def ttc_and_thw(df, /, ego_id, timegaps):
     """Metric that computes TTC and THW between `ego_id` and all other objects.
 
     Longitudinal distance is the arc-length gap along the ego's curvilinear
