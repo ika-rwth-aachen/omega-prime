@@ -5,6 +5,9 @@ import polars_st as st
 from .recording import Recording
 import graphlib
 import inspect
+import numpy as np
+import shapely
+from .locator import ShapelyTrajectoryTools
 
 
 @dataclass
@@ -100,9 +103,74 @@ def distance_traveled(df) -> tuple[pl.DataFrame, dict[str, pl.DataFrame]]:
 
 @metric(computes_columns=["vel"])
 def vel(df) -> tuple[pl.DataFrame, dict[str, pl.DataFrame]]:
-    """Metric that computes the column length of the speed vecotr `vel`"""
+    """Metric that computes the column length of the speed vector `vel`"""
     return df.with_columns(
         (pl.col("vel_x") ** 2 + pl.col("vel_y") ** 2).sqrt().alias("vel"),
+    ), {}
+
+
+@metric(
+    requires_columns=["vel"],
+    computes_intermediate_columns=["pos_lon", "curv_heading", "vel_lon"],
+)
+def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
+    """Projects all objects onto the ego's curvilinear reference axis.
+
+    Computes three intermediate columns:
+      - pos_lon:      arc-length position along the ego's trajectory line
+      - curv_heading: object heading relative to the reference tangent at its
+                       projected position, in radians
+      - vel_lon:      longitudinal velocity component (cos(curv_heading) * vel)
+
+    These are intermediate-only columns: consumed by ttc_and_thw and then
+    dropped from the final output by MetricManager.
+    """
+    # Collect only the ego rows to build the curvilinear reference line.
+    # This is a small, targeted collect — the rest of the frame stays lazy.
+    ego_xy = df.filter(pl.col("idx") == ego_id).sort("total_nanos").select(["x", "y"]).collect().to_numpy()
+
+    ego_curvilinear = ShapelyTrajectoryTools.extend_linestring(shapely.LineString(ego_xy), l_append=100)
+
+    # Collect only the scalar columns needed for Shapely operations, deliberately
+    # excluding heavy geometry/polygon columns that are not used here.
+    # Row order is preserved by the LazyFrame plan, so the resulting Series can
+    # be attached back to `df` safely via with_columns.
+    minimal = df.select(["x", "y", "yaw", "vel"]).collect()
+
+    xy = minimal.select(["x", "y"]).to_numpy()
+    points = shapely.points(xy[:, 0], xy[:, 1])
+
+    # st[:, 0] = arc-length (pos_lon), st[:, 1] = lateral offset
+    st_arr = ShapelyTrajectoryTools.xy2st(ego_curvilinear, points)
+    pos_lon = st_arr[:, 0]
+
+    # Tangent heading of the reference line at each projected point, in radians
+    heading_ref_rad = ShapelyTrajectoryTools.st2xy(
+        ego_curvilinear,
+        st_arr[:, 0],
+        st_arr[:, 1],
+        return_heading_of_ref_at_st=True,
+    )
+
+    # yaw in the Recording dataframe is already in radians.
+    yaw_rad = minimal["yaw"].to_numpy()
+    # curv_heading: how much the object's heading deviates from the reference
+    # tangent. 0 means perfectly aligned, ±pi/2 means perpendicular.
+    curv_heading_rad = heading_ref_rad - yaw_rad
+
+    # Longitudinal velocity: projection of speed onto the reference tangent.
+    # cos(0) = 1 for aligned traffic, cos(pi/2) = 0 for crossing traffic.
+    vel_arr = minimal["vel"].to_numpy()
+    vel_lon = np.cos(curv_heading_rad) * vel_arr
+
+    # Attach the computed arrays back to the original LazyFrame without
+    # materialising its heavy columns (geometry/polygon stay lazy).
+    return df.with_columns(
+        [
+            pl.Series("pos_lon", pos_lon, dtype=pl.Float64),
+            pl.Series("curv_heading", curv_heading_rad, dtype=pl.Float64),
+            pl.Series("vel_lon", vel_lon, dtype=pl.Float64),
+        ]
     ), {}
 
 
@@ -195,7 +263,93 @@ def p_timegaps_and_min_p_timgaps(df, /, ego_id, crossed, timegaps, time_buffer=2
     }
 
 
-metrics = [vel, distance_traveled, timegaps_and_min_timgaps, p_timegaps_and_min_p_timgaps]
+@metric(
+    requires_columns=["vel_lon", "pos_lon", "distance_traveled", "vel"],
+    requires_properties=["timegaps"],
+    computes_properties=["ttc_and_thw"],
+)
+def ttc_and_thw(df, /, ego_id, timegaps):
+    """Metric that computes TTC and THW between `ego_id` and all other objects.
+
+    Longitudinal distance is the arc-length gap along the ego's curvilinear
+    trajectory axis (obj.pos_lon - ego.pos_lon), matching the legacy
+    implementation.
+
+    Object velocity is projected onto that axis via vel_lon = cos(curv_heading)
+    * vel, which is the correct longitudinal component. The legacy code
+    used sin() (the lateral component) — that was a bug; this version fixes it.
+    """
+    # Pull pos_lon and vel_lon for objects and ego separately so we can form
+    # the longitudinal gap and closing speed at each ego timestep.
+    obj_curv = (
+        df.filter(pl.col("idx") != ego_id)
+        .select(["idx", "total_nanos", "pos_lon", "vel_lon"])
+        .rename({"total_nanos": "total_nanos_obj"})
+    )
+
+    ego_curv = (
+        df.filter(pl.col("idx") == ego_id)
+        .select(["total_nanos", "pos_lon", "vel_lon"])
+        .rename(
+            {
+                "total_nanos": "total_nanos_ego",
+                "pos_lon": "pos_lon_ego",
+                "vel_lon": "vel_lon_ego",
+            }
+        )
+    )
+
+    ttc_df = (
+        # Start from timegaps (one row per ego-timestep / object pair at the
+        # crossing point) — this gives us the reference total_nanos_ego.
+        timegaps.sort(["idx", "total_nanos_ego"])
+        # Attach object curvilinear state at the moment nearest total_nanos_ego.
+        # We use an asof join on total_nanos so we get the object's pos_lon at
+        # the ego timestamp even if the object's own timestamps don't align
+        # perfectly.
+        .join_asof(
+            obj_curv.sort(["idx", "total_nanos_obj"]),
+            left_on="total_nanos_ego",
+            right_on="total_nanos_obj",
+            by_left="idx",
+            by_right="idx",
+            strategy="nearest",
+        )
+        # Attach ego curvilinear state at total_nanos_ego.
+        .join(ego_curv, on="total_nanos_ego", how="left")
+        .with_columns(
+            # Positive lon_dist: object is ahead of ego on the reference line.
+            lon_dist=(pl.col("pos_lon") - pl.col("pos_lon_ego")),
+        )
+        .with_columns(
+            TTC=pl.when((pl.col("lon_dist") > 0) & (pl.col("vel_lon_ego") > pl.col("vel_lon")))
+            .then(pl.col("lon_dist") / (pl.col("vel_lon_ego") - pl.col("vel_lon")))
+            .otherwise(None),
+            THW=pl.when((pl.col("lon_dist") > 0) & (pl.col("vel_lon_ego") > 0))
+            .then(pl.col("lon_dist") / pl.col("vel_lon_ego"))
+            .otherwise(None),
+        )
+        .group_by("idx_ego", "idx", "total_nanos_ego")
+        .agg(
+            pl.col("TTC", "THW", "total_nanos").sort_by(pl.col("TTC").abs(), descending=False, nulls_last=True).first()
+        )
+        .sort("idx_ego", "idx", "total_nanos_ego")
+    )
+
+    return df, {"ttc_and_thw": ttc_df}
+
+
+# Order matters: each metric must appear after all metrics it depends on.
+# curvilinear_projection depends on vel (needs vel column) and must come
+# before ttc_and_thw (which needs pos_lon / vel_lon).
+metrics = [
+    vel,
+    distance_traveled,
+    curvilinear_projection,
+    timegaps_and_min_timgaps,
+    p_timegaps_and_min_p_timgaps,
+    ttc_and_thw,
+]
 
 
 @dataclass
