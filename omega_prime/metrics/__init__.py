@@ -1,9 +1,11 @@
 """Public metrics API."""
 
 from . import analysis, qualification
+from .analysis.curvilinear_projection import curvilinear_projection
 from .analysis.distance_traveled import distance_traveled
 from .analysis.predicted_timegaps import p_timegaps_and_min_p_timegaps
 from .analysis.timegaps import timegaps_and_min_timegaps
+from .analysis.ttc_and_thw import ttc_and_thw
 from .analysis.vel import vel
 from .metric import Metric, QRT, metric
 from .metric_manager import MetricManager
@@ -25,6 +27,7 @@ __all__ = [
     "analysis",
     "attribute_completeness",
     "class_completeness",
+    "curvilinear_projection",
     "data_format_consistency",
     "distance_traveled",
     "duplicate_record_rate",
@@ -38,5 +41,6 @@ __all__ = [
     "temporal_completeness",
     "temporal_coverage",
     "timegaps_and_min_timegaps",
+    "ttc_and_thw",
     "vel",
 ]

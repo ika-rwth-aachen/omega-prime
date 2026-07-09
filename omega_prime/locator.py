@@ -5,7 +5,6 @@ from typing import Any
 import networkx as nx
 import numpy as np
 import shapely
-import xarray as xr
 from matplotlib.patches import Polygon as PltPolygon
 from strenum import StrEnum
 import polars as pl
@@ -63,8 +62,10 @@ class ShapelyTrajectoryTools:
         return cl.simplify(tolerance=cls.simplify_tolerance) if simplify else cl
 
     @classmethod
-    def get_linestring_coordinate_s(cls, l: shapely.LineString):
-        return shapely.line_locate_point(l, shapely.points(l.coords))
+    def get_line_point_distances(cls, l: shapely.LineString):
+        with np.errstate(invalid="ignore"):
+            dists = shapely.line_locate_point(l, shapely.points(l.coords))
+            return dists[~np.isnan(dists)]
 
     @classmethod
     def st2xy(cls, l: shapely.LineString, s, t, return_heading_of_ref_at_st=False):
@@ -95,31 +96,50 @@ class ShapelyTrajectoryTools:
     @classmethod
     def xy2st(cls, l: shapely.LineString, x_or_xy, y=None, line_point_distances=None):
         if y is None:
-            xy_points = x_or_xy
+            xy_points = np.asarray(x_or_xy)
         else:
             xy_points = shapely.points(np.stack([x_or_xy, y], axis=1))
-        lon_distances = l.project(xy_points)
+
+        valid_mask = ~shapely.is_empty(xy_points)
+        out_shape = xy_points.shape
+        out_lon = np.full(out_shape, np.nan, dtype=np.float64)
+        out_lat = np.full(out_shape, np.nan, dtype=np.float64)
+
+        if not np.any(valid_mask):
+            return np.stack([out_lon, out_lat], axis=1)
+
+        valid_xy_points = xy_points[valid_mask]
+        with np.errstate(invalid="ignore"):
+            lon_distances = shapely.line_locate_point(l, valid_xy_points)
+
+        nan_mask = np.isnan(lon_distances)
+        if np.any(nan_mask):
+            valid_mask_indices = np.where(valid_mask)[0]
+            valid_mask[valid_mask_indices[nan_mask]] = False
+            valid_xy_points = valid_xy_points[~nan_mask]
+            lon_distances = lon_distances[~nan_mask]
+
         is_driver_side_of_centerline = shapely.is_ccw(
             shapely.linearrings(
                 np.array(
                     [
                         [np.asarray(o.coords)[0, :2] for o in l.interpolate(np.clip(lon_distances - 0.1, 0, np.inf))],
                         [np.asarray(o.coords)[0, :2] for o in l.interpolate(np.clip(lon_distances + 0.1, 0, l.length))],
-                        [np.asarray(o.coords)[0, :2] for o in xy_points],
+                        [np.asarray(o.coords)[0, :2] for o in valid_xy_points],
                     ]
                 ).transpose(1, 0, 2)
             )
         )
-        lat_distances = l.distance(xy_points) * (-is_driver_side_of_centerline.astype(int) * 2 + 1)
+        lat_distances = l.distance(valid_xy_points) * (-is_driver_side_of_centerline.astype(int) * 2 + 1)
 
         delta_s = np.zeros_like(lon_distances)
         if line_point_distances is None:
-            lane_point_distances = cls.get_linestring_coordinate_s(l)
+            lane_point_distances = cls.get_line_point_distances(l)
         else:
             lane_point_distances = line_point_distances
         delta_s_idxs = cls.needs_angle_adjustment(lane_point_distances, lon_distances)
         if np.sum(delta_s_idxs) > 0:
-            points = np.stack([p.centroid.coords for p in xy_points[delta_s_idxs]])[:, 0, :2]
+            points = np.stack([p.centroid.coords for p in valid_xy_points[delta_s_idxs]])[:, 0, :2]
             lon_dist_to_fix = lon_distances[delta_s_idxs]
             before_nearest_points = np.stack(
                 [np.asarray(o.coords)[0, :2] for o in l.interpolate(np.clip(lon_dist_to_fix - cls.epsi, 0, l.length))]
@@ -146,19 +166,23 @@ class ShapelyTrajectoryTools:
             gamma[~iz] = np.sin(before_in_angle[~iz]) / aia_sin[~iz]
             after_length = 2 * cls.epsi * (1 - (1 / (gamma + 1)))
             delta_s[delta_s_idxs] = cls.epsi - after_length
-        return np.stack([lon_distances - delta_s, lat_distances]).T
+        out_lon[valid_mask] = lon_distances - delta_s
+        out_lat[valid_mask] = lat_distances
+        return np.stack([out_lon, out_lat], axis=1)
 
 
 def get_lane_centerline(right_border: shapely.LineString, left_border: shapely.LineString) -> shapely.LineString:
     """middle line between (interpolated) boundaries, oriented in direction of lane"""
-    ses = np.unique(
-        np.concatenate(
-            [
-                shapely.line_locate_point(left_border, shapely.points(right_border.coords), normalized=True),
-                shapely.line_locate_point(right_border, shapely.points(left_border.coords), normalized=True),
-            ]
+    with np.errstate(invalid="ignore"):
+        ses = np.unique(
+            np.concatenate(
+                [
+                    shapely.line_locate_point(left_border, shapely.points(right_border.coords), normalized=True),
+                    shapely.line_locate_point(right_border, shapely.points(left_border.coords), normalized=True),
+                ]
+            )
         )
-    )
+    ses = ses[~np.isnan(ses)]
 
     points = np.zeros((len(ses), 2))
     for i, (rbp, lbp) in enumerate(
@@ -207,23 +231,32 @@ class Locator:
             self.str_tree = shapely.STRtree([l.polygon for l in self.all_lanes])
         else:
             self.str_tree = shapely.STRtree([l.centerline for l in self.all_lanes])
-        self.lane_point_distances = [
-            np.unique(shapely.line_locate_point(cl, shapely.points(cl.coords))) for cl in self.extended_centerlines
-        ]
+        with np.errstate(invalid="ignore"):
+            self.lane_point_distances = []
+            for cl in self.extended_centerlines:
+                dists = shapely.line_locate_point(cl, shapely.points(cl.coords))
+                self.lane_point_distances.append(np.unique(dists[~np.isnan(dists)]))
+
         self.g = self._get_routing_graph()
 
     def get_route(self, start_id, end_id):
         return nx.shortest_path(self.g, start_id, end_id)
 
     def sts2xys(self, sts):
-        xys = np.zeros((len(sts.s), 2), dtype=float) * np.nan
-        l_ids = np.array([self.external2internal_laneid[i] for i in sts.roadlane_id.values])
+        s_arr = sts["s"].to_numpy()
+        xys = np.zeros((len(s_arr), 2), dtype=float) * np.nan
+        l_ids = np.array([self.external2internal_laneid[i] for i in sts["roadlane_id"].to_numpy()])
         for l_id in set(l_ids):
             point_idxs = np.argwhere(l_ids == l_id)[:, 0]
-            rel_sts = sts.isel(dict(time=point_idxs))
+            if hasattr(sts, "gather"):
+                rel_sts = sts.gather(point_idxs)
+            elif hasattr(sts, "take"):
+                rel_sts = sts.take(point_idxs)
+            else:
+                rel_sts = sts[point_idxs, :]
             l = self.extended_centerlines[l_id]
             xys[point_idxs, 0], xys[point_idxs, 1] = ShapelyTrajectoryTools.st2xy(
-                l, rel_sts.s.values + ShapelyTrajectoryTools.l_append, rel_sts.t.values
+                l, rel_sts["s"].to_numpy() + ShapelyTrajectoryTools.l_append, rel_sts["t"].to_numpy()
             )
         return xys
 
@@ -236,11 +269,11 @@ class Locator:
         sla = np.zeros(len(single_lane_association), dtype=tuple)
         for i, v in enumerate(single_lane_association):
             sla[i] = v
-        sts = xr.Dataset(
+        sts = pl.DataFrame(
             {
-                "s": ("time", [lon_distances[lidx][i] for i, lidx in enumerate(single_lane_association)]),
-                "t": ("time", [lat_distances[lidx][i] for i, lidx in enumerate(single_lane_association)]),
-                "roadlane_id": ("time", sla),
+                "s": [lon_distances[lidx][i] for i, lidx in enumerate(single_lane_association)],
+                "t": [lat_distances[lidx][i] for i, lidx in enumerate(single_lane_association)],
+                "roadlane_id": sla,
             }
         )
         return sts
@@ -316,15 +349,13 @@ class Locator:
         moving = mv._df.filter(pl.any_horizontal((pl.col("x", "y").diff() != 0).fill_null(True)).alias("is_moving"))[
             "total_nanos", "x", "y", "polygon"
         ]
-        xrd = (
-            self.xys2sts(moving["x", "y"].to_numpy(), polygons=moving["polygon"] if use_polygon else None)
-            .assign_coords({"time": moving["total_nanos"].to_numpy()})
-            .set_coords("time")
-        )
+        sts = self.xys2sts(moving["x", "y"].to_numpy(), polygons=moving["polygon"] if use_polygon else None)
+        sts = sts.with_columns(time=pl.Series(moving["total_nanos"]))
+
         if moving.height < mv._df.height:
-            xrd = xrd.sel({"time": mv._df["total_nanos"].to_numpy()}, method="ffill", drop=True)
-            xrd["time"] = mv._df["total_nanos"].to_numpy()
-        return xrd
+            full_time = pl.DataFrame({"time": mv._df["total_nanos"]})
+            sts = full_time.join_asof(sts.sort("time"), on="time", strategy="backward")
+        return sts
 
     def query_centerlines(self, point, range_percentage=0.1):
         """

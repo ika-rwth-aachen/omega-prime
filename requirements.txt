@@ -102,18 +102,14 @@ numpy==2.3.4
     #   pyxodr-omega-prime
     #   scipy
     #   shapely
-    #   xarray
 packaging==25.0
     # via
     #   altair
     #   matplotlib
     #   pandera
     #   pyogrio
-    #   xarray
 pandas==2.3.3
-    # via
-    #   omega-prime (pyproject.toml)
-    #   xarray
+    # via omega-prime (pyproject.toml)
 pandera==0.26.1
     # via omega-prime (pyproject.toml)
 pillow==12.0.0
@@ -219,7 +215,5 @@ typing-inspection==0.4.2
     # via pydantic
 tzdata==2025.2
     # via pandas
-xarray==2025.10.1
-    # via omega-prime (pyproject.toml)
 zstandard==0.25.0
     # via mcap
