@@ -1,0 +1,35 @@
+<svg width="300" height="80" xmlns="http://www.w3.org/2000/svg" style="font-family: Arial, sans-serif;">
+  <!-- Background of EU flag -->
+  <rect x="0" y="0" width="120" height="80" fill="#003399" rx="0" />
+
+  <!-- Group of 12 stars -->
+  <g transform="translate(60,40)">
+    <!-- Star shape defined as reusable symbol -->
+    <defs>
+      <polygon id="star" points="0,-4 0.61,-1.4 3.9,-1.4 1.2,0.5 2.45,3.5 0,1.8 -2.45,3.5 -1.2,0.5 -3.9,-1.4 -0.61,-1.4"
+        fill="#ffcc00" />
+    </defs>
+
+    <!-- Place 12 stars in a circle of radius 30 -->
+    <g>
+      <use href="#star" transform="rotate(0) translate(0,-30) rotate(0)" />
+      <use href="#star" transform="rotate(30) translate(0,-30) rotate(-30)" />
+      <use href="#star" transform="rotate(60) translate(0,-30) rotate(-60)" />
+      <use href="#star" transform="rotate(90) translate(0,-30) rotate(-90)" />
+      <use href="#star" transform="rotate(120) translate(0,-30) rotate(-120)" />
+      <use href="#star" transform="rotate(150) translate(0,-30) rotate(-150)" />
+      <use href="#star" transform="rotate(180) translate(0,-30) rotate(-180)" />
+      <use href="#star" transform="rotate(210) translate(0,-30) rotate(-210)" />
+      <use href="#star" transform="rotate(240) translate(0,-30) rotate(-240)" />
+      <use href="#star" transform="rotate(270) translate(0,-30) rotate(-270)" />
+      <use href="#star" transform="rotate(300) translate(0,-30) rotate(-300)" />
+      <use href="#star" transform="rotate(330) translate(0,-30) rotate(-330)" />
+    </g>
+  </g>
+
+  <!-- Text beside the flag -->
+  <text x="140" y="40" fill="#003399" font-size="16" font-weight="bold">
+    <tspan x="140" dy="0">Funded by</tspan>
+    <tspan x="140" dy="1.2em">the European Union</tspan>
+  </text>
+</svg>

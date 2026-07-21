@@ -1,0 +1,1668 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://ika-rwth-aachen.github.io/omega-prime/map_segmentation/map_segmentation/">
+      
+      
+        <link rel="prev" href="../../library/">
+      
+      
+        <link rel="next" href="../../notebooks/tutorial/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../logo/omega-prime-no-text.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Map Segmentation - Omega-Prime</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#map-segmentation-omega_primemapsegment" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Omega-Prime" class="md-header__button md-logo" aria-label="Omega-Prime" data-md-component="logo">
+      
+  <img src="../../logo/omega-prime-no-text.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Omega-Prime
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Map Segmentation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Omega-Prime" class="md-nav__button md-logo" aria-label="Omega-Prime" data-md-component="logo">
+      
+  <img src="../../logo/omega-prime-no-text.svg" alt="logo">
+
+    </a>
+    Omega-Prime
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    omega-prime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../omega_prime_specification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Model & Specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Library
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python Library
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map Segmentation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map Segmentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#segment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapsegmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MapSegmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-and-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs and Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs and Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-lane-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline Lane Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-lane-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE Lane Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#segments-and-ids" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segments and IDs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#algorithms-and-key-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithms and Key Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Algorithms and Key Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trajectory-segmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trajectory Segmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-api-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public API Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public API Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-base-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Base API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plotting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plotting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions and Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases-to-consider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases to Consider
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extensibility-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extensibility Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inroduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/tutorial_locator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Locator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/tutorial_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/tutorial_map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Map Segmentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#segment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mapsegmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MapSegmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-and-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs and Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs and Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-lane-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline Lane Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-lane-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE Lane Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#segments-and-ids" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Segments and IDs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#algorithms-and-key-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithms and Key Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Algorithms and Key Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trajectory-segmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trajectory Segmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-api-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public API Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public API Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-base-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Base API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#osi-centerline-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OSI Centerline API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opendrive-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenDRIVE API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plotting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plotting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions and Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases-to-consider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases to Consider
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extensibility-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extensibility Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="map-segmentation-omega_primemapsegment">Map Segmentation (omega_prime.mapsegment)</h1>
+<p>This document describes the map segmentation system used to group map lanes into semantic segments, attach available traffic-light information, plot segmentation results, and split trajectories into segment-wise chunks.</p>
+<p>It covers:
+- Architecture and class hierarchy
+- OSI centerline and OpenDRIVE segmentation behavior
+- Data model expectations
+- Algorithms and thresholds
+- Public API surface
+- Assumptions, limitations, and edge cases</p>
+<h2 id="overview">Overview</h2>
+<p>The map segmentation system uses an abstract base class pattern to support multiple map types. The currently implemented segmentation classes are:</p>
+<ul>
+<li><code>MapSegmentation</code>: shared base class for segmentation implementations</li>
+<li><code>Segment</code>: shared base class for segment objects</li>
+<li><code>MapOsiCenterlineSegmentation</code>: segmentation for <code>MapOsiCenterline</code></li>
+<li><code>MapODRSegmentation</code>: segmentation for <code>MapOdr</code> / OpenDRIVE maps</li>
+<li><code>SegmentOsiCenterline</code>, <code>Intersection</code>, <code>ConnectionSegment</code>: OSI centerline segment classes</li>
+<li><code>SegmentOdr</code>, <code>IntersectionOdr</code>, <code>ConnectionSegmentOdr</code>: OpenDRIVE segment classes</li>
+</ul>
+<p>Segments are currently assigned as:
+- <code>MapSegmentType.JUNCTION</code>: intersection or OpenDRIVE junction segments
+- <code>MapSegmentType.NO_JUNCTION</code>: non-junction connection segments</p>
+<p>Other enum values exist, such as <code>RAMP_ON</code>, <code>RAMP_OFF</code>, and <code>ROUNDABOUT</code>, but are not currently assigned by these pipelines.</p>
+<p>Each segment stores its lanes, segment index, segment type, and a cached polygon generated from lane centerlines. The shared base class also owns a <code>Locator</code> and provides lane-first trajectory-to-segment mapping for both OSI and ODR maps.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="segment"><code>Segment</code></h3>
+<p><code>Segment</code> is the base class for all segment types. Concrete subclasses implement:
+- <code>_get_lane_id(lane)</code>: extract the map-type-specific lane ID
+- <code>_get_lane_geometry(lane)</code>: extract the lane geometry used for polygon generation
+- <code>set_trafficlight()</code>: attach traffic-light information when available</p>
+<p>Shared segment behavior includes:
+- Polygon computation with caching
+- Concave hull generation with convex hull fallback
+- Lane management through <code>add_lane()</code>
+- Center point calculation
+- Road-user time-interval checks against the segment polygon
+- Segment plotting with lane centerlines, lane labels, and optional polygon output semantics shared across map types</p>
+<h3 id="mapsegmentation"><code>MapSegmentation</code></h3>
+<p><code>MapSegmentation</code> is the base class for map segmentation implementations. Concrete subclasses implement lane ID, centerline, successor, predecessor, traffic-light, and intersection-flag accessors.</p>
+<p>Shared segmentation behavior includes:
+- Storing <code>recording.map</code>, <code>map.lanes</code>, and common segment dictionaries
+- Creating a <code>Locator</code> with <code>Locator.from_map(recording.map)</code>
+- Building lane, successor, predecessor, and road-to-segment mappings
+- Validating whether all lanes are assigned
+- Splitting trajectories into segment-wise chunks with <code>trajectory_segment_detection()</code>
+- Plotting full segmentation maps and per-segment intersection/connection plots through shared <code>plot()</code> and <code>plot_intersections()</code> implementations</p>
+<h3 id="osi-centerline-implementation">OSI Centerline Implementation</h3>
+<p><code>MapOsiCenterlineSegmentation</code> builds intersections from lane geometry and topology:
+- Detects parallel lanes with spatial indexing and direction comparison
+- Detects intersecting lanes using buffered centerlines
+- Builds graph components for intersections
+- Merges nearby intersection components
+- Finds connection segments from non-intersection lane topology
+- Assigns traffic lights from <code>recording.traffic_light_states</code>
+- Updates OSI lane <code>road_id</code> values to segment indices</p>
+<p><code>Intersection</code> and <code>ConnectionSegment</code> extend <code>SegmentOsiCenterline</code>.</p>
+<h3 id="opendrive-implementation">OpenDRIVE Implementation</h3>
+<p><code>MapODRSegmentation</code> uses OpenDRIVE road metadata instead of graph-based intersection detection:
+- Roads whose <code>junction</code> attribute is not <code>"-1"</code> are grouped into <code>IntersectionOdr</code> segments by junction ID
+- Remaining roads are grouped into <code>ConnectionSegmentOdr</code> segments by road ID
+- Segment indices are assigned sequentially from one shared namespace
+- Original OpenDRIVE IDs are preserved on the segment as <code>odr_junction_id</code> or <code>odr_road_id</code>
+- ODR lane IDs use the full <code>XodrLaneId</code> (<code>road_id</code>, <code>lane_id</code>, <code>section_id</code>) to avoid collisions</p>
+<p>If ODR segment creation fails or any lane remains unassigned, <code>identify_segments()</code> raises a <code>RuntimeError</code> with details about failed segments and unassigned lanes.</p>
+<h2 id="inputs-and-data-model">Inputs and Data Model</h2>
+<p>The constructor expects a <code>recording</code> object with:
+- <code>recording.map</code>: a map with <code>map.lanes</code>
+- <code>recording.traffic_light_states</code>: required by OSI centerline segmentation for traffic-light discovery</p>
+<p>All XY coordinates are expected to be in meters in a consistent local frame.</p>
+<h3 id="osi-centerline-lane-requirements">OSI Centerline Lane Requirements</h3>
+<p>OSI centerline lanes are expected to provide:
+- <code>lane.idx.lane_id</code>: unique lane identifier used as the segmentation key
+- <code>lane.idx.road_id</code>: road grouping ID, later updated to the segment index by <code>update_road_ids()</code>
+- <code>lane.centerline</code>: shapely <code>LineString</code>
+- <code>lane.successor_ids</code> and <code>lane.predecessor_ids</code>: lane IDs or objects exposing <code>.lane_id</code>
+- Optional/assigned attributes: <code>lane.on_intersection</code>, <code>lane.is_approaching</code>, and <code>lane.trafficlight</code></p>
+<h3 id="opendrive-lane-requirements">OpenDRIVE Lane Requirements</h3>
+<p>OpenDRIVE lanes are expected to provide:
+- <code>lane.idx</code>: full <code>XodrLaneId</code> namedtuple with <code>road_id</code>, <code>lane_id</code>, and <code>section_id</code>
+- <code>lane.centerline</code>: shapely <code>LineString</code>
+- <code>lane.successor_ids</code> and <code>lane.predecessor_ids</code>: full <code>XodrLaneId</code> values
+- <code>lane.on_intersection</code>: derived from the lane classification</p>
+<p>OpenDRIVE traffic-light mapping is currently a no-op in <code>SegmentOdr</code>.</p>
+<h2 id="configuration-parameters">Configuration Parameters</h2>
+<h3 id="shared-parameters">Shared Parameters</h3>
+<ul>
+<li><code>concave_hull_ratio</code> (default <code>0.3</code>): controls the tightness of the concave hull computed for each segment polygon. A value of <code>0.0</code> produces the tightest possible fit (approaching the input geometry); <code>1.0</code> degenerates to a convex hull. The default of <code>0.3</code> provides a good balance between tightly wrapping curved or branching lane geometry, which a convex hull would over-approximate, and robustness against noisy or very short centerlines.</li>
+</ul>
+<h3 id="osi-centerline-parameters">OSI Centerline Parameters</h3>
+<p><code>MapOsiCenterlineSegmentation(recording, lane_buffer=0.3, intersection_overlap_buffer=1.0, concave_hull_ratio=0.3)</code>:
+- <code>lane_buffer</code>: buffer used to detect intersecting lanes
+- <code>intersection_overlap_buffer</code>: buffer used to merge nearby intersection components</p>
+<p>Internal OSI thresholds:
+- Parallel lane search radius: <code>10 m</code>
+- Parallel lane angle threshold: <code>&lt; 10 degrees</code>
+- Isolated connection merge distance for a single bordering intersection: <code>5 m</code></p>
+<h3 id="opendrive-parameters">OpenDRIVE Parameters</h3>
+<p><code>MapODRSegmentation(recording, concave_hull_ratio=0.3)</code>:
+- Uses only <code>concave_hull_ratio</code>
+- Uses OpenDRIVE road <code>junction</code> attributes for segment grouping</p>
+<h2 id="segments-and-ids">Segments and IDs</h2>
+<p>All segment classes hold:
+- <code>lanes</code>
+- <code>lane_ids</code>
+- <code>trafficlights</code>
+- <code>idx</code>
+- <code>type</code>
+- <code>polygon</code></p>
+<p>Segment polygons are concave hulls of lane centerlines using <code>concave_hull_ratio</code>; if concave hull generation fails, the code falls back to a convex hull.</p>
+<p>A <strong>concave hull</strong> is used rather than a convex hull because road geometry is inherently non-convex:</p>
+<ul>
+<li>Lane centerlines within a segment can curve, run in parallel with gaps between them, or radiate outward from an intersection node. A convex hull would fill in all of that empty space, producing a polygon that extends well beyond the actual lane footprint.</li>
+<li>The polygon is used in <code>trajectory_segment_detection()</code> to verify that a located point actually lies within the segment. An over-extended convex hull would cause road users travelling on a neighbouring segment to be falsely assigned to the wrong segment.</li>
+<li>At multi-road intersections, the incoming and outgoing lanes spread outward, making the true segment footprint concave. Using a convex hull there would swallow territory belonging to the adjacent connection segments.</li>
+</ul>
+<p>The convex hull fallback is retained for degenerate geometries (e.g. collinear or very short lanes) where Shapely's <code>concave_hull</code> raises a <code>GEOSException</code> or returns an empty geometry.</p>
+<p>OSI behavior:
+- Segment IDs are sequential.
+- <code>update_road_ids()</code> rewrites OSI lane <code>idx.road_id</code> to the segment index.
+- <code>lane_segment_dict</code> is keyed by bare <code>lane_id</code>.</p>
+<p>ODR behavior:
+- Segment IDs are sequential and unique across junction and road segments.
+- Original OpenDRIVE road and junction IDs remain separate from <code>segment.idx</code>.
+- <code>IntersectionOdr.odr_junction_id</code> stores the source junction ID.
+- <code>ConnectionSegmentOdr.odr_road_id</code> stores the source road ID.
+- <code>lane_segment_dict</code> is keyed by full <code>XodrLaneId</code>.</p>
+<h2 id="algorithms-and-key-details">Algorithms and Key Details</h2>
+<h3 id="osi-centerline-pipeline">OSI Centerline Pipeline</h3>
+<ul>
+<li>Build lane, successor, and predecessor dictionaries.</li>
+<li>Detect parallel lanes using STRtree queries and centerline direction comparison.</li>
+<li>Detect intersecting lanes by querying buffered centerlines and excluding successors, predecessors, and parallels.</li>
+<li>Build a graph where intersecting lanes form edges; connected components become intersections.</li>
+<li>Merge overlapping or nearby intersection polygons.</li>
+<li>Add non-intersecting lanes contained within the expanded OSI intersection area.</li>
+<li>Build connection segments from connected components of non-intersection lanes.</li>
+<li>Assign traffic lights to nearest lanes using STRtree nearest queries.</li>
+<li>Assign sequential segment IDs and update lane <code>road_id</code> values.</li>
+</ul>
+<h3 id="opendrive-pipeline">OpenDRIVE Pipeline</h3>
+<ul>
+<li>Build lane, successor, and predecessor dictionaries.</li>
+<li>Build a <code>road_id -&gt; junction_id</code> mapping from OpenDRIVE roads whose <code>junction</code> attribute is not <code>"-1"</code>.</li>
+<li>Group lanes on junction roads into <code>IntersectionOdr</code> segments by junction ID.</li>
+<li>Group all remaining lanes into <code>ConnectionSegmentOdr</code> segments by road ID.</li>
+<li>Assign sequential segment indices across all ODR segments.</li>
+<li>Build <code>segment_by_road_id</code> and <code>lane_segment_dict</code>.</li>
+<li>Raise <code>RuntimeError</code> if any segment failed to construct or any lane remains unassigned.</li>
+</ul>
+<h3 id="trajectory-segmentation">Trajectory Segmentation</h3>
+<p><code>trajectory_segment_detection(trajectory)</code> is implemented on <code>MapSegmentation</code> and shared by OSI and ODR.</p>
+<p>Input:
+- <code>trajectory</code> must be a <code>np.ndarray</code> with shape <code>(n, 3)</code>.
+- Columns are <code>(frame_or_time, x, y)</code>.
+- Empty <code>(0, 3)</code> trajectories return <code>[]</code>.
+- Invalid shapes or non-NumPy inputs raise <code>ValueError</code>.</p>
+<p>Behavior:
+- Uses <code>self.locator.xys2sts(trajectory[:, 1:3])</code> to locate each point on a lane.
+- Converts located lane IDs to the key used by <code>lane_segment_dict</code>.
+- Looks up the assigned segment for each located lane.
+- If the located lane has a polygon, verifies the point is covered by that polygon using <code>covers()</code>.
+- Splits the trajectory whenever the resolved segment object changes.</p>
+<p>Map-specific lane-key handling:
+- OSI centerline segmentation converts located lane IDs to <code>.lane_id</code>.
+- ODR segmentation uses the full located <code>XodrLaneId</code> directly.</p>
+<p>Failure modes:
+- Unknown located lane: <code>RuntimeError</code>
+- Located lane has no assigned segment: <code>RuntimeError</code>
+- Located lane cannot be resolved to a lane object: <code>RuntimeError</code>
+- Point is outside the located lane polygon: <code>RuntimeError</code></p>
+<p>The trajectory method no longer uses buffered intersection segment polygons to reassign points near intersections; assignment is lane-first and map-type consistent.</p>
+<h2 id="public-api-summary">Public API Summary</h2>
+<h3 id="shared-base-api">Shared Base API</h3>
+<ul>
+<li><code>MapSegmentation(recording, concave_hull_ratio=0.3)</code></li>
+<li>Base class for segmentation implementations.</li>
+<li>Creates common dictionaries and a <code>Locator</code>.</li>
+<li>
+<p>Provides <code>trajectory_segment_detection()</code>, <code>build_segment_by_road_id()</code>, and <code>get_segment()</code>.</p>
+</li>
+<li>
+<p><code>trajectory_segment_detection(trajectory: np.ndarray) -&gt; list[tuple[np.ndarray, Segment]]</code></p>
+</li>
+<li>
+<p>Splits a time-ordered trajectory into segment-wise chunks.</p>
+</li>
+<li>
+<p><code>plot(output_plot=None, trajectory=None, plot_lane_ids=False, plot_intersection_polygons=False, plot_connection_polygons=False)</code></p>
+</li>
+<li>
+<p>Shared map plot for all segmentation implementations.</p>
+</li>
+<li>
+<p><code>plot_intersections(output_plot=None)</code></p>
+</li>
+<li>
+<p>Shared per-segment plotting for intersections and isolated connection segments.</p>
+</li>
+<li>
+<p><code>get_segment(road_id) -&gt; Segment | None</code></p>
+</li>
+<li>
+<p>Returns the segment mapped to a road ID.</p>
+</li>
+<li>
+<p><code>Segment(lanes, idx=None, concave_hull_ratio=0.3)</code></p>
+</li>
+<li>Base segment object with polygon generation, caching, lane management, and shared segment plotting.</li>
+</ul>
+<h3 id="osi-centerline-api">OSI Centerline API</h3>
+<ul>
+<li><code>MapOsiCenterlineSegmentation(recording, lane_buffer=0.3, intersection_overlap_buffer=1.0, concave_hull_ratio=0.3)</code></li>
+<li><code>init_intersections()</code></li>
+<li>Runs the full OSI centerline segmentation pipeline.</li>
+<li>Inherits shared <code>plot()</code> and <code>plot_intersections()</code> behavior from <code>MapSegmentation</code></li>
+<li><code>SegmentOsiCenterline</code></li>
+<li><code>Intersection</code></li>
+<li><code>ConnectionSegment</code></li>
+</ul>
+<h3 id="opendrive-api">OpenDRIVE API</h3>
+<ul>
+<li><code>MapODRSegmentation(recording, concave_hull_ratio=0.3)</code></li>
+<li><code>identify_segments()</code></li>
+<li>Runs the full OpenDRIVE segmentation pipeline.</li>
+<li>Inherits shared <code>plot()</code> and <code>plot_intersections()</code> behavior from <code>MapSegmentation</code></li>
+<li><code>SegmentOdr</code></li>
+<li><code>IntersectionOdr</code></li>
+<li><code>ConnectionSegmentOdr</code></li>
+</ul>
+<p><code>Recording.create_mapsegments()</code> selects <code>MapOsiCenterlineSegmentation</code> for <code>MapOsiCenterline</code> maps and <code>MapODRSegmentation</code> for <code>MapOdr</code> maps.</p>
+<h2 id="plotting">Plotting</h2>
+<p>Plotting is implemented in the shared <code>MapSegmentation</code> and <code>Segment</code> base classes. OSI and ODR subclasses only customize map-specific labels, titles, filenames, and legend entries.</p>
+<p>All plot methods support <code>output_plot=None</code> to show the plot interactively. <code>output_plot</code> may also be:
+- an existing directory
+- a suffixless directory path that will be created
+- a file path ending in <code>.pdf</code>, <code>.png</code>, or <code>.svg</code></p>
+<p>Shared map plotting supports:
+- lane centerline coloring
+- optional lane ID labels
+- optional intersection polygons
+- optional connection polygons
+- optional trajectory overlay
+- traffic-light markers when traffic-light data is available</p>
+<p>Shared segment plotting supports lane centerlines, lane labels, and segment polygons for both intersections and connection segments.</p>
+<p>Map-specific plotting hooks currently provide:
+- OSI map filename/title: <code>Map_with_Intersection.pdf</code> / <code>Map with Intersections</code>
+- ODR map filename/title: <code>MapODR_Segmentation.pdf</code> / <code>MapODR - Segmentation</code>
+- ODR lane labels formatted as <code>road_id/lane_id</code></p>
+<p>By default, intersection lanes are green, approaching lanes are orange, and road lanes are black. ODR segmentation does not currently mark approaching lanes, so ODR plots normally show intersection lanes and road lanes only.</p>
+<h2 id="assumptions-and-limitations">Assumptions and Limitations</h2>
+<ul>
+<li>Coordinates are meters in a consistent local frame.</li>
+<li>Lane centerlines should be valid shapely <code>LineString</code> geometries.</li>
+<li>Concave hulls at ratio <code>0.3</code> should be reasonable for most segments, but irregular geometries may need tuning.</li>
+<li>OSI topology depends on consistent successor/predecessor IDs.</li>
+<li>ODR segmentation depends on OpenDRIVE road <code>junction</code> attributes.</li>
+<li>OSI traffic-light assignment is nearest-centerline based.</li>
+<li>ODR traffic-light mapping is currently not implemented.</li>
+<li><code>update_road_ids()</code> mutates OSI lane IDs and map lane dictionary keys; external code relying on original OSI road IDs should account for this.</li>
+<li>Trajectory segmentation is strict: unknown, unassigned, or off-lane points raise errors instead of silently assigning an approximate segment.</li>
+<li>Large maps may require threshold tuning for OSI spatial queries.</li>
+</ul>
+<h2 id="edge-cases-to-consider">Edge Cases to Consider</h2>
+<ul>
+<li>Empty maps produce empty structures; plotting may produce a blank map.</li>
+<li>Degenerate or extremely short centerlines can make polygon generation unstable.</li>
+<li>Dense OSI lane networks may need adjusted <code>lane_buffer</code> or <code>intersection_overlap_buffer</code>.</li>
+<li>Miswired OSI predecessors/successors can affect approaching-lane marking and connection grouping.</li>
+<li>ODR road and junction IDs may overlap; segment indices remain unique because they are assigned sequentially.</li>
+<li>Trajectory points on lane polygon boundaries are accepted because <code>covers()</code> is used.</li>
+<li>Trajectory points outside the located lane polygon raise <code>RuntimeError</code>.</li>
+</ul>
+<h2 id="extensibility-notes">Extensibility Notes</h2>
+<p>To support a new map type:
+1. Create a concrete <code>Segment</code> subclass implementing:
+   - <code>_get_lane_id(lane)</code>
+   - <code>_get_lane_geometry(lane)</code>
+   - <code>set_trafficlight()</code>
+2. Create a concrete <code>MapSegmentation</code> subclass implementing:
+   - <code>_get_lane_id(lane)</code>
+   - <code>_get_lane_centerline(lane)</code>
+   - <code>_get_lane_successors(lane)</code>
+   - <code>_get_lane_predecessors(lane)</code>
+   - <code>_has_traffic_light(lane)</code>
+   - <code>_get_traffic_light(lane)</code>
+   - <code>_set_lane_on_intersection(lane, value)</code>
+   - <code>_set_lane_is_approaching(lane, value)</code>
+   - <code>_get_lane_on_intersection(lane)</code>
+3. Override <code>_located_lane_id_to_segment_lane_id()</code> if the <code>Locator</code> lane ID differs from the <code>lane_segment_dict</code> key.
+4. Override plotting hooks only when labels, titles, filenames, or legends need map-specific formatting.
+5. Add a map-specific segmentation entry point, such as <code>init_intersections()</code> or <code>identify_segments()</code>.</p>
+<p>Potential extensions:
+- Add classifiers for ramps, roundabouts, or other <code>MapSegmentType</code> values.
+- Override polygon generation for map types that need buffered unions or different hull settings.
+- Improve traffic-light mapping with explicit stop-line or signal topology.
+- Add richer plotting hooks or interactive inspection on top of the shared plot methods.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.instant.preview", "toc.follow", "search.suggest", "search.highlight", "navigation.tracking", "navigation.sections"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
