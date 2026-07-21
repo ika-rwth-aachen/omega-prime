@@ -252,11 +252,7 @@ class Recording:
         gt = betterosi.GroundTruth(
             version=betterosi.InterfaceVersion(version_major=3, version_minor=7, version_patch=9),
             timestamp=betterosi.Timestamp(seconds=int(nanos // int(1e9)), nanos=int(nanos % int(1e9))),
-            host_vehicle_id=(
-                None
-                if host_vehicle_idx is None
-                else betterosi.Identifier(value=host_vehicle_idx)
-            ),
+            host_vehicle_id=(None if host_vehicle_idx is None else betterosi.Identifier(value=host_vehicle_idx)),
             moving_object=mvs,
         )
         return gt
