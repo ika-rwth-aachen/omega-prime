@@ -31,7 +31,7 @@ see [Data Model & Specification](https://ika-rwth-aachen.github.io/omega-prime/o
   - ✅ **Validation** of data: check if your data conforms to the omega-prime specification (e.g., correct yaw) using [pandera](https://pandera.readthedocs.io/en/stable/)
   - 📐 **Interpolation** of data: bring your data into a fixed frequency
   - 📈 **Metrics**: compute interaction metrics like PET, TTC, THW (see [./docs/notebooks/tutorial_metrics.ipynb](https://github.com/ika-rwth-aachen/omega-prime/tree/main/docs/notebooks/tutorial_metrics.ipynb))
-    - Predicted and observed timegaps based on driving tubes (see [./omega_prime/metrics.py](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_prime/metrics.py))
+    - Predicted and observed timegaps based on driving tubes (see [./omega_prime/metrics/analysis](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_prime/metrics/analysis))
     - 2D-birds-eye-view visibility with [omega-prime-visibility](https://github.com/ika-rwth-aachen/omega-prime-visibility)
   - 🚀 **Fast Processing** directly on DataFrames using [polars](https://pola.rs/), [polars-st](https://oreilles.github.io/polars-st/)
   - ⌨️ **CLI** to convert, validate and visualize omega-prime files

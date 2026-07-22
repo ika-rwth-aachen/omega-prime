@@ -18,11 +18,14 @@ see [Data Model & Specification](omega_prime_specification.md)
   - ✅ **Validation** of data: check if your data conforms to the omega-prime specification (e.g., correct yaw) using [pandera](https://pandera.readthedocs.io/en/stable/)
   - 📐 **Interpolation** of data: bring your data into a fixed frequency
   - 📈 **Metrics**: compute interaction metrics like PET, TTC, THW (see [Tutorials/Metrics](notebooks/tutorial_metrics.ipynb))
-    - Predicted and observed timegaps based on driving tubes (see [./omega_prime/metrics.py](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_prime/metrics.py))
+    - Predicted and observed timegaps based on driving tubes (see [./omega_prime/metrics/analysis](https://github.com/ika-rwth-aachen/omega-prime/blob/main/omega_prime/metrics/analysis))
     - 2D-birds-eye-view visibility with [omega-prime-visibility](https://github.com/ika-rwth-aachen/omega-prime-visibility)
   - 🚀 **Fast Processing** directly on DataFrames using [polars](https://pola.rs/), [polars-st](https://oreilles.github.io/polars-st/)
   - ⌨️ **CLI** to convert, validate and visualize omega-prime files
 
+### ROS 2 Conversion
+  - Tooling for conversion from ROS 2 bag-files containing [perception_msgs::ObjectList](https://github.com/ika-rwth-aachen/perception_interfaces/blob/main/perception_msgs/msg/ObjectList.msg) messages to omega-prime MCAP is available in `tools/ros2_conversion/`.
+  - A Dockerfile and  [usage instructions](tools/ros2_conversion/README.md) are provided explaining how to run the export end-to-end.
 
 ## Installation
 `pip install omega-prime`

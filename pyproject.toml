@@ -48,12 +48,14 @@ dependencies = [
     'tqdm_joblib',
     'filelock>=3.18.0'
 ]
-version = "0.3.3"
+version = "0.3.4"
 
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
 Repository = "https://github.com/ika-rwth-aachen/omega-prime"
 Documentation = "https://ika-rwth-aachen.github.io/omega-prime/"
+ChangeLog = "https://ika-rwth-aachen.github.io/omega-prime/CHANGELOG.md"
+
 
 [project.optional-dependencies]
 test = ['ruff', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets', 'mkdocs-jupyter', 'mkdocs-material', 'mkdocstrings[python]', 'mkdocs-typer2']
@@ -63,7 +65,7 @@ omega-prime = "omega_prime.cli:main"
 
 [tool.ruff]
 lint.ignore = ["E741", "E701", "E501", "I001"]
-target-version = "py311"
+target-version = "py310"
 line-length = 120
 lint.select = [
     "F401",  # Unused imports
@@ -88,7 +90,7 @@ ignore_packages = [
 zero = true
 
 [tool.pytest.ini_options]
-addopts = "--nbval --codeblocks --cov=omega_prime --cov-report=xml --cov-report=html --cov-report=term-missing"
+addopts = "--nbval --codeblocks --cov-report=xml --cov-report=html --cov-report=term-missing"
 testpaths = [
     "tests",
     "docs/notebooks/tutorial.ipynb",
