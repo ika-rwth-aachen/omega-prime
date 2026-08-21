@@ -284,7 +284,7 @@ class Map:
     @classmethod
     def from_file(cls, filepath, parse_map=True, **kwargs):
         "Create a Map instance from a file."
-        first_gt = next(betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True))
+        first_gt = next(betterosi.read(filepath, return_ground_truth=True))
         return cls.create(first_gt, **kwargs)
 
     def plot_altair(self, recording=None, plot_polys=True):

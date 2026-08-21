@@ -173,7 +173,7 @@ class MapOdr(Map):
                 ignored_lane_types=ignored_lane_types,
             )
         if Path(filename).suffix in [".mcap"] or is_mcap:
-            map = next(iter(betterosi.read(filename, mcap_topics=topics, mcap_return_betterosi=False)))
+            map = next(iter(betterosi.read(filename, mcap_topics=topics)))
             return cls.create(
                 odr_xml=map.open_drive_xml_content, name=map.map_reference, step_size=step_size, parse_map=parse_map
             )
