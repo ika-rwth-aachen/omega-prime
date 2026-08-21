@@ -244,7 +244,8 @@ class Recording:
                     acceleration=betterosi.Vector3D(x=row["acc_x"], y=row["acc_y"], z=row["acc_z"]),
                 ),
                 vehicle_classification=betterosi.MovingObjectVehicleClassification(
-                    type=row["subtype"], role=row["role"]
+                    type=row["subtype"] if row['subtype']!=-1 else None, 
+                    role=row["role"] if row['role']!=-1 else None
                 ),
             )
 
@@ -608,7 +609,7 @@ class Recording:
         if filepath is not None and Path(filepath).suffix == ".parquet":
             r = cls.from_parquet(filepath, parse_map=parse_map, validate=validate, step_size=step_size)
         elif filepath is not None:
-            gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
+            gts = betterosi.read(filepath, return_ground_truth=True)
             r = cls.from_osi_gts(gts, validate=validate)
         if map_path is None and r.map is not None:
             return r
@@ -831,7 +832,7 @@ class Recording:
                 ),
             )
             new_dfs.append(new_track_df)
-        new_df = pl.concat(new_dfs)
+        new_df = pl.concat(new_dfs, how='vertical')
         return self.__init__(df=new_df, map=self.map, host_vehicle_idx=self.host_vehicle_idx)
 
     def _create_legend(self, ax):
@@ -955,7 +956,7 @@ class Recording:
             pl.concat_str(
                 pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name, return_dtype=pl.String),
                 pl.col("subtype").map_elements(
-                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name,
+                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name if x != -1 else None,
                     return_dtype=pl.String,
                 ),
                 separator="-",

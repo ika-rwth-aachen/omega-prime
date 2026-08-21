@@ -5,8 +5,7 @@ from typing import Annotated
 import polars as pl
 import typer
 from pathlib import Path
-from mcap_protobuf.decoder import DecoderFactory
-from mcap.reader import make_reader
+from betterosi.io import BetterOsiDecoderFactory, make_reader
 import omega_prime
 from omega_prime.converters import load_converters_into_cli
 from omega_prime.metrics.qualification.cli.cmd_line_interface import qualification_typer
@@ -72,7 +71,7 @@ def to_odr(
 ):
     if Path(input).suffix == ".mcap":
         with Path(input).open("rb") as f:
-            reader = make_reader(f, decoder_factories=[DecoderFactory()])
+            reader = make_reader(f, decoder_factories=[BetterOsiDecoderFactory()])
             gm = next(reader.iter_decoded_messages(topics="/ground_truth_map"))
         map = omega_prime.MapOdr.create(odr_xml=gm[3].open_drive_xml, name="", step_size=0.01)
         map.to_file(output)

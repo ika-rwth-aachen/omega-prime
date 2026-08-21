@@ -55,7 +55,7 @@ Documentation = "https://ika-rwth-aachen.github.io/omega-prime/"
 ChangeLog = "https://ika-rwth-aachen.github.io/omega-prime/CHANGELOG.md"
 
 [project.optional-dependencies]
-test = ['ruff', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipywidgets', 'mkdocs-jupyter', 'mkdocs-material', 'mkdocstrings[python]', 'mkdocs-typer2']
+test = ['ruff', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','jupyterlab', 'ipywidgets', 'mkdocs-jupyter', 'mkdocs-material', 'mkdocstrings[python]', 'mkdocs-typer2']
 
 [project.scripts]
 omega-prime = "omega_prime.cli:main"
