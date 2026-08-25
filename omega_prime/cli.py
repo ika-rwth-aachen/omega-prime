@@ -1,6 +1,5 @@
 """Command line interface for omega-prime conversions and utilities."""
 
-from pathlib import Path
 from typing import Annotated
 
 import polars as pl
@@ -10,11 +9,13 @@ from mcap_protobuf.decoder import DecoderFactory
 from mcap.reader import make_reader
 import omega_prime
 from omega_prime.converters import load_converters_into_cli
+from omega_prime.metrics.qualification.cli.cmd_line_interface import qualification_typer
 import altair as alt
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
 app.registered_commands += omega_prime.converters.app.registered_commands
+app.registered_commands += qualification_typer.registered_commands
 
 
 @app.command(help="Convert from ASAM OSI GroundTruth trace.")

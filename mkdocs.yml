@@ -43,7 +43,7 @@ nav:
     - Overview: library.md
     - Map Segmentation: map_segmentation/map_segmentation.md
   - Tutorials:
-    - Inroduction: notebooks/tutorial.ipynb
+    - Introduction: notebooks/tutorial.ipynb
     - Locator: notebooks/tutorial_locator.ipynb
     - Metrics: notebooks/tutorial_metrics.ipynb
     - Map Segmentation: notebooks/tutorial_map.ipynb

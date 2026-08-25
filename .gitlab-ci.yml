@@ -33,7 +33,7 @@ test:
   before_script: 
     - uv pip install --system -e .[test]
   script:
-    - pytest
+    - pytest --cov=omega_prime
   allow_failure: false
   artifacts:
     when: always
