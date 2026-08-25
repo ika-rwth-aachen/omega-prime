@@ -1,7 +1,7 @@
 import polars as pl
 import polars_st  # noqa: F401
 
-from ..metric import QRT, metric
+from ..metric import MRT, metric
 
 
 @metric(
@@ -9,7 +9,7 @@ from ..metric import QRT, metric
     computes_properties=["timegaps", "min_timegaps"],
     computes_intermediate_properties=["crossed"],
 )
-def timegaps_and_min_timegaps(df: pl.LazyFrame, /, ego_id, time_buffer=2e9) -> QRT:
+def timegaps_and_min_timegaps(df: pl.LazyFrame, /, ego_id, time_buffer=2e9) -> MRT:
     """Metrics that computes timegaps between `ego_id` and all other objects. `time_buffer` gives the timespan in which intersection of trajectories is tested"""
     ego_df = df.filter(idx=ego_id)
 

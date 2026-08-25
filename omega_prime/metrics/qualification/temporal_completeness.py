@@ -3,7 +3,7 @@
 import polars as pl
 
 from ..metric import metric
-from .common import STATUS, PASS, FAIL, QRT, get_num_rows
+from .common import STATUS, PASS, FAIL, MRT, get_num_rows
 
 TEMPORAL_COMPLETENESS = "temporal_completeness"
 
@@ -14,7 +14,7 @@ def temporal_completeness(
     /,
     expected_frequency: float,
     timing_tolerance: float = 0.05,
-) -> QRT:
+) -> MRT:
     if expected_frequency <= 0.0:
         raise ValueError(f"expected_frequency must be > 0, got {expected_frequency}")
     if timing_tolerance < 0.0:

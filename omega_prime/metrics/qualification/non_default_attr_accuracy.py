@@ -7,7 +7,7 @@ import polars as pl
 from .english_syntax import get_is_ending, format_items
 from ..metric import metric
 from ...schemas import polars_schema
-from .common import STATUS, PASS, FAIL, QRT, get_num_rows
+from .common import STATUS, PASS, FAIL, MRT, get_num_rows
 
 NON_DEFAULT_ATTRIBUTES_ACCURACY = "non_default_attributes_accuracy"
 
@@ -43,7 +43,7 @@ def get_default_value(polars_type: POLARS_T) -> float | int | str | bytes:
 
 
 @metric(computes_properties=[NON_DEFAULT_ATTRIBUTES_ACCURACY])
-def non_default_attributes_accuracy(df: pl.LazyFrame, /, columns: Sequence[str] = tuple()) -> QRT:
+def non_default_attributes_accuracy(df: pl.LazyFrame, /, columns: Sequence[str] = tuple()) -> MRT:
     """Non default valued attributes accuracy.
 
         Measures how often attributes contain non-default values, reflecting data richness.

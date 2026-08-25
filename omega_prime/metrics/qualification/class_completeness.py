@@ -9,7 +9,7 @@ import betterosi
 import polars as pl
 
 from ..metric import metric
-from .common import STATUS, PASS, FAIL, QRT
+from .common import STATUS, PASS, FAIL, MRT
 
 CLASS_COMPLETENESS = "class_completeness"
 TYPE_COMPLETENESS = "moving_object_type_completeness"
@@ -24,7 +24,7 @@ def class_completeness(
     expected_types: Sequence[betterosi.MovingObjectType],
     expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] = tuple(),
     expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] = tuple(),
-) -> QRT:
+) -> MRT:
     type_completeness_score = type_completeness(df, expected_types)
 
     subtype_completeness_score = 100.0

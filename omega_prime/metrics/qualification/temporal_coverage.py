@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import polars as pl
 
 from ..metric import metric
-from .common import STATUS, PASS, FAIL, QRT, get_num_rows
+from .common import STATUS, PASS, FAIL, MRT, get_num_rows
 
 
 TEMPORAL_COVERAGE = "temporal_coverage"
@@ -18,7 +18,7 @@ def temporal_coverage(
     expected_start: datetime | str,
     expected_end: datetime | str,
     threshold: float = 80.0,
-) -> QRT:
+) -> MRT:
     start_dt = _parse_datetime(expected_start, "expected_start")
     end_dt = _parse_datetime(expected_end, "expected_end")
     if end_dt <= start_dt:

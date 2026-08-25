@@ -7,7 +7,7 @@ import polars as pl
 
 from ..metric import metric
 from ...schemas import polars_schema
-from .common import STATUS, PASS, FAIL, QRT
+from .common import STATUS, PASS, FAIL, MRT
 
 DATA_FORMAT_CONSISTENCY = "data_format_consistency"
 
@@ -31,7 +31,7 @@ _VALUE_CHECKS = {
 
 
 @metric(computes_properties=[DATA_FORMAT_CONSISTENCY])
-def data_format_consistency(df: pl.LazyFrame) -> QRT:
+def data_format_consistency(df: pl.LazyFrame) -> MRT:
     schema = df.collect_schema()
     checked_columns = [column for column in polars_schema if column in schema]
 

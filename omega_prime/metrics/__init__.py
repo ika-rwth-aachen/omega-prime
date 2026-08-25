@@ -5,7 +5,7 @@ from .analysis.distance_traveled import distance_traveled
 from .analysis.predicted_timegaps import p_timegaps_and_min_p_timegaps
 from .analysis.timegaps import timegaps_and_min_timegaps
 from .analysis.vel import vel
-from .metric import Metric, QRT, metric
+from .metric import Metric, MRT, metric
 from .metric_manager import MetricManager
 from .qualification.attribute_completeness import attribute_completeness
 from .qualification.class_completeness import class_completeness
@@ -21,7 +21,7 @@ from .qualification.temporal_coverage import temporal_coverage
 __all__ = [
     "Metric",
     "MetricManager",
-    "QRT",
+    "MRT",
     "analysis",
     "attribute_completeness",
     "class_completeness",

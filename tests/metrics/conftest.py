@@ -7,7 +7,7 @@ from polars import LazyFrame
 
 import omega_prime
 
-from omega_prime.metrics.metric import Metric, QRT
+from omega_prime.metrics.metric import Metric, MRT
 
 
 @pytest.fixture(scope="session")
@@ -25,7 +25,7 @@ class MetricFunctionSpy:
         self.df = LazyFrame()
         self.ego_id = -1
 
-    def compute_metric(self, df: LazyFrame, ego_id: int) -> QRT:
+    def compute_metric(self, df: LazyFrame, ego_id: int) -> MRT:
         self.df = df
         self.ego_id = ego_id
         return df, {"property_mock": LazyFrame()}

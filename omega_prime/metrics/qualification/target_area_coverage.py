@@ -8,7 +8,7 @@ from pyproj import CRS, Transformer
 from shapely.geometry import MultiPoint, Polygon
 
 from ..metric import metric
-from .common import STATUS, PASS, FAIL, QRT
+from .common import STATUS, PASS, FAIL, MRT
 
 
 TARGET_AREA_COVERAGE = "target_area_coverage"
@@ -23,7 +23,7 @@ def target_area_coverage(
     expected_area_source_crs: str | CRS = "",
     dataset_proj4: str = "",
     dataset_frame_offset: tuple[float, float, float] | tuple[()] = (),
-) -> QRT:
+) -> MRT:
     if len(expected_area_coords) < 3:
         raise ValueError("expected_area_coords must contain at least three coordinate pairs")
 

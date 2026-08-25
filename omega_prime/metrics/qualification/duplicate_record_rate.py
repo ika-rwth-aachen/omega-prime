@@ -3,7 +3,7 @@
 import polars as pl
 
 from ..metric import metric
-from .common import STATUS, PASS, FAIL, QRT, get_num_rows
+from .common import STATUS, PASS, FAIL, MRT, get_num_rows
 
 DUPLICATE_RECORD_RATE = "duplicate_record_rate"
 RECORD_COUNT = "record_count"
@@ -13,7 +13,7 @@ RECORD_COUNT = "record_count"
 def duplicate_record_rate(
     df: pl.LazyFrame,
     /,
-) -> QRT:
+) -> MRT:
     group_counts = df.group_by("idx", "total_nanos").agg(pl.len().alias(RECORD_COUNT))
 
     total_records = get_num_rows(df)

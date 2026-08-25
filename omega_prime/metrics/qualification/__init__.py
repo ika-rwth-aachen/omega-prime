@@ -11,7 +11,7 @@ from .class_completeness import (
     subtype_completeness,
     type_completeness,
 )
-from .common import FAIL, PASS, QRT, STATUS, get_num_rows
+from .common import FAIL, PASS, MRT, STATUS, get_num_rows
 from .data_format_consistency import DATA_FORMAT_CONSISTENCY, data_format_consistency
 from .duplicate_record_rate import DUPLICATE_RECORD_RATE, duplicate_record_rate
 from .english_syntax import format_items, get_is_ending
@@ -31,7 +31,7 @@ __all__ = [
     "NON_DEFAULT_ATTRIBUTES_ACCURACY",
     "OBJECT_TYPE_COVERAGE",
     "PASS",
-    "QRT",
+    "MRT",
     "RECORD_COMPLETENESS",
     "ROLE_COMPLETENESS",
     "STATUS",

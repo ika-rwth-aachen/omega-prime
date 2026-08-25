@@ -4,14 +4,14 @@ import inspect
 
 import polars as pl
 
-QRT = tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]
+MRT = tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]
 
 
 @dataclass
 class Metric:
     """Class to compute metrics based on polars dataframes."""
 
-    compute_func: Callable[..., QRT]
+    compute_func: Callable[..., MRT]
     """The function that actually computes the metric"""
     computes_columns: list[str] = field(default_factory=list)
     """Names of the columns that will be added to the dataframe by this metrics"""
@@ -31,7 +31,7 @@ class Metric:
     def get_err_msg(self, error: TypeError) -> str:
         return f"Missing parameter for Metric with compute_func {self.compute_func.__name__}: {repr(error)}"
 
-    def compute_lazy(self, df: pl.LazyFrame, **kwargs) -> QRT:
+    def compute_lazy(self, df: pl.LazyFrame, **kwargs) -> MRT:
         try:
             df, properties = self.compute_func(df, **kwargs)
             assert isinstance(df, pl.LazyFrame)
@@ -54,7 +54,7 @@ class Metric:
             v for k, v in parameters.items() if k not in ["df", "args", "kwargs"] + self.requires_properties
         ]
 
-    def __call__(self, df: pl.DataFrame | pl.LazyFrame, **kwargs) -> QRT:
+    def __call__(self, df: pl.DataFrame | pl.LazyFrame, **kwargs) -> MRT:
         try:
             if not isinstance(df, pl.LazyFrame):
                 df = pl.LazyFrame(df)
@@ -87,4 +87,4 @@ def metric(
     return decorator
 
 
-__all__ = ["Metric", "QRT", "metric"]
+__all__ = ["Metric", "MRT", "metric"]

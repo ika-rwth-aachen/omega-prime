@@ -6,7 +6,7 @@ STATUS = "status"
 PASS = "pass"
 FAIL = "fail"
 
-QRT = tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]
+MRT = tuple[pl.LazyFrame, dict[str, pl.LazyFrame]]
 
 
 def get_num_rows(lf: pl.LazyFrame) -> int:
