@@ -1,4 +1,4 @@
-"""."""
+"""Define DataFrame schemas and validation checks for ASAM OSI data."""
 
 import betterosi
 import numpy as np
