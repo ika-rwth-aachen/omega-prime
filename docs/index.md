@@ -23,9 +23,6 @@ see [Data Model & Specification](omega_prime_specification.md)
   - 🚀 **Fast Processing** directly on DataFrames using [polars](https://pola.rs/), [polars-st](https://oreilles.github.io/polars-st/)
   - ⌨️ **CLI** to convert, validate and visualize omega-prime files
 
-### ROS 2 Conversion
-  - Tooling for conversion from ROS 2 bag-files containing [perception_msgs::ObjectList](https://github.com/ika-rwth-aachen/perception_interfaces/blob/main/perception_msgs/msg/ObjectList.msg) messages to omega-prime MCAP is available in `tools/ros2_conversion/`.
-  - A Dockerfile and  [usage instructions](tools/ros2_conversion/README.md) are provided explaining how to run the export end-to-end.
 
 ## Installation
 `pip install omega-prime`
