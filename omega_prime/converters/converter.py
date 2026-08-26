@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from loguru import logger
 from tqdm.auto import tqdm
 import joblib as jb
-from tqdm_joblib import tqdm_joblib
 from functools import partial
 from ..recording import Recording
 from collections.abc import Iterator
@@ -178,8 +177,11 @@ class DatasetConverter(ABC):
                 skip_existing=skip_existing,
                 log_file=log_file,
             )
-            with tqdm_joblib(desc="Source Recordings", total=self.len):
-                jb.Parallel(n_jobs=n_workers)(jb.delayed(partial_fct)(rec) for rec in recordings)
+            results = jb.Parallel(n_jobs=n_workers, return_as="generator")(
+                jb.delayed(partial_fct)(rec) for rec in recordings
+            )
+            for _ in tqdm(results, desc="Source Recordings", total=self.len):
+                pass
         else:
             for rec in tqdm(recordings, total=self.len):
                 self.convert_source_recording(

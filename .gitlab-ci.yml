@@ -23,9 +23,9 @@ lint:
 licensecheck:
   stage: test
   before_script:
-    - uv pip install --system -e .[test] licensecheck
+    - uv pip install --system licensecheck==2026.0.8
   script:
-      - licensecheck
+      - licensecheck --zero --format ansi
   allow_failure: false
 
 test:
