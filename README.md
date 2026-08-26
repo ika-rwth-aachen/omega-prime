@@ -53,8 +53,8 @@ Create an omega-prime file from an OSI GroundTruth message trace and an OpenDRIV
 ```python
 import omega_prime
 
-r = omega_prime.Recording.from_file('example_files/pedestrian.osi', map_path='example_files/fabriksgatan.xodr')
-r.to_mcap('example.mcap')
+r = omega_prime.Recording.from_file("example_files/pedestrian.osi", map_path="example_files/fabriksgatan.xodr")
+r.to_mcap("example.mcap")
 ```
 
 If you want to create an OSI trace on your own in python, check out the python library [betterosi](https://github.com/ika-rwth-aachen/betterosi).
@@ -63,7 +63,7 @@ Read and plot an omega-prime file:
 
 <!--pytest-codeblocks:cont-->
 ```python
-r = omega_prime.Recording.from_file('example.mcap')
+r = omega_prime.Recording.from_file("example.mcap")
 ax = r.plot()
 ```
 ## Convert Existing Datasets to omega-prime
@@ -73,7 +73,8 @@ You can convert data from LevelXData to omega-prime. Under the hood [lxd-io](htt
 <!--pytest.mark.skip-->
 ```python
 from omega_prime.converters import LxdConverter
-converter = LxdConverter('./exiD-dataset-v2.0', './exiD-as-omega-prime', n_workers=4)
+
+converter = LxdConverter("./exiD-dataset-v2.0", "./exiD-as-omega-prime", n_workers=4)
 # convert the dataset and store the omega-prime files in the new directory
 converter.convert()
 # access Recordings directly without storing them

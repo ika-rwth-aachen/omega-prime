@@ -1,0 +1,30 @@
+name: License Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  licensecheck:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        # Install a specific version of uv.
+        enable-cache: true
+        version: "0.6.12"
+        python-version: "3.12"
+
+    # licensecheck resolves dependencies from pyproject.toml and looks their
+    # licenses up on PyPI, so the project itself does not need to be installed.
+    # Pinned because the compatibility matrix ships inside the package: an
+    # unpinned upgrade can turn CI red without any change to this repository.
+    - name: Check dependency licenses against MPL-2.0
+      run: uvx licensecheck==2026.0.8 --zero --format ansi
