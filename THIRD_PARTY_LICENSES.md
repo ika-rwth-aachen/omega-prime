@@ -5,8 +5,7 @@ omega-prime is distributed under the [Mozilla Public License 2.0](LICENSE).
 Dependency licenses are checked automatically against MPL-2.0 by
 [`licensecheck`](https://github.com/FHPythonUtils/LicenseCheck), configured under
 `[tool.licensecheck]` in [`pyproject.toml`](pyproject.toml) and enforced by
-`.github/workflows/licensecheck.yml` (push to `main`, and every pull request) as
-well as by the `licensecheck` job in `.gitlab-ci.yml`.
+`.github/workflows/licensecheck.yml` (push to `main`, and every pull request).
 
 To reproduce the check locally:
 
