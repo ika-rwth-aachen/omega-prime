@@ -6,7 +6,6 @@ build-backend = "hatchling.build"
 [project]
 name = "omega-prime"
 authors = [
-    {name = "Michael Schuldes", email = "michael.schuldes@ika.rwth-aachen.de"},
     {name = "Sven Tarlowski", email = "sven.tarlowski@ika.rwth-aachen.de"},
     {name = "ika - RWTH Aachen University", email = "opensource@ika.rwth-aachen.de"}
 ]
@@ -48,7 +47,7 @@ dependencies = [
     'tqdm',
     'filelock>=3.18.0'
 ]
-version = "0.3.4"
+version = "0.3.5"
 
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
@@ -80,22 +79,10 @@ lint.select = [
 lint.isort.combine-as-imports = true
 
 [tool.licensecheck]
-# run `uvx licensecheck` locally; enforced by .github/workflows/licensecheck.yml
-# Only runtime dependencies are checked: `extras`/`groups` default to empty, and
-# dev/test tooling is never redistributed, so it carries no obligation.
-
-# Policy: both are permissive enough to combine into an MPL-2.0 work.
-# licensecheck's matrix marks MPL x Apache incompatible, which is over-conservative
-# (MPL-2.0 s3.3 explicitly permits a Larger Work under other terms).
 ignore_licenses = ["MPL", "Apache"]
 
 ignore_packages = [
-    # MIT in fact (github.com/python/mypy_extensions); publishes no license
-    # metadata to PyPI at all. Transitive via pandera -> typing-inspect.
     "mypy-extensions",
-    # LGPL-2.1 because the wheel statically bundles GEOS. Accepted: omega-prime
-    # imports it dynamically and never redistributes it, so LGPL-2.1 s6 does not
-    # attach. See THIRD_PARTY_LICENSES.md before vendoring or freezing a build.
     "polars-st",
 ]
 zero = true

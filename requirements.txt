@@ -189,10 +189,8 @@ strenum==0.4.15
     # via omega-prime (pyproject.toml)
 tqdm==4.67.1
     # via
+    #   omega-prime (pyproject.toml)
     #   betterosi
-    #   tqdm-joblib
-tqdm-joblib==0.0.5
-    # via omega-prime (pyproject.toml)
 typeguard==4.4.4
     # via pandera
 typer==0.19.2
