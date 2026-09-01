@@ -46,7 +46,7 @@ dependencies = [
     'tqdm',
     'filelock>=3.18.0'
 ]
-version = "0.3.5"
+version = "0.3.6"
 
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"

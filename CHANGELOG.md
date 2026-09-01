@@ -1,3 +1,7 @@
+# 0.3.6
+
+- Calculate TTC (Time to Collision) and THW (Time Headway) in omega-prime with Polars.
+
 # 0.3.4
 
  - Add the `qualify` command to CLI.
