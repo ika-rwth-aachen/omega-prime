@@ -42,12 +42,15 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
     pos_lon = st_arr[:, 0]
 
     # Tangent heading of the reference line at each projected point, in radians
-    heading_ref_rad = ShapelyTrajectoryTools.st2xy(
-        ego_curvilinear,
-        st_arr[:, 0],
-        st_arr[:, 1],
-        return_heading_of_ref_at_st=True,
-    )
+    valid = np.isfinite(st_arr[:, 0]) & np.isfinite(st_arr[:, 1])
+    heading_ref_rad = np.full(st_arr.shape[0], np.nan, dtype=np.float64)
+    if np.any(valid):
+        heading_ref_rad[valid] = ShapelyTrajectoryTools.st2xy(
+            ego_curvilinear,
+            st_arr[valid, 0],
+            st_arr[valid, 1],
+            return_heading_of_ref_at_st=True,
+        )
 
     # yaw in the Recording dataframe is already in radians.
     yaw_rad = minimal["yaw"].to_numpy()
