@@ -82,4 +82,3 @@ def test_curvilinear_projection_all_invalid():
     assert np.all(np.isnan(obj_res["pos_lon"].to_numpy()))
     assert np.all(np.isnan(obj_res["curv_heading"].to_numpy()))
     assert np.all(np.isnan(obj_res["vel_lon"].to_numpy()))
-
