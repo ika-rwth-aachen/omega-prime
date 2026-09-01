@@ -353,8 +353,13 @@ class Locator:
         sts = sts.with_columns(time=pl.Series(moving["total_nanos"]))
 
         if moving.height < mv._df.height:
-            full_time = pl.DataFrame({"time": mv._df["total_nanos"]})
-            sts = full_time.join_asof(sts.sort("time"), on="time", strategy="backward")
+            full_time = pl.DataFrame({"time": mv._df["total_nanos"]}).with_row_index("__orig_idx__")
+            sts = (
+                full_time.sort("time")
+                .join_asof(sts.sort("time"), on="time", strategy="backward")
+                .sort("__orig_idx__")
+                .drop("__orig_idx__")
+            )
         return sts
 
     def query_centerlines(self, point, range_percentage=0.1):
