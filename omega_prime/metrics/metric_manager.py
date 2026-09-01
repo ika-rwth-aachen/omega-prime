@@ -5,13 +5,22 @@ import polars as pl
 import polars_st as st
 
 from ..recording import Recording
+from .analysis.curvilinear_projection import curvilinear_projection
 from .analysis.distance_traveled import distance_traveled
 from .analysis.predicted_timegaps import p_timegaps_and_min_p_timegaps
 from .analysis.timegaps import timegaps_and_min_timegaps
+from .analysis.ttc_and_thw import ttc_and_thw
 from .analysis.vel import vel
 from .metric import Metric
 
-DEFAULT_METRICS = [vel, distance_traveled, timegaps_and_min_timegaps, p_timegaps_and_min_p_timegaps]
+DEFAULT_METRICS = [
+    vel,
+    distance_traveled,
+    curvilinear_projection,
+    timegaps_and_min_timegaps,
+    p_timegaps_and_min_p_timegaps,
+    ttc_and_thw,
+]
 
 
 @dataclass
