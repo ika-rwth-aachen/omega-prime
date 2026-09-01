@@ -4,7 +4,7 @@ from ..metric import metric
 
 
 @metric(
-    requires_columns=["vel_lon", "pos_lon", "distance_traveled", "vel"],
+    requires_columns=["vel_lon", "pos_lon"],
     requires_properties=["timegaps"],
     computes_properties=["ttc_and_thw"],
 )

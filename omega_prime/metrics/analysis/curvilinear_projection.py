@@ -35,10 +35,14 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
     minimal = df.select(["x", "y", "yaw", "vel"]).collect()
 
     xy = minimal.select(["x", "y"]).to_numpy()
-    points = shapely.points(xy[:, 0], xy[:, 1])
+    valid_xy = np.isfinite(xy[:, 0]) & np.isfinite(xy[:, 1])
 
     # st[:, 0] = arc-length (pos_lon), st[:, 1] = lateral offset
-    st_arr = ShapelyTrajectoryTools.xy2st(ego_curvilinear, points)
+    st_arr = np.full((xy.shape[0], 2), np.nan, dtype=np.float64)
+    if np.any(valid_xy):
+        points = shapely.points(xy[valid_xy, 0], xy[valid_xy, 1])
+        st_arr[valid_xy] = ShapelyTrajectoryTools.xy2st(ego_curvilinear, points)
+
     pos_lon = st_arr[:, 0]
 
     # Tangent heading of the reference line at each projected point, in radians

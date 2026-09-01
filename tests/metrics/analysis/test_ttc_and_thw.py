@@ -12,8 +12,6 @@ def test_ttc_and_thw_synthetic():
             "total_nanos": [0, 0],
             "pos_lon": [0.0, 20.0],
             "vel_lon": [10.0, 5.0],
-            "distance_traveled": [0.0, 20.0],
-            "vel": [10.0, 5.0],
         }
     )
 
@@ -39,8 +37,6 @@ def test_ttc_and_thw_synthetic_no_overlap():
             "total_nanos": [0, 0],
             "pos_lon": [0.0, 20.0],
             "vel_lon": [10.0, 15.0],
-            "distance_traveled": [0.0, 20.0],
-            "vel": [10.0, 15.0],
         }
     )
 
