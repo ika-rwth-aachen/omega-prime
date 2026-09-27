@@ -1,7 +1,9 @@
 """."""
 
 from omega_prime.metrics.qualification.cli.mov_obj_type import MovObjTypeCli
-from betterosi import MovingObjectType as OsiType
+import betterosi
+
+OsiType = betterosi.MovingObject.Type
 
 
 def test_to_osi_list() -> None:

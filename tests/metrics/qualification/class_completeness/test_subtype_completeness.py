@@ -7,7 +7,7 @@ import polars as pl
 from omega_prime.metrics.qualification.class_completeness import subtype_completeness
 
 
-vct = betterosi.MovingObjectVehicleClassificationType
+vct = betterosi.MovingObject.VehicleClassification.Type
 
 
 @pytest.fixture()
@@ -15,22 +15,22 @@ def subtype_df() -> pl.LazyFrame:
     return pl.DataFrame(
         {
             "subtype": [
-                int(vct.TYPE_CAR),
-                int(vct.TYPE_BICYCLE),
-                int(vct.TYPE_CAR),
+                int(vct.CAR),
+                int(vct.BICYCLE),
+                int(vct.CAR),
             ]
         }
     ).lazy()
 
 
 def test_pass(subtype_df: pl.LazyFrame) -> None:
-    expected_subtypes = [vct.TYPE_CAR, vct.TYPE_BICYCLE]
+    expected_subtypes = [vct.CAR, vct.BICYCLE]
     result = subtype_completeness(subtype_df, expected_subtypes)
     assert result == pytest.approx(100.0)
 
 
 def test_fail(subtype_df: pl.LazyFrame) -> None:
-    expected_subtypes = [vct.TYPE_CAR, vct.TYPE_BICYCLE, vct.TYPE_BUS]
+    expected_subtypes = [vct.CAR, vct.BICYCLE, vct.BUS]
     result = subtype_completeness(subtype_df, expected_subtypes)
     assert result == pytest.approx(66.66666666666667)
 
@@ -38,7 +38,7 @@ def test_fail(subtype_df: pl.LazyFrame) -> None:
 def test_missing_column_filters_invalid_expected_values() -> None:
     df_without_subtype = pl.DataFrame({"type": [0]}).lazy()
 
-    result = subtype_completeness(df_without_subtype, [None, -1, vct.TYPE_CAR])
+    result = subtype_completeness(df_without_subtype, [None, -1, vct.CAR])
 
     assert result == pytest.approx(0.0)
 

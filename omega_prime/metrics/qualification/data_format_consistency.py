@@ -11,9 +11,9 @@ from .common import STATUS, PASS, FAIL, MRT
 
 DATA_FORMAT_CONSISTENCY = "data_format_consistency"
 
-_MAX_MOVING_OBJECT_TYPE = max(int(v) for v in betterosi.MovingObjectType)
-_MAX_VEHICLE_ROLE = max(int(v) for v in betterosi.MovingObjectVehicleClassificationRole)
-_MAX_VEHICLE_SUBTYPE = max(int(v) for v in betterosi.MovingObjectVehicleClassificationType)
+_MAX_MOVING_OBJECT_TYPE = max(int(v) for v in betterosi.MovingObject.Type)
+_MAX_VEHICLE_ROLE = max(int(v) for v in betterosi.MovingObject.VehicleClassification.Role)
+_MAX_VEHICLE_SUBTYPE = max(int(v) for v in betterosi.MovingObject.VehicleClassification.Type)
 
 _VALUE_CHECKS = {
     "total_nanos": pl.col("total_nanos") >= 0,

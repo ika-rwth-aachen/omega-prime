@@ -92,7 +92,7 @@ class LaneBoundaryOsi(LaneBoundary):
         return cls(
             idx=lane_boundary.id.value,
             polyline=shapely.LineString([(p.position.x, p.position.y) for p in lane_boundary.boundary_line]),
-            type=betterosi.LaneBoundaryClassification.Type(lane_boundary.classification.type),
+            type=betterosi.LaneBoundary.Classification.Type(lane_boundary.classification.type),
             _osi=lane_boundary,
         )
 

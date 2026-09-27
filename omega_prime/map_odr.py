@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from omega_prime.map import Map, Lane, LaneBoundary
 from shapely import LineString, Polygon, simplify, make_valid
 import numpy as np
-from betterosi import LaneClassificationType, LaneClassificationSubtype, LaneBoundaryClassificationType
+from betterosi import Lane as OsiLane, LaneBoundary as OsiLaneBoundary, MapAsamOpenDrive
 from pyxodr_omega_prime.road_objects.network import RoadNetwork as PyxodrRoadNetwork
 from pyxodr_omega_prime.road_objects.road import Road as PyxodrRoad
 from pyxodr_omega_prime.road_objects.lane import Lane as PyxodrLane
@@ -13,7 +13,6 @@ import pyproj
 from .map import ProjectionOffset
 from pathlib import Path
 import betterosi
-from betterosi import MapAsamOpenDrive
 from collections import namedtuple
 import warnings
 
@@ -35,38 +34,38 @@ class RoadNetwork(PyxodrRoadNetwork):
 
 
 LANE_BOUNDARY_MAP = {
-    "none": LaneBoundaryClassificationType.NO_LINE,
-    "solid": LaneBoundaryClassificationType.SOLID_LINE,
-    "broken": LaneBoundaryClassificationType.DASHED_LINE,
-    "botts dots": LaneBoundaryClassificationType.BOTTS_DOTS,
-    "broken broken": LaneBoundaryClassificationType.DASHED_LINE,
-    "broken solid": LaneBoundaryClassificationType.DASHED_LINE,
-    "solid broken": LaneBoundaryClassificationType.SOLID_LINE,
-    "solid solid": LaneBoundaryClassificationType.SOLID_LINE,
-    "curb": LaneBoundaryClassificationType.CURB,
-    "edge": LaneBoundaryClassificationType.ROAD_EDGE,
-    "grass": LaneBoundaryClassificationType.GRASS_EDGE,
-    "custom": LaneBoundaryClassificationType.OTHER,
+    "none": OsiLaneBoundary.Classification.Type.NO_LINE,
+    "solid": OsiLaneBoundary.Classification.Type.SOLID_LINE,
+    "broken": OsiLaneBoundary.Classification.Type.DASHED_LINE,
+    "botts dots": OsiLaneBoundary.Classification.Type.BOTTS_DOTS,
+    "broken broken": OsiLaneBoundary.Classification.Type.DASHED_LINE,
+    "broken solid": OsiLaneBoundary.Classification.Type.DASHED_LINE,
+    "solid broken": OsiLaneBoundary.Classification.Type.SOLID_LINE,
+    "solid solid": OsiLaneBoundary.Classification.Type.SOLID_LINE,
+    "curb": OsiLaneBoundary.Classification.Type.CURB,
+    "edge": OsiLaneBoundary.Classification.Type.ROAD_EDGE,
+    "grass": OsiLaneBoundary.Classification.Type.GRASS_EDGE,
+    "custom": OsiLaneBoundary.Classification.Type.OTHER,
 }
 
 LANE_SUBMAP = {
-    "driving": LaneClassificationSubtype.NORMAL,
-    "shoulder": LaneClassificationSubtype.SHOULDER,
-    "sidewalk": LaneClassificationSubtype.SIDEWALK,
-    "walking": LaneClassificationSubtype.SIDEWALK,
-    "parking": LaneClassificationSubtype.PARKING,
-    "biking": LaneClassificationSubtype.BIKING,
-    "stop": LaneClassificationSubtype.STOP,
-    "restricted": LaneClassificationSubtype.RESTRICTED,
-    "border": LaneClassificationSubtype.BORDER,
-    "curb": LaneClassificationSubtype.BORDER,
-    "exit": LaneClassificationSubtype.EXIT,
-    "mwyexit": LaneClassificationSubtype.EXIT,
-    "entry": LaneClassificationSubtype.ENTRY,
-    "mwyentry": LaneClassificationSubtype.ENTRY,
-    "onramp": LaneClassificationSubtype.ONRAMP,
-    "offramp": LaneClassificationSubtype.OFFRAMP,
-    "connectingramp": LaneClassificationSubtype.CONNECTINGRAMP,
+    "driving": OsiLane.Classification.Subtype.NORMAL,
+    "shoulder": OsiLane.Classification.Subtype.SHOULDER,
+    "sidewalk": OsiLane.Classification.Subtype.SIDEWALK,
+    "walking": OsiLane.Classification.Subtype.SIDEWALK,
+    "parking": OsiLane.Classification.Subtype.PARKING,
+    "biking": OsiLane.Classification.Subtype.BIKING,
+    "stop": OsiLane.Classification.Subtype.STOP,
+    "restricted": OsiLane.Classification.Subtype.RESTRICTED,
+    "border": OsiLane.Classification.Subtype.BORDER,
+    "curb": OsiLane.Classification.Subtype.BORDER,
+    "exit": OsiLane.Classification.Subtype.EXIT,
+    "mwyexit": OsiLane.Classification.Subtype.EXIT,
+    "entry": OsiLane.Classification.Subtype.ENTRY,
+    "mwyentry": OsiLane.Classification.Subtype.ENTRY,
+    "onramp": OsiLane.Classification.Subtype.ONRAMP,
+    "offramp": OsiLane.Classification.Subtype.OFFRAMP,
+    "connectingramp": OsiLane.Classification.Subtype.CONNECTINGRAMP,
 }
 
 OTHER_LANE_TYPES = {
@@ -381,9 +380,9 @@ class LaneBoundaryXodr(LaneBoundary):
         return None
 
     @staticmethod
-    def _determine_lane_boundary_type(boundary_str: str) -> LaneBoundaryClassificationType:
+    def _determine_lane_boundary_type(boundary_str: str) -> OsiLaneBoundary.Classification.Type:
         return LANE_BOUNDARY_MAP.get(
-            (boundary_str or "unknown").strip().lower(), LaneBoundaryClassificationType.UNKNOWN
+            (boundary_str or "unknown").strip().lower(), OsiLaneBoundary.Classification.Type.UNKNOWN
         )
 
 
@@ -429,16 +428,16 @@ class LaneXodr(Lane):
         lane_str = (getattr(lane, "type", "unknown") or "unknown").lower()
 
         if is_junction:
-            lane_type = LaneClassificationType.INTERSECTION
+            lane_type = OsiLane.Classification.Type.INTERSECTION
         else:
             lane_type = odrlanetype2osilanetype[lane_str]
 
         if lane_str in LANE_SUBMAP:
             lane_subtype = LANE_SUBMAP[lane_str]
         elif lane_str in OTHER_LANE_TYPES:
-            lane_subtype = LaneClassificationSubtype.OTHER
+            lane_subtype = OsiLane.Classification.Subtype.OTHER
         else:
-            lane_subtype = LaneClassificationSubtype.UNKNOWN
+            lane_subtype = OsiLane.Classification.Subtype.UNKNOWN
 
         return lane_type, lane_subtype
 
