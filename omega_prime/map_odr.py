@@ -34,39 +34,39 @@ class RoadNetwork(PyxodrRoadNetwork):
         self.road_ids_to_object = {}
 
 
-LANE_BOUNDARY_TYPE_MAP = {
-    "none": LaneBoundaryClassificationType.TYPE_NO_LINE,
-    "solid": LaneBoundaryClassificationType.TYPE_SOLID_LINE,
-    "broken": LaneBoundaryClassificationType.TYPE_DASHED_LINE,
-    "botts dots": LaneBoundaryClassificationType.TYPE_BOTTS_DOTS,
-    "broken broken": LaneBoundaryClassificationType.TYPE_DASHED_LINE,
-    "broken solid": LaneBoundaryClassificationType.TYPE_DASHED_LINE,
-    "solid broken": LaneBoundaryClassificationType.TYPE_SOLID_LINE,
-    "solid solid": LaneBoundaryClassificationType.TYPE_SOLID_LINE,
-    "curb": LaneBoundaryClassificationType.TYPE_CURB,
-    "edge": LaneBoundaryClassificationType.TYPE_ROAD_EDGE,
-    "grass": LaneBoundaryClassificationType.TYPE_GRASS_EDGE,
-    "custom": LaneBoundaryClassificationType.TYPE_OTHER,
+LANE_BOUNDARY_MAP = {
+    "none": LaneBoundaryClassificationType.NO_LINE,
+    "solid": LaneBoundaryClassificationType.SOLID_LINE,
+    "broken": LaneBoundaryClassificationType.DASHED_LINE,
+    "botts dots": LaneBoundaryClassificationType.BOTTS_DOTS,
+    "broken broken": LaneBoundaryClassificationType.DASHED_LINE,
+    "broken solid": LaneBoundaryClassificationType.DASHED_LINE,
+    "solid broken": LaneBoundaryClassificationType.SOLID_LINE,
+    "solid solid": LaneBoundaryClassificationType.SOLID_LINE,
+    "curb": LaneBoundaryClassificationType.CURB,
+    "edge": LaneBoundaryClassificationType.ROAD_EDGE,
+    "grass": LaneBoundaryClassificationType.GRASS_EDGE,
+    "custom": LaneBoundaryClassificationType.OTHER,
 }
 
-LANE_SUBTYPE_MAP = {
-    "driving": LaneClassificationSubtype.SUBTYPE_NORMAL,
-    "shoulder": LaneClassificationSubtype.SUBTYPE_SHOULDER,
-    "sidewalk": LaneClassificationSubtype.SUBTYPE_SIDEWALK,
-    "walking": LaneClassificationSubtype.SUBTYPE_SIDEWALK,
-    "parking": LaneClassificationSubtype.SUBTYPE_PARKING,
-    "biking": LaneClassificationSubtype.SUBTYPE_BIKING,
-    "stop": LaneClassificationSubtype.SUBTYPE_STOP,
-    "restricted": LaneClassificationSubtype.SUBTYPE_RESTRICTED,
-    "border": LaneClassificationSubtype.SUBTYPE_BORDER,
-    "curb": LaneClassificationSubtype.SUBTYPE_BORDER,
-    "exit": LaneClassificationSubtype.SUBTYPE_EXIT,
-    "mwyexit": LaneClassificationSubtype.SUBTYPE_EXIT,
-    "entry": LaneClassificationSubtype.SUBTYPE_ENTRY,
-    "mwyentry": LaneClassificationSubtype.SUBTYPE_ENTRY,
-    "onramp": LaneClassificationSubtype.SUBTYPE_ONRAMP,
-    "offramp": LaneClassificationSubtype.SUBTYPE_OFFRAMP,
-    "connectingramp": LaneClassificationSubtype.SUBTYPE_CONNECTINGRAMP,
+LANE_SUBMAP = {
+    "driving": LaneClassificationSubtype.NORMAL,
+    "shoulder": LaneClassificationSubtype.SHOULDER,
+    "sidewalk": LaneClassificationSubtype.SIDEWALK,
+    "walking": LaneClassificationSubtype.SIDEWALK,
+    "parking": LaneClassificationSubtype.PARKING,
+    "biking": LaneClassificationSubtype.BIKING,
+    "stop": LaneClassificationSubtype.STOP,
+    "restricted": LaneClassificationSubtype.RESTRICTED,
+    "border": LaneClassificationSubtype.BORDER,
+    "curb": LaneClassificationSubtype.BORDER,
+    "exit": LaneClassificationSubtype.EXIT,
+    "mwyexit": LaneClassificationSubtype.EXIT,
+    "entry": LaneClassificationSubtype.ENTRY,
+    "mwyentry": LaneClassificationSubtype.ENTRY,
+    "onramp": LaneClassificationSubtype.ONRAMP,
+    "offramp": LaneClassificationSubtype.OFFRAMP,
+    "connectingramp": LaneClassificationSubtype.CONNECTINGRAMP,
 }
 
 OTHER_LANE_TYPES = {
@@ -86,9 +86,9 @@ OTHER_LANE_TYPES = {
     "special3",
 }
 
-LANE_TYPE_MAP = {
-    betterosi.LaneClassificationType.TYPE_UNKNOWN: ["unknown", "none"],
-    betterosi.LaneClassificationType.TYPE_OTHER: [
+LANE_MAP = {
+    betterosi.Lane.Classification.Type.UNKNOWN: ["unknown", "none"],
+    betterosi.Lane.Classification.Type.OTHER: [
         "special1",
         "special2",
         "special3",
@@ -97,7 +97,7 @@ LANE_TYPE_MAP = {
         "shoulder",
         "median",
     ],
-    betterosi.LaneClassificationType.TYPE_DRIVING: [
+    betterosi.Lane.Classification.Type.DRIVING: [
         "driving",
         "parking",
         "stop",
@@ -115,7 +115,7 @@ LANE_TYPE_MAP = {
         "sliplane",
         "shared",
     ],
-    betterosi.LaneClassificationType.TYPE_NONDRIVING: [
+    betterosi.Lane.Classification.Type.NONDRIVING: [
         "sidewalk",
         "walking",
         "biking",
@@ -126,7 +126,7 @@ LANE_TYPE_MAP = {
     ],
 }
 
-odrlanetype2osilanetype = {odrlt: osilt for osilt, ts in LANE_TYPE_MAP.items() for odrlt in ts}
+odrlanetype2osilanetype = {odrlt: osilt for osilt, ts in LANE_MAP.items() for odrlt in ts}
 
 XodrLaneId = namedtuple("XodrLaneId", ["road_id", "lane_id", "section_id"])
 XodrBoundaryId = namedtuple("XodrBoundaryId", ["road_id", "lane_id", "section_id", "side"])
@@ -358,7 +358,7 @@ class LaneBoundaryXodr(LaneBoundary):
             polyline = LineString(bl)
 
         if type is None and hasattr(boundary, "lane_xml"):
-            type = cls._extract_lane_boundary_type_from_xml(boundary, side)
+            type = cls._extract_lane_boundary_from_xml(boundary, side)
 
         lane_boundary_type = cls._determine_lane_boundary_type(type)
 
@@ -366,7 +366,7 @@ class LaneBoundaryXodr(LaneBoundary):
         return cls(idx=idx, type=lane_boundary_type, polyline=polyline, _xodr=boundary)
 
     @staticmethod
-    def _extract_lane_boundary_type_from_xml(lane, side: str) -> str:
+    def _extract_lane_boundary_from_xml(lane, side: str) -> str:
         if not hasattr(lane, "lane_xml"):
             return None
         road_marks = lane.lane_xml.findall("roadMark")
@@ -381,9 +381,9 @@ class LaneBoundaryXodr(LaneBoundary):
         return None
 
     @staticmethod
-    def _determine_lane_boundary_type(boundary_type_str: str) -> LaneBoundaryClassificationType:
-        return LANE_BOUNDARY_TYPE_MAP.get(
-            (boundary_type_str or "unknown").strip().lower(), LaneBoundaryClassificationType.TYPE_UNKNOWN
+    def _determine_lane_boundary_type(boundary_str: str) -> LaneBoundaryClassificationType:
+        return LANE_BOUNDARY_MAP.get(
+            (boundary_str or "unknown").strip().lower(), LaneBoundaryClassificationType.UNKNOWN
         )
 
 
@@ -406,7 +406,7 @@ class LaneXodr(Lane):
                 f"Needed to make centerline of lane {idx} valid. Most likely, because the OpenDRIVE geometry is translated to a zero length polyline. Try to decrease `step_size`."
             )
 
-        lane_type, lane_subtype = cls._determine_lane_type_and_subtype(lane, road)
+        lane_type, lane_subtype = cls._determine_lane_and_subtype(lane, road)
         return cls(
             _xodr=lane,
             idx=idx,
@@ -424,21 +424,21 @@ class LaneXodr(Lane):
         )
 
     @staticmethod
-    def _determine_lane_type_and_subtype(lane: PyxodrLane, road: PyxodrRoad):
+    def _determine_lane_and_subtype(lane: PyxodrLane, road: PyxodrRoad):
         is_junction = road.road_xml.get("junction") != "-1"
-        lane_type_str = (getattr(lane, "type", "unknown") or "unknown").lower()
+        lane_str = (getattr(lane, "type", "unknown") or "unknown").lower()
 
         if is_junction:
-            lane_type = LaneClassificationType.TYPE_INTERSECTION
+            lane_type = LaneClassificationType.INTERSECTION
         else:
-            lane_type = odrlanetype2osilanetype[lane_type_str]
+            lane_type = odrlanetype2osilanetype[lane_str]
 
-        if lane_type_str in LANE_SUBTYPE_MAP:
-            lane_subtype = LANE_SUBTYPE_MAP[lane_type_str]
-        elif lane_type_str in OTHER_LANE_TYPES:
-            lane_subtype = LaneClassificationSubtype.SUBTYPE_OTHER
+        if lane_str in LANE_SUBMAP:
+            lane_subtype = LANE_SUBMAP[lane_str]
+        elif lane_str in OTHER_LANE_TYPES:
+            lane_subtype = LaneClassificationSubtype.OTHER
         else:
-            lane_subtype = LaneClassificationSubtype.SUBTYPE_UNKNOWN
+            lane_subtype = LaneClassificationSubtype.UNKNOWN
 
         return lane_type, lane_subtype
 

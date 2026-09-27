@@ -235,15 +235,15 @@ class Recording:
         def get_object(row):
             return betterosi.MovingObject(
                 id=betterosi.Identifier(value=row["idx"]),
-                type=betterosi.MovingObjectType(row["type"]),
+                type=betterosi.MovingObject.Type(row["type"]),
                 base=betterosi.BaseMoving(
-                    dimension=betterosi.Dimension3D(length=row["length"], width=row["width"], height=row["width"]),
-                    position=betterosi.Vector3D(x=row["x"], y=row["y"], z=row["z"]),
-                    orientation=betterosi.Orientation3D(roll=row["roll"], pitch=row["pitch"], yaw=row["yaw"]),
-                    velocity=betterosi.Vector3D(x=row["vel_x"], y=row["vel_y"], z=row["vel_z"]),
-                    acceleration=betterosi.Vector3D(x=row["acc_x"], y=row["acc_y"], z=row["acc_z"]),
+                    dimension=betterosi.Dimension3d(length=row["length"], width=row["width"], height=row["width"]),
+                    position=betterosi.Vector3d(x=row["x"], y=row["y"], z=row["z"]),
+                    orientation=betterosi.Orientation3d(roll=row["roll"], pitch=row["pitch"], yaw=row["yaw"]),
+                    velocity=betterosi.Vector3d(x=row["vel_x"], y=row["vel_y"], z=row["vel_z"]),
+                    acceleration=betterosi.Vector3d(x=row["acc_x"], y=row["acc_y"], z=row["acc_z"]),
                 ),
-                vehicle_classification=betterosi.MovingObjectVehicleClassification(
+                vehicle_classification=betterosi.MovingObject.VehicleClassification(
                     type=row["subtype"] if row['subtype']!=-1 else None, 
                     role=row["role"] if row['role']!=-1 else None
                 ),
@@ -477,10 +477,10 @@ class Recording:
                         yaw=mv.base.orientation.yaw,
                         type=mv.type,
                         role=(
-                            mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1
+                            mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.VEHICLE else -1
                         ),
                         subtype=(
-                            mv.vehicle_classification.type if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1
+                            mv.vehicle_classification.type if mv.type == betterosi.MovingObjectType.VEHICLE else -1
                         ),
                     )
 
@@ -634,7 +634,8 @@ class Recording:
             try:
                 r.apply_projections()
             except Exception:
-                warn("Failed to apply projections.")
+                import traceback
+                warn(f"Failed to apply projections: {traceback.format_exc()}")
         return r
 
     def to_file(self, filepath):
@@ -665,7 +666,7 @@ class Recording:
             source_proj_string = getattr(self.map, "proj_string", None)
 
         if source_proj_string is None:
-            raise ValueError("No proj_string information available on the recording or attached map.")
+            return self
 
         frame_projections: list[dict[str, typing.Any]] = []
         for ts, offset in self.projections.items():
@@ -954,9 +955,9 @@ class Recording:
 
         df = df.with_columns(
             pl.concat_str(
-                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name, return_dtype=pl.String),
+                pl.col("type").map_elements(lambda x: betterosi.MovingObject.Type(x).name, return_dtype=pl.String),
                 pl.col("subtype").map_elements(
-                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name if x != -1 else None,
+                    lambda x: betterosi.MovingObject.VehicleClassification.Type(x).name if x != -1 else None,
                     return_dtype=pl.String,
                 ),
                 separator="-",
