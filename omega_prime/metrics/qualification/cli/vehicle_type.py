@@ -2,23 +2,26 @@
 
 import click
 import typer.models
-from betterosi import MovingObjectVehicleClassificationType as OsiCls
+import betterosi
 
 from .common import to_osi_str
+
+OsiCls = betterosi.MovingObject.VehicleClassification.Type
 
 
 class VehicleTypeCli:
     # fmt: off
     CHOICES = (
-        'bicycle', 'bus', 'car', 'compact-car', 'delivery-van', 'heavy-truck', 'luxury-car', 'medium-car',
-        'motorbike', 'other', 'semitractor', 'semitrailer', 'small-car', 'standup-scooter', 'trailer', 'train',
-        'tram', 'unknown', 'wheelchair'
+        'aircraft', 'bicycle', 'bus', 'car', 'compact-car', 'delivery-van', 'heavy-truck', 'land-vehicle',
+        'luxury-car', 'medium-car', 'micromobility-device', 'motorbike', 'motorcycle', 'other',
+        'semitractor', 'semitrailer', 'small-car', 'standup-scooter', 'trailer', 'train', 'tram',
+        'unknown', 'van', 'watercraft', 'wheelchair', 'work-machine'
     )
     # fmt: on
 
     @staticmethod
     def to_osi_list(veh_cls: list[str]) -> list[OsiCls]:
-        return [OsiCls.from_string(to_osi_str(c)) for c in veh_cls]
+        return [OsiCls[to_osi_str(c)] for c in veh_cls]
 
     @classmethod
     def get_option(cls) -> typer.models.OptionInfo:

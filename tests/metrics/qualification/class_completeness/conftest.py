@@ -6,9 +6,9 @@ import pytest
 from ..conftest import qualification_assert
 from omega_prime.metrics.qualification.class_completeness import (
     CLASS_COMPLETENESS,
-    ROLE_COMPLETENESS,
-    SUBTYPE_COMPLETENESS,
     TYPE_COMPLETENESS,
+    SUBTYPE_COMPLETENESS,
+    ROLE_COMPLETENESS,
 )
 import polars as pl
 

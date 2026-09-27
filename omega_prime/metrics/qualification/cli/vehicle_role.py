@@ -2,7 +2,9 @@
 
 import click
 import typer.models
-from betterosi import MovingObjectVehicleClassificationRole as OsiRole
+import betterosi
+
+OsiRole = betterosi.MovingObject.VehicleClassification.Role
 
 from .common import to_osi_str
 
@@ -17,7 +19,7 @@ class VehicleRoleCli:
 
     @staticmethod
     def to_osi_list(roles: list[str]) -> list[OsiRole]:
-        return [OsiRole.from_string(to_osi_str(role)) for role in roles]
+        return [OsiRole[to_osi_str(role)] for role in roles]
 
     @classmethod
     def get_option(cls) -> typer.models.OptionInfo:

@@ -384,7 +384,7 @@ Though, it could be checked if the field was actually intendedly set to false us
 <tr>
 <td>. . type</td>
 <td>
-<p>MovingObjectVehicleClassificationType</p>
+<p>MovingObject.VehicleClassification.Type</p>
 <p>(Other, car, delivery van, semitrailer, trailer, motorbike, bicycle, bus, tram, train, wheelchair, standup scooter)</p>
 </td>
 <td></td>
@@ -392,7 +392,7 @@ Though, it could be checked if the field was actually intendedly set to false us
 <tr>
 <td>. . role</td>
 <td>
-<p>MovingObjectVehicleClassificationRole</p>
+<p>MovingObject.VehicleClassification.Role</p>
 <p>(Other, civil, ambulance, fire, police, public transport, road assistance, garbage  collectin, road construction, military)</p>
 </td>
 <td></td>

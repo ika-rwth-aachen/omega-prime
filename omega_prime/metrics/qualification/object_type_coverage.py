@@ -9,6 +9,7 @@ from ...types import MovingObjectType
 from .common import STATUS, PASS, FAIL, MRT
 
 OBJECT_TYPE_COVERAGE = "object_type_coverage"
+OBJECT_COVERAGE = OBJECT_TYPE_COVERAGE
 
 
 @metric(computes_properties=[OBJECT_TYPE_COVERAGE])

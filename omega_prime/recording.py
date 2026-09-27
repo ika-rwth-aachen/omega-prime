@@ -249,8 +249,8 @@ class Recording:
                     acceleration=betterosi.Vector3d(x=row["acc_x"], y=row["acc_y"], z=row["acc_z"]),
                 ),
                 vehicle_classification=betterosi.MovingObject.VehicleClassification(
-                    type=row["subtype"] if row['subtype']!=-1 else None, 
-                    role=row["role"] if row['role']!=-1 else None
+                    type=row["subtype"] if row["subtype"] != -1 else None,
+                    role=row["role"] if row["role"] != -1 else None,
                 ),
             )
 
@@ -356,13 +356,13 @@ class Recording:
                     pl.col("total_nanos").max().alias("t_end"),
                 )
                 .with_columns(
-                    pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x), return_dtype=object),
+                    pl.col("type").map_elements(lambda x: betterosi.MovingObject.Type(x), return_dtype=object),
                     pl.col("subtype").map_elements(
-                        lambda x: betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None,
+                        lambda x: betterosi.MovingObject.VehicleClassification.Type(x) if x != -1 else None,
                         return_dtype=object,
                     ),
                     pl.col("role").map_elements(
-                        lambda x: betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None,
+                        lambda x: betterosi.MovingObject.VehicleClassification.Role(x).name if x != -1 else None,
                         return_dtype=object,
                     ),
                 )
@@ -422,7 +422,7 @@ class Recording:
             projections[None] = target_offset
         return projections
 
-    def to_osi_gts(self, *, materialize_projection: bool = False) -> typing.Iterator[betterosi.GroundTruth]:
+    def to_osi_gts(self, *, materialize_projection: bool = False) -> typing.Generator[betterosi.GroundTruth, None, None]:
         """Yield OSI GroundTruth messages.
 
         By default, any temporary projection is reversed for export. Set
@@ -520,11 +520,9 @@ class Recording:
                         pitch=mv.base.orientation.pitch,
                         yaw=mv.base.orientation.yaw,
                         type=mv.type,
-                        role=(
-                            mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.VEHICLE else -1
-                        ),
+                        role=(mv.vehicle_classification.role if mv.type == betterosi.MovingObject.Type.VEHICLE else -1),
                         subtype=(
-                            mv.vehicle_classification.type if mv.type == betterosi.MovingObjectType.VEHICLE else -1
+                            mv.vehicle_classification.type if mv.type == betterosi.MovingObject.Type.VEHICLE else -1
                         ),
                     )
 
@@ -686,6 +684,7 @@ class Recording:
                 r.apply_projections()
             except Exception:
                 import traceback
+
                 warn(f"Failed to apply projections: {traceback.format_exc()}")
         return r
 
@@ -884,7 +883,7 @@ class Recording:
                 ),
             )
             new_dfs.append(new_track_df)
-        new_df = pl.concat(new_dfs, how='vertical')
+        new_df = pl.concat(new_dfs, how="vertical")
         return self.__init__(df=new_df, map=self.map, host_vehicle_idx=self.host_vehicle_idx)
 
     def _create_legend(self, ax):

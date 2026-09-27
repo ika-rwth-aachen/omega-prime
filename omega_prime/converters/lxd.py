@@ -45,9 +45,7 @@ class LxdConverter(DatasetConverter):
             .map_elements(
                 (
                     lambda x: (
-                        betterosi.MovingObject.Type.VEHICLE
-                        if x in vehicles
-                        else betterosi.MovingObject.Type.PEDESTRIAN
+                        betterosi.MovingObject.Type.VEHICLE if x in vehicles else betterosi.MovingObject.Type.PEDESTRIAN
                     )
                 ),
                 return_dtype=int,
@@ -55,7 +53,7 @@ class LxdConverter(DatasetConverter):
             .alias("type"),
             pl.col("class")
             .map_elements(
-                (lambda x: betterosi.MovingObject.VehicleClassification.Role.ROLE_CIVIL if x in vehicles else -1),
+                (lambda x: betterosi.MovingObject.VehicleClassification.Role.CIVIL if x in vehicles else -1),
                 return_dtype=int,
             )
             .alias("role"),
