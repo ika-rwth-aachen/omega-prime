@@ -9,9 +9,9 @@ __all__ = [
     "MovingObjectRole",
 ]
 
-LaneBoundaryType = betterosi.LaneBoundaryClassificationType
-LaneType = betterosi.LaneClassificationType
-LaneSubtype = betterosi.LaneClassificationSubtype
-MovingObjectType = betterosi.MovingObjectType
-MovingObjectSubtype = betterosi.MovingObjectVehicleClassificationType
-MovingObjectRole = betterosi.MovingObjectVehicleClassificationRole
+LaneBoundaryType = betterosi.LaneBoundaryClassification.Type
+LaneType = betterosi.Lane.Classification.Type
+LaneSubtype = betterosi.Lane.Classification.Subtype
+MovingObjectType = betterosi.MovingObject.Type
+MovingObjectSubtype = betterosi.MovingObject.VehicleClassification.Type
+MovingObjectRole = betterosi.MovingObject.VehicleClassification.Role
