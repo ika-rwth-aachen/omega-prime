@@ -1,7 +1,9 @@
 """."""
 
 from omega_prime.metrics.qualification.cli.vehicle_type import VehicleTypeCli
-from betterosi import MovingObjectVehicleClassificationType as OsiCls
+import betterosi
+
+OsiCls = betterosi.MovingObject.VehicleClassification.Type
 
 
 def test_to_osi_list() -> None:

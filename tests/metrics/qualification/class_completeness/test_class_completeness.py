@@ -6,9 +6,9 @@ import pytest
 import polars as pl
 
 from omega_prime.metrics.qualification.class_completeness import (
-    ROLE_COMPLETENESS,
-    SUBTYPE_COMPLETENESS,
     TYPE_COMPLETENESS,
+    SUBTYPE_COMPLETENESS,
+    ROLE_COMPLETENESS,
     class_completeness,
     type_completeness,
 )
@@ -16,17 +16,17 @@ from omega_prime.metrics.qualification.class_completeness import (
 from .conftest import assert_class_completeness
 
 expected_pass = [
-    betterosi.MovingObjectType.TYPE_PEDESTRIAN,
-    betterosi.MovingObjectType.TYPE_VEHICLE,
+    betterosi.MovingObject.Type.PEDESTRIAN,
+    betterosi.MovingObject.Type.VEHICLE,
 ]
 
 expected_fail = [
-    betterosi.MovingObjectType.TYPE_PEDESTRIAN,
-    betterosi.MovingObjectType.TYPE_VEHICLE,
-    betterosi.MovingObjectType.TYPE_ANIMAL,
+    betterosi.MovingObject.Type.PEDESTRIAN,
+    betterosi.MovingObject.Type.VEHICLE,
+    betterosi.MovingObject.Type.ANIMAL,
 ]
-vct = betterosi.MovingObjectVehicleClassificationType
-vcr = betterosi.MovingObjectVehicleClassificationRole
+vct = betterosi.MovingObject.VehicleClassification.Type
+vcr = betterosi.MovingObject.VehicleClassification.Role
 
 
 @pytest.fixture()
@@ -34,9 +34,9 @@ def class_df() -> pl.LazyFrame:
     return pl.DataFrame(
         {
             "type": [
-                int(betterosi.MovingObjectType.TYPE_PEDESTRIAN),
-                int(betterosi.MovingObjectType.TYPE_VEHICLE),
-                int(betterosi.MovingObjectType.TYPE_VEHICLE),
+                int(betterosi.MovingObject.Type.PEDESTRIAN),
+                int(betterosi.MovingObject.Type.VEHICLE),
+                int(betterosi.MovingObject.Type.VEHICLE),
             ]
         }
     ).lazy()
@@ -47,14 +47,14 @@ def class_df_with_subtype() -> pl.LazyFrame:
     return pl.DataFrame(
         {
             "type": [
-                int(betterosi.MovingObjectType.TYPE_PEDESTRIAN),
-                int(betterosi.MovingObjectType.TYPE_VEHICLE),
-                int(betterosi.MovingObjectType.TYPE_VEHICLE),
+                int(betterosi.MovingObject.Type.PEDESTRIAN),
+                int(betterosi.MovingObject.Type.VEHICLE),
+                int(betterosi.MovingObject.Type.VEHICLE),
             ],
             "subtype": [
                 -1,
-                int(vct.TYPE_CAR),
-                int(vct.TYPE_BICYCLE),
+                int(vct.CAR),
+                int(vct.BICYCLE),
             ],
         }
     ).lazy()
@@ -65,14 +65,14 @@ def class_df_with_role() -> pl.LazyFrame:
     return pl.DataFrame(
         {
             "type": [
-                int(betterosi.MovingObjectType.TYPE_PEDESTRIAN),
-                int(betterosi.MovingObjectType.TYPE_VEHICLE),
-                int(betterosi.MovingObjectType.TYPE_VEHICLE),
+                int(betterosi.MovingObject.Type.PEDESTRIAN),
+                int(betterosi.MovingObject.Type.VEHICLE),
+                int(betterosi.MovingObject.Type.VEHICLE),
             ],
             "role": [
                 -1,
-                int(vcr.ROLE_CIVIL),
-                int(vcr.ROLE_POLICE),
+                int(vcr.CIVIL),
+                int(vcr.POLICE),
             ],
         }
     ).lazy()
@@ -121,8 +121,8 @@ def test_record_subtype_fail(rec: Recording) -> None:
     _df, result_dict = class_completeness(
         rec.df.lazy(),
         expected_types=expected_pass,
-        expected_subtypes=[vct.TYPE_BICYCLE],
-        expected_roles=[vcr.ROLE_CIVIL],
+        expected_subtypes=[vct.BICYCLE],
+        expected_roles=[vcr.CIVIL],
     )
 
     assert_class_completeness(
@@ -151,7 +151,7 @@ def test_record_type_fail(rec: Recording) -> None:
 
 
 def test_subtype_pass(class_df_with_subtype) -> None:
-    expected_subtypes = [vct.TYPE_CAR, vct.TYPE_BICYCLE]
+    expected_subtypes = [vct.CAR, vct.BICYCLE]
     _df, result_dict = class_completeness(
         class_df_with_subtype, expected_types=expected_pass, expected_subtypes=expected_subtypes
     )
@@ -168,7 +168,7 @@ def test_subtype_pass(class_df_with_subtype) -> None:
 
 
 def test_subtype_fail(class_df_with_subtype) -> None:
-    expected_subtypes = [vct.TYPE_CAR, vct.TYPE_BICYCLE, vct.TYPE_BUS]
+    expected_subtypes = [vct.CAR, vct.BICYCLE, vct.BUS]
     _df, result_dict = class_completeness(
         class_df_with_subtype,
         expected_types=expected_pass,
@@ -201,7 +201,7 @@ def test_subtype_not_required(class_df) -> None:
 
 
 def test_role_pass(class_df_with_role) -> None:
-    expected_roles = [vcr.ROLE_CIVIL, vcr.ROLE_POLICE]
+    expected_roles = [vcr.CIVIL, vcr.POLICE]
     _df, result_dict = class_completeness(
         class_df_with_role,
         expected_types=expected_pass,
@@ -220,7 +220,7 @@ def test_role_pass(class_df_with_role) -> None:
 
 
 def test_role_fail(class_df_with_role) -> None:
-    expected_roles = [vcr.ROLE_CIVIL, vcr.ROLE_POLICE, vcr.ROLE_AMBULANCE]
+    expected_roles = [vcr.CIVIL, vcr.POLICE, vcr.AMBULANCE]
     _df, result_dict = class_completeness(
         class_df_with_role,
         expected_types=expected_pass,
@@ -254,9 +254,9 @@ def test_role_not_required(class_df) -> None:
 def test_vehicle_specific_expectations_are_ignored_without_vehicle_type(class_df) -> None:
     _df, result_dict = class_completeness(
         class_df,
-        expected_types=[betterosi.MovingObjectType.TYPE_PEDESTRIAN],
-        expected_subtypes=[vct.TYPE_BUS],
-        expected_roles=[vcr.ROLE_AMBULANCE],
+        expected_types=[betterosi.MovingObject.Type.PEDESTRIAN],
+        expected_subtypes=[vct.BUS],
+        expected_roles=[vcr.AMBULANCE],
     )
 
     assert_class_completeness(

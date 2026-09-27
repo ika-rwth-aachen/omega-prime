@@ -64,7 +64,7 @@ class QualificationCli:
         if CliMetric.CLASS_COMPLETENESS in selected_metrics:
             metric_kwargs |= ClassCompletenessCli.build_kwargs(types, subtypes, roles)
 
-        if CliMetric.OBJECT_TYPE_COVERAGE in selected_metrics:
+        if CliMetric.OBJECT_COVERAGE in selected_metrics:
             metric_kwargs |= ObjectTypeCoverageCli.build_kwargs(types)
 
         if CliMetric.TEMPORAL_COMPLETENESS in selected_metrics:
