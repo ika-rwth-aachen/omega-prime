@@ -28,13 +28,13 @@ class CliMetric(Enum):
     DUPLICATE_RECORD_RATE = "duplicate-record-rate"
     TEMPORAL_COMPLETENESS = "temporal-completeness"
     TEMPORAL_COVERAGE = "temporal-coverage"
-    OBJECT_TYPE_COVERAGE = "object-type-coverage"
+    OBJECT_COVERAGE = "object-type-coverage"
     NON_DEFAULT_ATTRIBUTES_ACCURACY = "non-default-attributes-accuracy"
     TARGET_AREA_COVERAGE = "target-area-coverage"
 
     @classmethod
     def get_default(cls) -> tuple["CliMetric", "CliMetric"]:
-        return cls.CLASS_COMPLETENESS, cls.OBJECT_TYPE_COVERAGE
+        return cls.CLASS_COMPLETENESS, cls.OBJECT_COVERAGE
 
     @staticmethod
     def get_option() -> typer.models.OptionInfo:
@@ -49,7 +49,7 @@ MAP_METRIC_NAME = {
     CliMetric.DUPLICATE_RECORD_RATE.value: duplicate_record_rate,
     CliMetric.TEMPORAL_COMPLETENESS.value: temporal_completeness,
     CliMetric.TEMPORAL_COVERAGE.value: temporal_coverage,
-    CliMetric.OBJECT_TYPE_COVERAGE.value: object_type_coverage,
+    CliMetric.OBJECT_COVERAGE.value: object_type_coverage,
     CliMetric.NON_DEFAULT_ATTRIBUTES_ACCURACY.value: non_default_attributes_accuracy,
     CliMetric.TARGET_AREA_COVERAGE.value: target_area_coverage,
 }

@@ -235,16 +235,17 @@ class Recording:
         def get_object(row):
             return betterosi.MovingObject(
                 id=betterosi.Identifier(value=row["idx"]),
-                type=betterosi.MovingObjectType(row["type"]),
+                type=betterosi.MovingObject.Type(row["type"]),
                 base=betterosi.BaseMoving(
-                    dimension=betterosi.Dimension3D(length=row["length"], width=row["width"], height=row["width"]),
-                    position=betterosi.Vector3D(x=row["x"], y=row["y"], z=row["z"]),
-                    orientation=betterosi.Orientation3D(roll=row["roll"], pitch=row["pitch"], yaw=row["yaw"]),
-                    velocity=betterosi.Vector3D(x=row["vel_x"], y=row["vel_y"], z=row["vel_z"]),
-                    acceleration=betterosi.Vector3D(x=row["acc_x"], y=row["acc_y"], z=row["acc_z"]),
+                    dimension=betterosi.Dimension3d(length=row["length"], width=row["width"], height=row["width"]),
+                    position=betterosi.Vector3d(x=row["x"], y=row["y"], z=row["z"]),
+                    orientation=betterosi.Orientation3d(roll=row["roll"], pitch=row["pitch"], yaw=row["yaw"]),
+                    velocity=betterosi.Vector3d(x=row["vel_x"], y=row["vel_y"], z=row["vel_z"]),
+                    acceleration=betterosi.Vector3d(x=row["acc_x"], y=row["acc_y"], z=row["acc_z"]),
                 ),
-                vehicle_classification=betterosi.MovingObjectVehicleClassification(
-                    type=row["subtype"], role=row["role"]
+                vehicle_classification=betterosi.MovingObject.VehicleClassification(
+                    type=row["subtype"] if row["subtype"] != -1 else None,
+                    role=row["role"] if row["role"] != -1 else None,
                 ),
             )
 
@@ -350,13 +351,13 @@ class Recording:
                     pl.col("total_nanos").max().alias("t_end"),
                 )
                 .with_columns(
-                    pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x), return_dtype=object),
+                    pl.col("type").map_elements(lambda x: betterosi.MovingObject.Type(x), return_dtype=object),
                     pl.col("subtype").map_elements(
-                        lambda x: betterosi.MovingObjectVehicleClassificationType(x) if x != -1 else None,
+                        lambda x: betterosi.MovingObject.VehicleClassification.Type(x) if x != -1 else None,
                         return_dtype=object,
                     ),
                     pl.col("role").map_elements(
-                        lambda x: betterosi.MovingObjectVehicleClassificationRole(x).name if x != -1 else None,
+                        lambda x: betterosi.MovingObject.VehicleClassification.Role(x).name if x != -1 else None,
                         return_dtype=object,
                     ),
                 )
@@ -388,7 +389,7 @@ class Recording:
             df_export = df_export.with_columns(*overwrite_exprs)
         return df_export
 
-    def to_osi_gts(self) -> list[betterosi.GroundTruth]:
+    def to_osi_gts(self) -> typing.Generator[betterosi.GroundTruth, None, None]:
         first_iteration = True
         df_export = self._df_with_original_pose_for_export()
         for [nanos], group_df in df_export.sort(["total_nanos"]).group_by("total_nanos", maintain_order=True):
@@ -475,11 +476,9 @@ class Recording:
                         pitch=mv.base.orientation.pitch,
                         yaw=mv.base.orientation.yaw,
                         type=mv.type,
-                        role=(
-                            mv.vehicle_classification.role if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1
-                        ),
+                        role=(mv.vehicle_classification.role if mv.type == betterosi.MovingObject.Type.VEHICLE else -1),
                         subtype=(
-                            mv.vehicle_classification.type if mv.type == betterosi.MovingObjectType.TYPE_VEHICLE else -1
+                            mv.vehicle_classification.type if mv.type == betterosi.MovingObject.Type.VEHICLE else -1
                         ),
                     )
 
@@ -608,7 +607,7 @@ class Recording:
         if filepath is not None and Path(filepath).suffix == ".parquet":
             r = cls.from_parquet(filepath, parse_map=parse_map, validate=validate, step_size=step_size)
         elif filepath is not None:
-            gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
+            gts = betterosi.read(filepath, return_ground_truth=True)
             r = cls.from_osi_gts(gts, validate=validate)
         if map_path is None and r.map is not None:
             return r
@@ -633,7 +632,9 @@ class Recording:
             try:
                 r.apply_projections()
             except Exception:
-                warn("Failed to apply projections.")
+                import traceback
+
+                warn(f"Failed to apply projections: {traceback.format_exc()}")
         return r
 
     def to_file(self, filepath):
@@ -660,11 +661,12 @@ class Recording:
 
         source_proj_string = self.projections.get("proj_string")
         if source_proj_string is None:
-            self.map.parse()
+            if hasattr(self.map, "parse"):
+                self.map.parse()
             source_proj_string = getattr(self.map, "proj_string", None)
 
         if source_proj_string is None:
-            raise ValueError("No proj_string information available on the recording or attached map.")
+            return self
 
         frame_projections: list[dict[str, typing.Any]] = []
         for ts, offset in self.projections.items():
@@ -831,7 +833,7 @@ class Recording:
                 ),
             )
             new_dfs.append(new_track_df)
-        new_df = pl.concat(new_dfs)
+        new_df = pl.concat(new_dfs, how="vertical")
         return self.__init__(df=new_df, map=self.map, host_vehicle_idx=self.host_vehicle_idx)
 
     def _create_legend(self, ax):
@@ -953,9 +955,9 @@ class Recording:
 
         df = df.with_columns(
             pl.concat_str(
-                pl.col("type").map_elements(lambda x: betterosi.MovingObjectType(x).name, return_dtype=pl.String),
+                pl.col("type").map_elements(lambda x: betterosi.MovingObject.Type(x).name, return_dtype=pl.String),
                 pl.col("subtype").map_elements(
-                    lambda x: betterosi.MovingObjectVehicleClassificationType(x).name,
+                    lambda x: betterosi.MovingObject.VehicleClassification.Type(x).name if x != -1 else None,
                     return_dtype=pl.String,
                 ),
                 separator="-",

@@ -16,7 +16,7 @@ from .data_format_consistency import DATA_FORMAT_CONSISTENCY, data_format_consis
 from .duplicate_record_rate import DUPLICATE_RECORD_RATE, duplicate_record_rate
 from .english_syntax import format_items, get_is_ending
 from .non_default_attr_accuracy import NON_DEFAULT_ATTRIBUTES_ACCURACY, non_default_attributes_accuracy
-from .object_type_coverage import OBJECT_TYPE_COVERAGE, object_type_coverage
+from .object_type_coverage import OBJECT_COVERAGE, OBJECT_TYPE_COVERAGE, object_type_coverage
 from .record_completeness import RECORD_COMPLETENESS, record_completeness
 from .target_area_coverage import TARGET_AREA_COVERAGE, target_area_coverage
 from .temporal_completeness import TEMPORAL_COMPLETENESS, temporal_completeness
@@ -29,6 +29,7 @@ __all__ = [
     "DUPLICATE_RECORD_RATE",
     "FAIL",
     "NON_DEFAULT_ATTRIBUTES_ACCURACY",
+    "OBJECT_COVERAGE",
     "OBJECT_TYPE_COVERAGE",
     "PASS",
     "MRT",
