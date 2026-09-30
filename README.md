@@ -89,6 +89,9 @@ Tested with exiD-v2.0, inD-v1.1, highD-v1.0 (highD does not provide an ASAM Open
 Based on [MCAP](https://mcap.dev/), [ASAM OSI](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/specification/index.html) and [ASAM OpenDRIVE](https://publications.pages.asam.net/standards/ASAM_OpenDRIVE/ASAM_OpenDRIVE_Specification/latest/specification/index.html#) the ASAM OSI GroundTruth messages and ASAM OpenDRIVE map are packaged as shown in the following figure.
 ![](https://github.com/ika-rwth-aachen/omega-prime/blob/main/docs/omega_prime/omega_specification.svg)
 
+## Visualization in Lichtblick
+
+You can view omega-prime files in [Lichtbick](https://github.com/lichtblick-suite/lichtblick) (fork of foxglove) using the plugins [asam-opendrive-converter](https://github.com/lichtblick-suite/asam-opendrive-converter) and [asam-osi-converter](https://github.com/lichtblick-suite/asam-osi-converter)
 
 # Acknowledgements
 
