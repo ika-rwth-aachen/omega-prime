@@ -8,6 +8,7 @@ import pytest
 
 import omega_prime
 from omega_prime.map import ProjectionOffset
+from omega_prime.recording import PRECIPITATION_AMOUNT_REFERENCE_TYPE, PRECIPITATION_INTENSITY_REFERENCE_TYPE
 
 p = Path(__file__).parent.parent / "example_files/"
 with open(p / "mapping.json") as f:
@@ -207,3 +208,40 @@ def test_environmental_conditions_df():
     joined = rec.df.join(df, on="total_nanos", how="left")
     assert joined.height == rec.df.height
     assert joined["precipitation"].null_count() == 0
+
+
+@pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
+def test_measured_precipitation_in_source_reference(tmp_path, suffix):
+    def reference(reference_type, value):
+        return betterosi.ExternalReference(reference="weather_station", type=reference_type, identifier=[value])
+
+    measured = EC(
+        precipitation=Precipitation.VERY_LIGHT,
+        source_reference=[
+            reference(PRECIPITATION_INTENSITY_REFERENCE_TYPE, "0.3"),
+            reference(PRECIPITATION_AMOUNT_REFERENCE_TYPE, "0.01"),
+        ],
+    )
+    not_a_number = EC(source_reference=[reference(PRECIPITATION_INTENSITY_REFERENCE_TYPE, "n/a")])
+
+    rec = load()
+    nanos = sorted(rec.nanos2frame)
+    rec.set_environmental_conditions(measured)
+    rec.set_environmental_conditions(not_a_number, nanos=nanos[-2:-1])
+    rec.set_environmental_conditions(MODERATE, nanos=nanos[-1:])
+    if suffix == ".mcap":
+        rec.to_mcap(tmp_path / "measured.mcap")
+    else:
+        rec.to_parquet(tmp_path / "measured.parquet")
+
+    reloaded = omega_prime.Recording.from_file(tmp_path / f"measured{suffix}", validate=False)
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+
+    df = reloaded.environmental_conditions_df
+    first = df.row(0, named=True)
+    assert first["precipitation"] == Precipitation.VERY_LIGHT.value
+    assert first["precipitation_intensity"] == pytest.approx(0.3)
+    assert first["precipitation_amount"] == pytest.approx(0.01)
+    assert df.row(-2, named=True)["precipitation_intensity"] is None
+    assert df.row(-1, named=True)["precipitation_intensity"] is None
+    assert df.row(-1, named=True)["precipitation_amount"] is None

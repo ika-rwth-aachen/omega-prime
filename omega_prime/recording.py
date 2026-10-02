@@ -22,6 +22,11 @@ from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
 from .mapodrsegmentation import MapODRSegmentation
 from .schemas import polars_schema, recording_moving_object_schema
 
+# `type` of the `betterosi.ExternalReference` in `EnvironmentalConditions.source_reference` that carries a measured
+# precipitation value. The value is stored as a string in the first `identifier`.
+PRECIPITATION_INTENSITY_REFERENCE_TYPE = "omega_prime.precipitation_intensity_mm_per_h"
+PRECIPITATION_AMOUNT_REFERENCE_TYPE = "omega_prime.precipitation_amount_mm"
+
 
 def timestamp2ts(timestamp: betterosi.Timestamp):
     return timestamp.seconds * 1_000_000_000 + timestamp.nanos
@@ -129,6 +134,8 @@ class Recording:
         "total_nanos": polars_schema["total_nanos"],
         "frame": pl.UInt32,
         "precipitation": pl.Int64,
+        "precipitation_intensity": pl.Float64,
+        "precipitation_amount": pl.Float64,
         "fog": pl.Int64,
         "ambient_illumination": pl.Int64,
         "temperature": pl.Float64,
@@ -441,6 +448,17 @@ class Recording:
         for n in self.nanos2frame if nanos is None else nanos:
             self.environmental_conditions[int(n)] = conditions
 
+    @staticmethod
+    def _source_reference_value(conditions: betterosi.EnvironmentalConditions, reference_type: str) -> float | None:
+        "Value of the first `source_reference` of the given type, None if there is none or it is not a number."
+        for reference in conditions.source_reference:
+            if reference.type == reference_type and reference.identifier:
+                try:
+                    return float(reference.identifier[0])
+                except ValueError:
+                    return None
+        return None
+
     @property
     def environmental_conditions_df(self) -> pl.DataFrame:
         """
@@ -448,6 +466,8 @@ class Recording:
         Enumerations are given as their integer value. Fields of unset sub-messages (`time_of_day`, `clouds`, `wind`,
         `sun`) are null. `temperature`, `atmospheric_pressure`, `relative_humidity` and `unix_timestamp` are null if
         they are 0, since an unset value cannot be distinguished from 0 after deserialization.
+        `precipitation_intensity` (mm/h) and `precipitation_amount` (mm) are measured values taken from
+        `source_reference` and null if there is no such reference.
         """
         rows = []
         for nanos, ec in sorted(self.environmental_conditions.items()):
@@ -456,6 +476,8 @@ class Recording:
                     total_nanos=nanos,
                     frame=self.nanos2frame.get(nanos),
                     precipitation=int(ec.precipitation),
+                    precipitation_intensity=self._source_reference_value(ec, PRECIPITATION_INTENSITY_REFERENCE_TYPE),
+                    precipitation_amount=self._source_reference_value(ec, PRECIPITATION_AMOUNT_REFERENCE_TYPE),
                     fog=int(ec.fog),
                     ambient_illumination=int(ec.ambient_illumination),
                     temperature=ec.temperature or None,
