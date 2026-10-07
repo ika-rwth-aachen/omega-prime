@@ -2391,7 +2391,7 @@ wheels = [
 
 [[package]]
 name = "omega-prime"
-version = "0.3.6"
+version = "0.3.7"
 source = { editable = "." }
 dependencies = [
     { name = "altair" },
@@ -2457,7 +2457,7 @@ requires-dist = [
     { name = "numpy" },
     { name = "pandas", extras = ["pyarrow"] },
     { name = "pandera", extras = ["polars"] },
-    { name = "polars" },
+    { name = "polars", specifier = "<2" },
     { name = "polars-st" },
     { name = "pre-commit", marker = "extra == 'test'" },
     { name = "pyproj" },
