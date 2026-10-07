@@ -1,3 +1,7 @@
+# 0.3.7
+
+- Cap `polars<2`: polars-st is not yet compatible with polars 2 (metaclass conflict on import).
+
 # 0.3.6
 
 - Calculate TTC (Time to Collision) and THW (Time Headway) in omega-prime with Polars.
