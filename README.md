@@ -91,7 +91,15 @@ Based on [MCAP](https://mcap.dev/), [ASAM OSI](https://opensimulationinterface.g
 
 ## Visualization in Lichtblick
 
-You can view omega-prime files in [Lichtbick](https://github.com/lichtblick-suite/lichtblick) (fork of foxglove) using the plugins [asam-opendrive-converter](https://github.com/lichtblick-suite/asam-opendrive-converter) and [asam-osi-converter](https://github.com/lichtblick-suite/asam-osi-converter)
+You can view omega-prime files in [Lichtblick](https://github.com/lichtblick-suite/lichtblick) (fork of foxglove) using the plugins [asam-opendrive-converter](https://github.com/lichtblick-suite/asam-opendrive-converter) and [asam-osi-converter](https://github.com/lichtblick-suite/asam-osi-converter)
+
+Lichtblick does not apply the projection metadata embedded in OSI GroundTruth. Create a separate file with the projected coordinates materialized before opening it:
+
+```bash
+omega-prime materialize-projection input.mcap output.mcap --flatten-map
+```
+
+`--flatten-map` additionally removes OpenDRIVE elevation and banking. Omit it when object Z coordinates and the map use the same height reference. The equivalent Python API is `recording.to_mcap(output, materialize_projection=True)`.
 
 # Acknowledgements
 

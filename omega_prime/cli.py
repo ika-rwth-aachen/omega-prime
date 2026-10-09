@@ -141,6 +141,40 @@ def attach_odr(
         r.to_mcap(output)
 
 
+@app.command(
+    help=(
+        "Export the currently projected coordinates as canonical coordinates. "
+        "Useful for viewers such as Lichtblick that do not apply OSI projection metadata."
+    )
+)
+def materialize_projection(
+    input: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=False, help="Path to an omega-prime MCAP or Parquet file")
+    ],
+    output: Annotated[
+        Path, typer.Argument(dir_okay=False, help="Output path (.mcap or .parquet); must differ from input")
+    ],
+    flatten_map: Annotated[
+        bool,
+        typer.Option(
+            "--flatten-map",
+            help="Flatten OpenDRIVE elevation and banking for viewers that use a flat object Z reference.",
+        ),
+    ] = False,
+):
+    if input.resolve() == output.resolve():
+        raise typer.BadParameter("Input and output must be different; projection materialization is explicit.")
+
+    r = omega_prime.Recording.from_file(input, validate=False, parse_map=False, apply_proj=True)
+    if flatten_map:
+        if not isinstance(r.map, omega_prime.MapOdr):
+            raise typer.BadParameter("--flatten-map requires an embedded ASAM OpenDRIVE map.")
+        r.map.flatten_elevation()
+
+    r.to_file(output, materialize_projection=True)
+    typer.echo(f"Wrote projected recording to {output}")
+
+
 def main():
     load_converters_into_cli(app)
     app()
