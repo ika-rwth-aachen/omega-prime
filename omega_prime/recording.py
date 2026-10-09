@@ -208,15 +208,20 @@ class Recording:
 
         return validated
 
-    def _projection_for_timestamp(self, total_nanos: int) -> tuple[str | None, ProjectionOffset | None]:
-        source_proj_string = self.projections.get("proj_string")
+    def _projection_for_timestamp(
+        self,
+        total_nanos: int,
+        projections: dict[typing.Any, typing.Any] | None = None,
+    ) -> tuple[str | None, ProjectionOffset | None]:
+        projections = self.projections if projections is None else projections
+        source_proj_string = projections.get("proj_string")
         if source_proj_string is None:
             source_proj_string = getattr(self.map, "proj_string", None)
 
-        if total_nanos in self.projections:
-            offset = self.projections[total_nanos]
-        elif None in self.projections:
-            offset = self.projections[None]
+        if total_nanos in projections:
+            offset = projections[total_nanos]
+        elif None in projections:
+            offset = projections[None]
         else:
             offset = None
 
@@ -388,14 +393,53 @@ class Recording:
             df_export = df_export.with_columns(*overwrite_exprs)
         return df_export
 
-    def to_osi_gts(self) -> list[betterosi.GroundTruth]:
+    def _parse_map_projection(self):
+        if self.map is None:
+            raise ValueError("A map is required to apply or materialize a projection.")
+        if isinstance(self.map, MapOdr):
+            self.map.parse_projection()
+        else:
+            self.map.parse()
+
+    def _materialized_projection_metadata(self) -> dict[typing.Any, typing.Any]:
+        required_columns = {"x_original", "y_original", "z_original"}
+        if not required_columns.issubset(self._df.columns):
+            raise ValueError(
+                "No applied projection found. Load with `apply_proj=True` or call `apply_projections()` first."
+            )
+
+        self._parse_map_projection()
+        target_proj_string = getattr(self.map, "proj_string", None)
+        if target_proj_string is None:
+            raise ValueError("The attached map does not define a target projection.")
+
+        projections: dict[typing.Any, typing.Any] = {"proj_string": target_proj_string}
+        target_offset = getattr(self.map, "proj_offset", None)
+        if target_offset is not None:
+            # The current coordinates are map-local. Reusing the map offset ensures that
+            # loading the exported file and applying projections is idempotent.
+            projections[None] = target_offset
+        return projections
+
+    def to_osi_gts(self, *, materialize_projection: bool = False) -> typing.Iterator[betterosi.GroundTruth]:
+        """Yield OSI GroundTruth messages.
+
+        By default, any temporary projection is reversed for export. Set
+        ``materialize_projection=True`` to export the currently projected coordinates and
+        describe them using the attached map's projection metadata.
+        """
         first_iteration = True
-        df_export = self._df_with_original_pose_for_export()
+        if materialize_projection:
+            df_export = self._df
+            projections = self._materialized_projection_metadata()
+        else:
+            df_export = self._df_with_original_pose_for_export()
+            projections = self.projections
         for [nanos], group_df in df_export.sort(["total_nanos"]).group_by("total_nanos", maintain_order=True):
             gt = self.get_moving_object_ground_truth(
                 nanos, group_df, host_vehicle_idx=self.host_vehicle_idx, validate=False
             )
-            source_proj_string, proj_offset = self._projection_for_timestamp(int(nanos))
+            source_proj_string, proj_offset = self._projection_for_timestamp(int(nanos), projections)
             if source_proj_string is not None:
                 gt.proj_string = source_proj_string
             if proj_offset is not None:
@@ -492,8 +536,12 @@ class Recording:
             **kwargs,
         )
 
-    def to_mcap(self, filepath):
-        "Store Recording as an MCAP file."
+    def to_mcap(self, filepath, *, materialize_projection: bool = False):
+        """Store Recording as an MCAP file.
+
+        Set ``materialize_projection=True`` to store the currently projected coordinates
+        instead of restoring the original pose columns.
+        """
         if Path(filepath).suffix != ".mcap":
             raise ValueError()
         map_time = 0
@@ -502,7 +550,7 @@ class Recording:
             if min_total_nanos is not None:
                 map_time = int(min_total_nanos)
         with betterosi.Writer(filepath) as w:
-            for gt in self.to_osi_gts():
+            for gt in self.to_osi_gts(materialize_projection=materialize_projection):
                 w.add(gt)
             if isinstance(self.map, MapOdr):
                 w.add(self.map.to_osi(), topic="ground_truth_map", log_time=map_time)
@@ -548,16 +596,21 @@ class Recording:
             **kwargs,
         )
 
-    def to_parquet(self, filename):
-        "Store Recording as a Parquet file."
+    def to_parquet(self, filename, *, materialize_projection: bool = False):
+        """Store Recording as a Parquet file.
+
+        Set ``materialize_projection=True`` to store the currently projected coordinates
+        instead of restoring the original pose columns.
+        """
         metadata = {}
         if self.host_vehicle_idx is not None:
             metadata[b"host_vehicle_idx"] = str(self.host_vehicle_idx).encode()
         proj_meta = {}
-        encoded_projections = self._encode_projections(self.projections)
+        projections = self._materialized_projection_metadata() if materialize_projection else self.projections
+        encoded_projections = self._encode_projections(projections)
         if encoded_projections:
             proj_meta[b"projections_json"] = encoded_projections
-        df_export = self._df_with_original_pose_for_export()
+        df_export = self._df if materialize_projection else self._df_with_original_pose_for_export()
         to_drop = ["frame"]
         optional_cols = [
             "polygon",
@@ -636,14 +689,14 @@ class Recording:
                 warn("Failed to apply projections.")
         return r
 
-    def to_file(self, filepath):
+    def to_file(self, filepath, *, materialize_projection: bool = False):
         "Store Recording to a file based on its suffix (`.parquet`, `.mcap`)."
         suffix = Path(filepath).suffix.lower()
         if suffix == ".parquet":
-            self.to_parquet(filepath)
+            self.to_parquet(filepath, materialize_projection=materialize_projection)
             return
         if suffix == ".mcap":
-            self.to_mcap(filepath)
+            self.to_mcap(filepath, materialize_projection=materialize_projection)
             return
         raise ValueError(f"Unsupported file suffix `{suffix}`. Expected one of: `.parquet`, `.mcap`.")
 
@@ -660,7 +713,7 @@ class Recording:
 
         source_proj_string = self.projections.get("proj_string")
         if source_proj_string is None:
-            self.map.parse()
+            self._parse_map_projection()
             source_proj_string = getattr(self.map, "proj_string", None)
 
         if source_proj_string is None:
@@ -738,7 +791,7 @@ class Recording:
             (pl.col("z") + pl.col("offset_z")).alias("z"),
         )
 
-        self.map.parse()
+        self._parse_map_projection()
         target_crs = self.map.projection
         if not target_crs:
             raise ValueError("Map does not have a valid projection defined.")

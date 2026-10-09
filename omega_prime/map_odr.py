@@ -214,35 +214,7 @@ class MapOdr(Map):
         lane_boundaries = {}
         lanes = {}
 
-        # Extract projection information from XML tree
-        proj_string = None
-        proj_offset = None
-        projection = None
-
-        # Get the header element from XML
-        header = rn.tree.find("header")
-        if header is not None:
-            # Get geoReference if it exists
-            geo_ref = header.find("geoReference")
-            if geo_ref is not None and geo_ref.text:
-                proj_string = geo_ref.text.strip()
-                try:
-                    projection = pyproj.CRS.from_proj4(proj_string)
-                except pyproj.exceptions.CRSError as e:
-                    logger.warning(f"Failed to parse projection string: {e}")
-
-            # Get offset if it exists
-            offset = header.find("offset")
-            if offset is not None:
-                try:
-                    proj_offset = ProjectionOffset(
-                        x=float(offset.get("x", "0")),
-                        y=float(offset.get("y", "0")),
-                        z=float(offset.get("z", "0")),
-                        yaw=float(offset.get("hdg", "0")),
-                    )
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"Failed to parse offset: {e}")
+        self._set_projection_metadata(rn.root)
 
         for road in rn.get_roads():
             lane_idx = 0
@@ -284,15 +256,73 @@ class MapOdr(Map):
         self._xodr_map = rn
         self.lane_boundaries = lane_boundaries
         self.lanes = lanes
-        self.proj_string = proj_string
-        self.proj_offset = proj_offset
-        self.projection = projection
         for lane in self.lanes.values():
             lane._map = self
             lane._set_boundaries()
             lane._set_polygon()
         for b in self._lane_boundaries.values():
             b._map = self
+
+        return self
+
+    def _set_projection_metadata(self, root):
+        """Read the geo reference and map offset from an OpenDRIVE XML root."""
+        proj_string = None
+        proj_offset = None
+        projection = None
+
+        header = root.find("header")
+        if header is not None:
+            geo_ref = header.find("geoReference")
+            if geo_ref is not None and geo_ref.text:
+                proj_string = geo_ref.text.strip()
+                try:
+                    projection = pyproj.CRS.from_proj4(proj_string)
+                except pyproj.exceptions.CRSError as e:
+                    logger.warning(f"Failed to parse projection string: {e}")
+
+            # Get offset if it exists
+            offset = header.find("offset")
+            if offset is not None:
+                try:
+                    proj_offset = ProjectionOffset(
+                        x=float(offset.get("x", "0")),
+                        y=float(offset.get("y", "0")),
+                        z=float(offset.get("z", "0")),
+                        yaw=float(offset.get("hdg", "0")),
+                    )
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse offset: {e}")
+
+        self.proj_string = proj_string
+        self.proj_offset = proj_offset
+        self.projection = projection
+
+    def parse_projection(self):
+        """Parse only OpenDRIVE projection metadata, without building lane geometry."""
+        root = etree.fromstring(self.odr_xml.encode("utf-8"))
+        self._set_projection_metadata(root)
+        return self
+
+    def flatten_elevation(self):
+        """Set OpenDRIVE surface height, superelevation, crossfall and shape polynomials to zero.
+
+        This is primarily useful for 3D viewers when object heights are expressed relative to a
+        flat local ground plane while the embedded OpenDRIVE map contains absolute elevation.
+        """
+        root = etree.fromstring(self.odr_xml.encode("utf-8"))
+        surface_elements = root.xpath(
+            "//*[local-name()='elevation' or local-name()='superelevation' "
+            "or local-name()='crossfall' or local-name()='shape']"
+        )
+        for element in surface_elements:
+            for coefficient in ("a", "b", "c", "d"):
+                element.set(coefficient, "0")
+
+        self.odr_xml = etree.tostring(root, encoding="unicode")
+        self._xodr_map = None
+        self._lanes = None
+        self._lane_boundaries = None
 
         return self
 
