@@ -1,3 +1,4 @@
+import copy
 import itertools
 import json
 import typing
@@ -213,6 +214,7 @@ class Recording:
         """
         Encode environmental conditions into a JSON string and then to bytes.
         Consecutive timestamps of `total_nanos` with equal conditions are stored as one run.
+        `version` is the version of this encoding.
         """
         runs: list[dict[str, typing.Any]] = []
         current = None
@@ -228,14 +230,17 @@ class Recording:
                 current = (conditions, run)
         if not runs:
             return b""
-        return json.dumps({"runs": runs}).encode()
+        return json.dumps({"version": 1, "runs": runs}).encode()
 
     @staticmethod
     def _decode_environmental_conditions(
         raw: bytes | str | None,
         total_nanos: typing.Iterable[int],
     ) -> dict[int, betterosi.EnvironmentalConditions]:
-        "Decode environmental conditions from bytes or string to a dictionary keyed by the given `total_nanos`."
+        """
+        Decode environmental conditions from bytes or string to a dictionary keyed by the given `total_nanos`.
+        Each timestamp gets its own `betterosi.EnvironmentalConditions`.
+        """
         if raw in (None, b"", ""):
             return {}
         if isinstance(raw, bytes):
@@ -247,7 +252,7 @@ class Recording:
             lo = np.searchsorted(timestamps, int(run["start"]), side="left")
             hi = np.searchsorted(timestamps, int(run["end"]), side="right")
             for ts in timestamps[lo:hi]:
-                result[int(ts)] = conditions
+                result[int(ts)] = copy.deepcopy(conditions)
         return result
 
     @staticmethod
@@ -444,9 +449,12 @@ class Recording:
     def set_environmental_conditions(
         self, conditions: betterosi.EnvironmentalConditions, nanos: typing.Iterable[int] | None = None
     ):
-        "Set environmental conditions for the given timestamps (default: all frames of the recording)."
+        """
+        Set environmental conditions for the given timestamps (default: all frames of the recording).
+        Each timestamp gets its own copy of `conditions`.
+        """
         for n in self.nanos2frame if nanos is None else nanos:
-            self.environmental_conditions[int(n)] = conditions
+            self.environmental_conditions[int(n)] = copy.deepcopy(conditions)
 
     @staticmethod
     def _source_reference_value(conditions: betterosi.EnvironmentalConditions, reference_type: str) -> float | None:
@@ -464,8 +472,9 @@ class Recording:
         """
         Environmental conditions as a DataFrame with one row per timestamp that carries conditions.
         Enumerations are given as their integer value. Fields of unset sub-messages (`time_of_day`, `clouds`, `wind`,
-        `sun`) are null. `temperature`, `atmospheric_pressure`, `relative_humidity` and `unix_timestamp` are null if
-        they are 0, since an unset value cannot be distinguished from 0 after deserialization.
+        `sun`) are null. `temperature`, `atmospheric_pressure`, `relative_humidity`, `unix_timestamp` and the values
+        of `wind` and `sun` are null if they are 0, since an unset value cannot be distinguished from 0 after
+        deserialization.
         `precipitation_intensity` (mm/h) and `precipitation_amount` (mm) are measured values taken from
         `source_reference` and null if there is no such reference.
         """
@@ -486,11 +495,11 @@ class Recording:
                     unix_timestamp=ec.unix_timestamp or None,
                     seconds_since_midnight=None if ec.time_of_day is None else ec.time_of_day.seconds_since_midnight,
                     fractional_cloud_cover=None if ec.clouds is None else int(ec.clouds.fractional_cloud_cover),
-                    wind_origin_direction=None if ec.wind is None else ec.wind.origin_direction,
-                    wind_speed=None if ec.wind is None else ec.wind.speed,
-                    sun_azimuth=None if ec.sun is None else ec.sun.azimuth,
-                    sun_elevation=None if ec.sun is None else ec.sun.elevation,
-                    sun_intensity=None if ec.sun is None else ec.sun.intensity,
+                    wind_origin_direction=None if ec.wind is None else ec.wind.origin_direction or None,
+                    wind_speed=None if ec.wind is None else ec.wind.speed or None,
+                    sun_azimuth=None if ec.sun is None else ec.sun.azimuth or None,
+                    sun_elevation=None if ec.sun is None else ec.sun.elevation or None,
+                    sun_intensity=None if ec.sun is None else ec.sun.intensity or None,
                 )
             )
         return pl.DataFrame(rows, schema=self._environmental_conditions_schema)
@@ -663,9 +672,12 @@ class Recording:
                 host_vehicle_idx = int(metadata[b"host_vehicle_idx"].decode())
 
             projections = cls._decode_projections(metadata.get(b"projections_json"))
-            environmental_conditions = cls._decode_environmental_conditions(
-                metadata.get(b"environmental_conditions_json"), df["total_nanos"].unique()
-            )
+            try:
+                environmental_conditions = cls._decode_environmental_conditions(
+                    metadata.get(b"environmental_conditions_json"), df["total_nanos"].unique()
+                )
+            except Exception as e:
+                warn(f"The environmental conditions could not be read: {e!r}")
 
             map_parsing = {}
             for MC in MAP_CLASSES:
@@ -917,7 +929,8 @@ class Recording:
         """
         Interpolate the recording to new timestamps or a given frequency.
         Traffic light states, environmental conditions and projection offsets are taken from the nearest original
-        timestamp.
+        timestamp. If several original timestamps fall onto one new timestamp (downsampling), the nearest one that
+        carries the information is used.
         """
         df = self._df
         original_cols = [c for c in ["x_original", "y_original", "z_original"] if c in df.columns]
@@ -989,19 +1002,38 @@ class Recording:
         new_df = pl.concat(new_dfs)
 
         # Map each new timestamp to the nearest original timestamp to carry over per-timestamp information
+        def nearest(candidates: np.ndarray, targets: np.ndarray) -> np.ndarray:
+            "For each target the nearest of the sorted candidates."
+            pos = np.clip(np.searchsorted(candidates, targets), 1, len(candidates) - 1)
+            before, after = candidates[pos - 1], candidates[pos]
+            return np.where(targets - before <= after - targets, before, after)
+
         old_nanos = np.array(sorted(self.nanos2frame), dtype=np.int64)
-        kept_nanos = new_df["total_nanos"].unique().to_numpy()
-        pos = np.clip(np.searchsorted(old_nanos, kept_nanos), 1, len(old_nanos) - 1)
-        before, after = old_nanos[pos - 1], old_nanos[pos]
-        nearest = np.where(kept_nanos - before <= after - kept_nanos, before, after)
-        new2old = dict(zip(kept_nanos.tolist(), nearest.tolist()))
+        kept_nanos = new_df["total_nanos"].unique().sort().to_numpy()
+        new2old = dict(zip(kept_nanos.tolist(), nearest(old_nanos, kept_nanos).tolist()))
+        used_nanos = set(new2old.values())
 
         def rekey(per_nanos: dict) -> dict:
-            return {new: per_nanos[old] for new, old in new2old.items() if old in per_nanos}
+            result = {new: per_nanos[old] for new, old in new2old.items() if old in per_nanos}
+            # When downsampling, original timestamps between two new ones are not the nearest of any new timestamp.
+            # Their information is kept on the nearest new timestamp, if this has none yet.
+            skipped = np.array(
+                [
+                    k
+                    for k in per_nanos
+                    if isinstance(k, int | np.integer) and k not in used_nanos and kept_nanos[0] <= k <= kept_nanos[-1]
+                ],
+                dtype=np.int64,
+            )
+            if len(skipped) > 0:
+                new = nearest(kept_nanos, skipped)
+                for i in np.argsort(np.abs(new - skipped), kind="stable"):
+                    result.setdefault(int(new[i]), per_nanos[int(skipped[i])])
+            return result
 
         projections = {k: v for k, v in self.projections.items() if k in ("proj_string", None)}
         projections.update(rekey(self.projections))
-        environmental_conditions = rekey(self.environmental_conditions)
+        environmental_conditions = {n: copy.deepcopy(c) for n, c in rekey(self.environmental_conditions).items()}
         self.__init__(
             df=new_df,
             map=self.map,

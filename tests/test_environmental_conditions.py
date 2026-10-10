@@ -107,7 +107,9 @@ def test_parquet_roundtrip(tmp_path):
     rec.to_parquet(tmp_path / "conditions.parquet")
 
     metadata = pq.read_schema(tmp_path / "conditions.parquet").metadata
-    runs = json.loads(metadata[b"environmental_conditions_json"])["runs"]
+    encoded = json.loads(metadata[b"environmental_conditions_json"])
+    assert encoded["version"] == 1
+    runs = encoded["runs"]
     assert [(r["start"], r["end"]) for r in runs] == [
         (nanos[0], nanos[len(nanos) // 4 - 1]),
         (nanos[len(nanos) // 2], nanos[-1]),
@@ -123,6 +125,53 @@ def test_parquet_without_conditions(tmp_path):
     rec.to_parquet(tmp_path / "absent.parquet")
     assert b"environmental_conditions_json" not in pq.read_schema(tmp_path / "absent.parquet").metadata
     assert omega_prime.Recording.from_file(tmp_path / "absent.parquet", validate=False).environmental_conditions == {}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"{not json",
+        json.dumps(
+            {"version": 2, "runs": [{"start": 0, "end": 1, "conditions": {"precipitation": "NOT_A_PRECIPITATION"}}]}
+        ).encode(),
+        json.dumps({"version": 2, "runs": [{"conditions": {}}]}).encode(),
+    ],
+)
+def test_parquet_with_unreadable_conditions(tmp_path, payload):
+    rec = load()
+    rec.set_environmental_conditions(MODERATE)
+    rec.to_parquet(tmp_path / "conditions.parquet")
+    table = pq.read_table(tmp_path / "conditions.parquet")
+    metadata = {**table.schema.metadata, b"environmental_conditions_json": payload}
+    pq.write_table(table.replace_schema_metadata(metadata), tmp_path / "unreadable.parquet")
+
+    # the recording is still loaded, only the conditions are missing
+    with pytest.warns(UserWarning, match="environmental conditions could not be read"):
+        reloaded = omega_prime.Recording.from_file(tmp_path / "unreadable.parquet", validate=False)
+    assert reloaded.environmental_conditions == {}
+    assert reloaded.df.height == rec.df.height
+
+
+def test_environmental_conditions_are_not_shared(tmp_path):
+    conditions = EC(precipitation=Precipitation.LIGHT)
+    rec = load()
+    rec.set_environmental_conditions(conditions)
+    nanos = sorted(rec.nanos2frame)
+
+    # neither between the timestamps nor with the object of the caller
+    rec.environmental_conditions[nanos[0]].precipitation = Precipitation.HEAVY
+    conditions.fog = Fog.MIST
+    assert rec.environmental_conditions[nanos[1]] == EC(precipitation=Precipitation.LIGHT)
+
+    rec.to_parquet(tmp_path / "conditions.parquet")
+    reloaded = omega_prime.Recording.from_file(tmp_path / "conditions.parquet", validate=False)
+    reloaded.environmental_conditions[nanos[1]].fog = Fog.MIST
+    assert reloaded.environmental_conditions[nanos[2]] == EC(precipitation=Precipitation.LIGHT)
+
+    reloaded.interpolate(hz=60)
+    new_nanos = sorted(reloaded.nanos2frame)
+    reloaded.environmental_conditions[new_nanos[-1]].fog = Fog.MIST
+    assert reloaded.environmental_conditions[new_nanos[-2]] == EC(precipitation=Precipitation.LIGHT)
 
 
 @pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
@@ -157,6 +206,25 @@ def test_interpolate_keeps_environmental_conditions():
             assert rec.environmental_conditions[n] == HEAVY
     assert rec.environmental_conditions[new_nanos[0]] == MODERATE
     assert rec.environmental_conditions[new_nanos[-1]] == HEAVY
+
+
+def test_interpolate_keeps_sparse_environmental_conditions():
+    rec = load()
+    nanos = sorted(rec.nanos2frame)
+    # conditions on every 7th timestamp of the first half, nothing on the second half
+    sparse = nanos[1 : len(nanos) // 2 : 7]
+    rec.set_environmental_conditions(MODERATE, nanos=sparse)
+
+    hz = 2
+    rec.interpolate(hz=hz)
+
+    new_nanos = np.array(sorted(rec.nanos2frame))
+    assert len(new_nanos) < len(sparse)
+    assert all(c == MODERATE for c in rec.environmental_conditions.values())
+    # the conditions are kept on the new timestamps nearest to the sparse ones ...
+    assert set(rec.environmental_conditions) == {int(new_nanos[np.abs(new_nanos - n).argmin()]) for n in sparse}
+    # ... and the half without conditions stays without
+    assert max(rec.environmental_conditions) <= sparse[-1] + 1e9 / hz / 2
 
 
 def test_interpolate_keeps_traffic_light_states():
@@ -231,7 +299,8 @@ def test_environmental_conditions_df():
     assert first["wind_speed"] is None
     assert last["precipitation"] == Precipitation.HEAVY.value
     assert last["temperature"] is None
-    assert last["wind_speed"] == 0.0
+    # 0 is not distinguishable from unset, also within a set sub-message
+    assert last["wind_speed"] is None
     assert last["wind_origin_direction"] == pytest.approx(1.5)
     assert last["sun_azimuth"] is None
 
