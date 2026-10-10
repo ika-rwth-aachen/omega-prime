@@ -38,6 +38,22 @@ def set_time_varying(rec: omega_prime.Recording) -> list[int]:
     return nanos
 
 
+class ExplicitInitRecording(omega_prime.Recording):
+    "Subclass with an `__init__` that does not know the argument `environmental_conditions`."
+
+    def __init__(
+        self, df, map=None, projections=None, host_vehicle_idx=None, validate=False, traffic_light_states=None
+    ):
+        super().__init__(
+            df,
+            map=map,
+            projections=projections,
+            host_vehicle_idx=host_vehicle_idx,
+            validate=validate,
+            traffic_light_states=traffic_light_states,
+        )
+
+
 def test_mcap_roundtrip_constant(tmp_path):
     rec = load()
     rec.set_environmental_conditions(MODERATE)
@@ -107,6 +123,20 @@ def test_parquet_without_conditions(tmp_path):
     rec.to_parquet(tmp_path / "absent.parquet")
     assert b"environmental_conditions_json" not in pq.read_schema(tmp_path / "absent.parquet").metadata
     assert omega_prime.Recording.from_file(tmp_path / "absent.parquet", validate=False).environmental_conditions == {}
+
+
+@pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
+def test_subclass_without_environmental_conditions_argument(tmp_path, suffix):
+    rec = load()
+    set_time_varying(rec)
+    rec.to_file(tmp_path / f"conditions{suffix}")
+
+    reloaded = ExplicitInitRecording.from_file(tmp_path / f"conditions{suffix}", validate=False)
+    assert isinstance(reloaded, ExplicitInitRecording)
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+
+    reloaded.interpolate(hz=10)
+    assert set(reloaded.environmental_conditions) == set(reloaded.nanos2frame)
 
 
 def test_interpolate_keeps_environmental_conditions():
