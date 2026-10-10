@@ -8,18 +8,18 @@ from lxd_io import Dataset
 import polars as pl
 from warnings import warn
 
-vct = betterosi.MovingObjectVehicleClassificationType
+vct = betterosi.MovingObject.VehicleClassification.Type
 vehicles = {
-    "Car": vct.TYPE_CAR,
-    "car": vct.TYPE_CAR,
-    "Truck": vct.TYPE_HEAVY_TRUCK,
-    "truck_bus": vct.TYPE_BUS,
-    "truck": vct.TYPE_HEAVY_TRUCK,
-    "bicycle": vct.TYPE_BICYCLE,
-    "van": vct.TYPE_DELIVERY_VAN,
-    "ad_shuttle": vct.TYPE_OTHER,
+    "Car": vct.CAR,
+    "car": vct.CAR,
+    "Truck": vct.HEAVY_TRUCK,
+    "truck_bus": vct.BUS,
+    "truck": vct.HEAVY_TRUCK,
+    "bicycle": vct.BICYCLE,
+    "van": vct.DELIVERY_VAN,
+    "ad_shuttle": vct.OTHER,
 }
-pedestrians = {"pedestrian": betterosi.MovingObjectType.TYPE_PEDESTRIAN}
+pedestrians = {"pedestrian": betterosi.MovingObject.Type.PEDESTRIAN}
 
 
 class LxdConverter(DatasetConverter):
@@ -45,9 +45,7 @@ class LxdConverter(DatasetConverter):
             .map_elements(
                 (
                     lambda x: (
-                        betterosi.MovingObjectType.TYPE_VEHICLE
-                        if x in vehicles
-                        else betterosi.MovingObjectType.TYPE_PEDESTRIAN
+                        betterosi.MovingObject.Type.VEHICLE if x in vehicles else betterosi.MovingObject.Type.PEDESTRIAN
                     )
                 ),
                 return_dtype=int,
@@ -55,7 +53,7 @@ class LxdConverter(DatasetConverter):
             .alias("type"),
             pl.col("class")
             .map_elements(
-                (lambda x: betterosi.MovingObjectVehicleClassificationRole.ROLE_CIVIL if x in vehicles else -1),
+                (lambda x: betterosi.MovingObject.VehicleClassification.Role.CIVIL if x in vehicles else -1),
                 return_dtype=int,
             )
             .alias("role"),
@@ -103,9 +101,9 @@ class LxdConverter(DatasetConverter):
                 pl.col("height").alias("width"),
             )
 
-        is_vehicle = pl.col("type") == betterosi.MovingObjectType.TYPE_VEHICLE
-        is_bicycle = pl.col("subtype") == betterosi.MovingObjectVehicleClassificationType.TYPE_BICYCLE
-        is_pedestrian = pl.col("type") == betterosi.MovingObjectType.TYPE_PEDESTRIAN
+        is_vehicle = pl.col("type") == betterosi.MovingObject.Type.VEHICLE
+        is_bicycle = pl.col("subtype") == betterosi.MovingObject.VehicleClassificationType.BICYCLE
+        is_pedestrian = pl.col("type") == betterosi.MovingObject.Type.PEDESTRIAN
         tracks = tracks.with_columns(
             [pl.lit(0.0).alias(k) for k in ["acc_z", "z", "vel_z", "roll", "pitch"]]
             + [

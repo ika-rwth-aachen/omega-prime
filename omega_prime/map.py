@@ -92,7 +92,7 @@ class LaneBoundaryOsi(LaneBoundary):
         return cls(
             idx=lane_boundary.id.value,
             polyline=shapely.LineString([(p.position.x, p.position.y) for p in lane_boundary.boundary_line]),
-            type=betterosi.LaneBoundaryClassificationType(lane_boundary.classification.type),
+            type=betterosi.LaneBoundary.Classification.Type(lane_boundary.classification.type),
             _osi=lane_boundary,
         )
 
@@ -105,8 +105,8 @@ class LaneBase:
     _map: "Map" = field(init=False)
     idx: Any
     centerline: shapely.LineString
-    type: betterosi.LaneClassificationType
-    subtype: betterosi.LaneClassificationSubtype
+    type: betterosi.Lane.Classification.Type
+    subtype: betterosi.Lane.Classification.Subtype
     successor_ids: list[Any]
     predecessor_ids: list[Any]
     trafficlight: Any = field(init=False, default=None)
@@ -114,14 +114,14 @@ class LaneBase:
 
     @property
     def on_intersection(self):
-        return self.type == betterosi.LaneClassificationType.TYPE_INTERSECTION
+        return self.type == betterosi.Lane.Classification.Type.INTERSECTION
 
     @on_intersection.setter
     def on_intersection(self, value: bool):
         if value:
-            self.type = betterosi.LaneClassificationType.TYPE_INTERSECTION
+            self.type = betterosi.Lane.Classification.Type.INTERSECTION
         else:
-            self.type = betterosi.LaneClassificationType.DRIVING  # TODO: choose a better default?
+            self.type = betterosi.Lane.Classification.Type.DRIVING  # TODO: choose a better default?
 
     def plot(self, ax: plt.Axes | None = None):
         if ax is None:
@@ -207,8 +207,8 @@ class LaneOsiCenterline(LaneBase):
             _osi=lane,
             idx=OsiLaneId(road_id=lid, lane_id=lid),
             centerline=cls._get_centerline(lane),
-            type=betterosi.LaneClassificationType(lane.classification.type),
-            subtype=betterosi.LaneClassificationSubtype(lane.classification.subtype),
+            type=betterosi.Lane.Classification.Type(lane.classification.type),
+            subtype=betterosi.Lane.Classification.Subtype(lane.classification.subtype),
             successor_ids=np.array(list(set(successor_ids))),
             predecessor_ids=np.array(list(set(predecessor_ids))),
         )
@@ -227,8 +227,8 @@ class LaneOsi(Lane, LaneOsiCenterline):
             _osi=lane,
             idx=OsiLaneId(road_id=lid, lane_id=lid),
             centerline=cls._get_centerline(lane),
-            type=betterosi.LaneClassificationType(lane.classification.type),
-            subtype=betterosi.LaneClassificationSubtype(lane.classification.subtype),
+            type=betterosi.Lane.Classification.Type(lane.classification.type),
+            subtype=betterosi.Lane.Classification.Subtype(lane.classification.subtype),
             successor_ids=[
                 p.successor_lane_id.value for p in lane.classification.lane_pairing if p.successor_lane_id is not None
             ],
@@ -284,7 +284,7 @@ class Map:
     @classmethod
     def from_file(cls, filepath, parse_map=True, **kwargs):
         "Create a Map instance from a file."
-        first_gt = next(betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True))
+        first_gt = next(betterosi.read(filepath, return_ground_truth=True))
         return cls.create(first_gt, **kwargs)
 
     def plot_altair(self, recording=None, plot_polys=True):
@@ -393,7 +393,7 @@ class Map:
                     logging.warning(f"Warning: Skipping lane {lane.idx} due to insufficient centerline points")
                     continue
 
-            centerline = [betterosi.Vector3D(x=float(x), y=float(y), z=0.0) for x, y in centerline_coords]
+            centerline = [betterosi.Vector3d(x=float(x), y=float(y), z=0.0) for x, y in centerline_coords]
 
             assert len(centerline_coords) > 1
             # Create lane pairing for successor/predecessor relationships
@@ -414,7 +414,7 @@ class Map:
                 for pred_id in predecessors:
                     for succ_id in successors:
                         lane_pairings.append(
-                            betterosi.LaneClassificationLanePairing(
+                            betterosi.Lane.Classification.LanePairing(
                                 antecessor_lane_id=betterosi.Identifier(value=lane_id_mapping[pred_id])
                                 if pred_id is not None
                                 else None,
@@ -427,7 +427,7 @@ class Map:
             # Create the OSI lane
             osi_lane = betterosi.Lane(
                 id=betterosi.Identifier(value=lane_id_mapping[lane.idx]),
-                classification=betterosi.LaneClassification(
+                classification=betterosi.Lane.Classification(
                     centerline=centerline,
                     centerline_is_driving_direction=True,
                     type=lane.type,

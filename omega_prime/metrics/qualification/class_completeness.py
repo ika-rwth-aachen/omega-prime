@@ -21,19 +21,19 @@ ROLE_COMPLETENESS = "vehicle_role_completeness"
 def class_completeness(
     df: pl.LazyFrame,
     /,
-    expected_types: Sequence[betterosi.MovingObjectType],
-    expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] = tuple(),
-    expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] = tuple(),
+    expected_types: Sequence[betterosi.MovingObject.Type],
+    expected_subtypes: Sequence[betterosi.MovingObject.VehicleClassification.Type] = tuple(),
+    expected_roles: Sequence[betterosi.MovingObject.VehicleClassification.Role] = tuple(),
 ) -> MRT:
     type_completeness_score = type_completeness(df, expected_types)
 
     subtype_completeness_score = 100.0
-    subtype_completeness_is_applicable = betterosi.MovingObjectType.TYPE_VEHICLE in expected_types
+    subtype_completeness_is_applicable = betterosi.MovingObject.Type.VEHICLE in expected_types
     if subtype_completeness_is_applicable:
         subtype_completeness_score = subtype_completeness(df, expected_subtypes)
 
     role_completeness_score = 100.0
-    role_completeness_is_applicable = betterosi.MovingObjectType.TYPE_VEHICLE in expected_types
+    role_completeness_is_applicable = betterosi.MovingObject.Type.VEHICLE in expected_types
     if role_completeness_is_applicable:
         role_completeness_score = role_completeness(df, expected_roles)
 
@@ -59,7 +59,7 @@ def class_completeness(
 
 def type_completeness(
     df: pl.LazyFrame,
-    expected_types: Sequence[betterosi.MovingObjectType],
+    expected_types: Sequence[betterosi.MovingObject.Type],
 ) -> float:
     if not expected_types:
         raise ValueError("expected_types must be provided")
@@ -69,7 +69,7 @@ def type_completeness(
 
 def subtype_completeness(
     df: pl.LazyFrame,
-    expected_subtypes: Sequence[betterosi.MovingObjectVehicleClassificationType] = tuple(),
+    expected_subtypes: Sequence[betterosi.MovingObject.VehicleClassification.Type] = tuple(),
 ) -> float:
     if not expected_subtypes:
         return 100.0
@@ -78,7 +78,7 @@ def subtype_completeness(
 
 def role_completeness(
     df: pl.LazyFrame,
-    expected_roles: Sequence[betterosi.MovingObjectVehicleClassificationRole] = tuple(),
+    expected_roles: Sequence[betterosi.MovingObject.VehicleClassification.Role] = tuple(),
 ) -> float:
     if not expected_roles:
         return 100.0
@@ -89,9 +89,9 @@ def _completeness_for_column(
     df: pl.LazyFrame,
     column: str,
     expected_values: Sequence[
-        betterosi.MovingObjectType
-        | betterosi.MovingObjectVehicleClassificationType
-        | betterosi.MovingObjectVehicleClassificationRole
+        betterosi.MovingObject.Type
+        | betterosi.MovingObject.VehicleClassification.Type
+        | betterosi.MovingObject.VehicleClassification.Role
     ],
     expected_label: str,
 ) -> float:
@@ -109,9 +109,9 @@ def _completeness_for_column(
 
 def _normalize_expected(
     values: Sequence[
-        betterosi.MovingObjectType
-        | betterosi.MovingObjectVehicleClassificationType
-        | betterosi.MovingObjectVehicleClassificationRole
+        betterosi.MovingObject.Type
+        | betterosi.MovingObject.VehicleClassification.Type
+        | betterosi.MovingObject.VehicleClassification.Role
     ],
 ) -> set[int]:
     expected: set[int] = set()
