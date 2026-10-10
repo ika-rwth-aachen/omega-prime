@@ -1,3 +1,8 @@
+# 0.3.8
+
+- `Recording` reads, stores and writes the OSI `EnvironmentalConditions` of a recording (MCAP and Parquet), see `Recording.environmental_conditions`, `Recording.set_environmental_conditions` and `Recording.environmental_conditions_df`.
+- `Recording.interpolate` returns the recording and keeps traffic light states, environmental conditions and projections.
+
 # 0.3.7
 
 - Cap `polars<2`: polars-st is not yet compatible with polars 2 (metaclass conflict on import).

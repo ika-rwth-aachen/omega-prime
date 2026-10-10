@@ -619,14 +619,16 @@ class Recording:
                     )
 
         df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
-        return cls(
+        rec = cls(
             df_mv,
             projections=projs,
             host_vehicle_idx=host_vehicle_idx,
             traffic_light_states=traffic_light_states,
-            environmental_conditions=environmental_conditions,
             **kwargs,
         )
+        # set after construction, so that subclasses do not have to accept the argument in their `__init__`
+        rec.environmental_conditions = environmental_conditions
+        return rec
 
     def to_mcap(self, filepath):
         "Store Recording as an MCAP file."
@@ -680,14 +682,16 @@ class Recording:
                         if map is not None:
                             break
 
-        return cls(
+        rec = cls(
             df,
             map=map,
             host_vehicle_idx=host_vehicle_idx,
             projections=projections,
-            environmental_conditions=environmental_conditions,
             **kwargs,
         )
+        # set after construction, so that subclasses do not have to accept the argument in their `__init__`
+        rec.environmental_conditions = environmental_conditions
+        return rec
 
     def to_parquet(self, filename):
         "Store Recording as a Parquet file."
@@ -997,14 +1001,16 @@ class Recording:
 
         projections = {k: v for k, v in self.projections.items() if k in ("proj_string", None)}
         projections.update(rekey(self.projections))
+        environmental_conditions = rekey(self.environmental_conditions)
         self.__init__(
             df=new_df,
             map=self.map,
             projections=projections,
             host_vehicle_idx=self.host_vehicle_idx,
             traffic_light_states=rekey(self.traffic_light_states),
-            environmental_conditions=rekey(self.environmental_conditions),
         )
+        # set after construction, so that subclasses do not have to accept the argument in their `__init__`
+        self.environmental_conditions = environmental_conditions
         return self
 
     def _create_legend(self, ax):
