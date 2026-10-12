@@ -237,7 +237,7 @@ class Recording:
                 id=betterosi.Identifier(value=row["idx"]),
                 type=betterosi.MovingObjectType(row["type"]),
                 base=betterosi.BaseMoving(
-                    dimension=betterosi.Dimension3D(length=row["length"], width=row["width"], height=row["width"]),
+                    dimension=betterosi.Dimension3D(length=row["length"], width=row["width"], height=row["height"]),
                     position=betterosi.Vector3D(x=row["x"], y=row["y"], z=row["z"]),
                     orientation=betterosi.Orientation3D(roll=row["roll"], pitch=row["pitch"], yaw=row["yaw"]),
                     velocity=betterosi.Vector3D(x=row["vel_x"], y=row["vel_y"], z=row["vel_z"]),
