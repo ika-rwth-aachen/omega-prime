@@ -95,6 +95,7 @@ You can view omega-prime files in [Lichtblick](https://github.com/lichtblick-sui
 
 Lichtblick does not apply the projection metadata embedded in OSI GroundTruth. Create a separate file with the projected coordinates materialized before opening it:
 
+<!--pytest.mark.skip-->
 ```bash
 omega-prime materialize-projection input.mcap output.mcap --flatten-map
 ```
