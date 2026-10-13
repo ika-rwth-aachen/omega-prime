@@ -99,7 +99,7 @@ Lichtblick does not apply the projection metadata embedded in OSI GroundTruth. C
 omega-prime materialize-projection input.mcap output.mcap --flatten-map
 ```
 
-`--flatten-map` additionally removes OpenDRIVE elevation and banking. Omit it when object Z coordinates and the map use the same height reference. The equivalent Python API is `recording.to_mcap(output, materialize_projection=True)`.
+`--flatten-map` additionally removes OpenDRIVE elevation and banking. Omit it when object Z coordinates and the map use the same height reference.
 
 # Acknowledgements
 

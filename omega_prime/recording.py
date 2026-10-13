@@ -663,24 +663,22 @@ class Recording:
         elif filepath is not None:
             gts = betterosi.read(filepath, return_ground_truth=True, mcap_return_betterosi=True)
             r = cls.from_osi_gts(gts, validate=validate)
-        if map_path is None and r.map is not None:
-            return r
-
-        map_path = Path(map_path if map_path is not None else filepath)
-        map_parsing = {}
-        map = None
-        for MC in MAP_CLASSES:
-            if map_path.suffix in MC._supported_file_suffixes:
-                try:
-                    map = MC.from_file(map_path, parse_map=parse_map, **kwargs)
-                except Exception as e:
-                    map_parsing[MC.__name__] = str(e)
-                else:
-                    break
-        if map is not None:
-            r.map = map
-        elif r.map is None:
-            warn(f"No map could be found: {map_parsing}")
+        if map_path is not None or r.map is None:
+            map_path = Path(map_path if map_path is not None else filepath)
+            map_parsing = {}
+            map = None
+            for MC in MAP_CLASSES:
+                if map_path.suffix in MC._supported_file_suffixes:
+                    try:
+                        map = MC.from_file(map_path, parse_map=parse_map, **kwargs)
+                    except Exception as e:
+                        map_parsing[MC.__name__] = str(e)
+                    else:
+                        break
+            if map is not None:
+                r.map = map
+            elif r.map is None:
+                warn(f"No map could be found: {map_parsing}")
 
         if r.projections and apply_proj:
             try:

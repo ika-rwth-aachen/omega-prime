@@ -2,8 +2,10 @@ import betterosi
 import polars as pl
 import pytest
 from lxml import etree
+from typer.testing import CliRunner
 
 from omega_prime import MapOdr, Recording
+from omega_prime.cli import app
 from omega_prime.map import ProjectionOffset
 
 
@@ -93,6 +95,35 @@ def test_materialized_parquet_is_idempotent_when_loaded(tmp_path):
     assert reloaded.df["x"].item() == pytest.approx(12.0)
     assert reloaded.df["y"].item() == pytest.approx(34.0)
     assert reloaded.df["z"].item() == pytest.approx(1.5)
+
+
+@pytest.mark.parametrize("apply_proj", [True, False])
+def test_parquet_with_embedded_map_respects_apply_proj(tmp_path, apply_proj):
+    source = tmp_path / "input.parquet"
+    make_recording().to_parquet(source)
+    expected = Recording.from_parquet(source)
+    if apply_proj:
+        expected.apply_projections()
+
+    reloaded = Recording.from_file(source, apply_proj=apply_proj)
+
+    assert reloaded.df.select("x", "y", "z").equals(expected.df.select("x", "y", "z"))
+    assert ("x_original" in reloaded.df.columns) == apply_proj
+
+
+@pytest.mark.parametrize("suffix", [".parquet", ".mcap"])
+def test_materialize_projection_cli_with_embedded_parquet_map(tmp_path, suffix):
+    source = tmp_path / "input.parquet"
+    output = tmp_path / f"output{suffix}"
+    make_recording().to_parquet(source)
+    expected = Recording.from_parquet(source).apply_projections()
+
+    result = CliRunner().invoke(app, ["materialize-projection", str(source), str(output), "--flatten-map"])
+
+    assert result.exit_code == 0, result.exception
+    reloaded = Recording.from_file(output)
+    for coordinate in ("x", "y", "z"):
+        assert reloaded.df[coordinate].item() == pytest.approx(expected.df[coordinate].item())
 
 
 def test_materialization_requires_an_applied_projection():
