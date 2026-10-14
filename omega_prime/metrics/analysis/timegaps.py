@@ -11,14 +11,33 @@ from ..metric import MRT, metric
 )
 def timegaps_and_min_timegaps(df: pl.LazyFrame, /, ego_id, time_buffer=2e9) -> MRT:
     """Metrics that computes timegaps between `ego_id` and all other objects. `time_buffer` gives the timespan in which intersection of trajectories is tested"""
-    ego_df = df.filter(idx=ego_id)
+    # Only the pairs of an object row and an ego row within `time_buffer` of each other, found by a range join: a
+    # cross join of every row with every ego row does not fit into memory for a long ego track. The bounds are
+    # compared in the type `total_nanos_ego - time_buffer <= total_nanos` compares them (floats for a float buffer),
+    # and the rows are put back into the order of the cross join (object row, then ego row), which decides between
+    # equal timegaps below.
+    nanos = pl.col("total_nanos") if isinstance(time_buffer, int) else pl.col("total_nanos").cast(pl.Float64)
+    rows = (
+        df.select("idx", "total_nanos", "geometry", "distance_traveled", "vel")
+        .with_row_index("_row")
+        .with_columns(_nanos=nanos)
+    )
+    ego_rows = rows.filter(idx=ego_id).select(
+        pl.all().exclude("_nanos"),
+        _lower=pl.col("_nanos") - time_buffer,
+        _upper=pl.col("_nanos") + time_buffer,
+    )
 
-    crossed = df.join(ego_df, how="cross", suffix="_ego")
-
-    crossed = crossed.filter(
-        (pl.col("total_nanos_ego") - time_buffer) <= pl.col("total_nanos"),
-        (pl.col("total_nanos_ego") + time_buffer) >= pl.col("total_nanos"),
-        pl.col("idx_ego") != pl.col("idx"),
+    crossed = (
+        rows.join_where(
+            ego_rows,
+            pl.col("_nanos") >= pl.col("_lower"),
+            pl.col("_nanos") <= pl.col("_upper"),
+            suffix="_ego",
+        )
+        .filter(pl.col("idx_ego") != pl.col("idx"))
+        .sort("_row", "_row_ego")
+        .drop("_row", "_row_ego", "_nanos", "_lower", "_upper")
     )
 
     all_timegaps = (
