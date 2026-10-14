@@ -790,7 +790,9 @@ class Recording:
             for MC in MAP_CLASSES:
                 if map_path.suffix in MC._supported_file_suffixes:
                     try:
-                        map = MC.from_file(map_path, parse_map=parse_map, **kwargs)
+                        # the sampling distance only exists for ASAM OpenDRIVE; the OSI maps take no step_size
+                        step = {"step_size": step_size} if MC is MapOdr else {}
+                        map = MC.from_file(map_path, parse_map=parse_map, **step, **kwargs)
                     except Exception as e:
                         map_parsing[MC.__name__] = str(e)
                     else:
