@@ -63,9 +63,17 @@ class ShapelyTrajectoryTools:
 
     @classmethod
     def get_line_point_distances(cls, l: shapely.LineString):
-        with np.errstate(invalid="ignore"):
-            dists = shapely.line_locate_point(l, shapely.points(l.coords))
-            return dists[~np.isnan(dists)]
+        """
+        Distance along `l` of each of its vertices: the summed length of the segments before it.
+
+        Projecting the vertices onto the line (`line_locate_point`) gives the same for a line that does not run
+        back over itself, but takes time quadratic in the number of vertices - hours for a lane of a long road.
+        Only the smallest distance is used (`needs_angle_adjustment()`), and that is 0 either way.
+        """
+        coords = shapely.get_coordinates(l)
+        if len(coords) == 0:
+            return np.zeros(0)
+        return np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(coords, axis=0).T))])
 
     @classmethod
     def st2xy(cls, l: shapely.LineString, s, t, return_heading_of_ref_at_st=False):
@@ -87,11 +95,13 @@ class ShapelyTrajectoryTools:
 
     @classmethod
     def needs_angle_adjustment(cls, lane_point_distance, lon_distances):
-        lpd = lane_point_distance[:, np.newaxis]
-        ub = lpd + cls.epsi
-        lb = lpd - cls.epsi
-        in_corner_area = np.logical_and(ub <= lon_distances, lb <= lon_distances)
-        return np.any(in_corner_area, axis=0)
+        # The condition holds for some vertex exactly if it holds for the one with the smallest distance, so that
+        # one decides - the same result as the full vertex x point matrix, which does not fit into memory for a
+        # long lane. As written, it holds for nearly every point beyond the start of the line.
+        if len(lane_point_distance) == 0:
+            return np.zeros(np.shape(lon_distances), dtype=bool)
+        lpd = np.min(lane_point_distance)
+        return np.logical_and(lpd + cls.epsi <= lon_distances, lpd - cls.epsi <= lon_distances)
 
     @classmethod
     def xy2st(cls, l: shapely.LineString, x_or_xy, y=None, line_point_distances=None):
@@ -231,11 +241,9 @@ class Locator:
             self.str_tree = shapely.STRtree([l.polygon for l in self.all_lanes])
         else:
             self.str_tree = shapely.STRtree([l.centerline for l in self.all_lanes])
-        with np.errstate(invalid="ignore"):
-            self.lane_point_distances = []
-            for cl in self.extended_centerlines:
-                dists = shapely.line_locate_point(cl, shapely.points(cl.coords))
-                self.lane_point_distances.append(np.unique(dists[~np.isnan(dists)]))
+        self.lane_point_distances = [
+            np.unique(ShapelyTrajectoryTools.get_line_point_distances(cl)) for cl in self.extended_centerlines
+        ]
 
         self.g = self._get_routing_graph()
 
@@ -303,7 +311,7 @@ class Locator:
             polygons = xys
         lon_distances = defaultdict(lambda: np.nan * np.ones((len(xys),)))
         lat_distances = defaultdict(lambda: np.nan * np.ones((len(xys),)))
-        point_idxs, intersection_lane_ids = self.str_tree.query(polygons, predicate="intersects")
+        point_idxs, intersection_lane_ids = self._query_intersecting_lanes(polygons)
         for l_id in set(intersection_lane_ids):
             lps = point_idxs[intersection_lane_ids == l_id]
             (
@@ -343,6 +351,25 @@ class Locator:
 
         assert len(no_asscociation_new) == 0
         return lat_distances, lon_distances
+
+    def _query_intersecting_lanes(self, geoms):
+        """
+        The pairs (index into `geoms`, lane index) of intersecting geometries, as
+        `str_tree.query(geoms, predicate="intersects")` returns them.
+
+        The tree only narrows down by bounding box here. The predicate is evaluated on the prepared lane
+        geometry: the tree would test the unprepared one, at a cost that grows with the number of vertices of
+        the lane, for every geometry.
+        """
+        geoms = np.asarray(geoms)
+        geom_idxs, lane_idxs = self.str_tree.query(geoms)
+        hit = np.zeros(len(geom_idxs), dtype=bool)
+        for lane_idx in np.unique(lane_idxs):
+            candidates = np.flatnonzero(lane_idxs == lane_idx)
+            lane_geom = self.str_tree.geometries[lane_idx]
+            shapely.prepare(lane_geom)
+            hit[candidates] = shapely.intersects(lane_geom, geoms[geom_idxs[candidates]])
+        return geom_idxs[hit], lane_idxs[hit]
 
     def locate_mv(self, mv, use_polygon: bool = False):
         mv.polygon
