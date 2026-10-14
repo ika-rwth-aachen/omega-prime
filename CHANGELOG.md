@@ -7,7 +7,8 @@ timestamp `p_timegaps.total_nanos` depends on row order, as it did before).
 - `Locator`: building it and locating points take time linear in the vertices of a lane, not quadratic. The vertex
   distances come from the segment lengths, `needs_angle_adjustment` from the first vertex (it decides the result for
   all of them), and lanes are tested as prepared geometries after a bounding-box query of the tree.
-- `timegaps`: the time window is a range join instead of a cross join of every row with every ego row.
+- `timegaps`: only the columns it uses go into the cross join with the time window (which polars runs as a
+  range join); it carried every column of both sides before. The expression is unchanged, so are the results.
 - `p_timegaps`: new parameter `overlap_horizon` [ns]. With it only overlaps within the horizon of the ego timestamp
   are used, computed block by block; without it (default) every overlap of the pair is used, as before.
 - `Recording.from_file(step_size=...)` also reaches an ASAM OpenDRIVE map embedded in an MCAP file.

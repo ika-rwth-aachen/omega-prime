@@ -28,7 +28,7 @@ def test_it(cut_in: Recording) -> None:
 
 
 def _timegaps_by_cross_join(df, ego_id, time_buffer):
-    "the cross join `timegaps_and_min_timegaps` used to do: every row with every ego row, then the time window"
+    "what `timegaps_and_min_timegaps` used to do: the cross join of all columns, then the time window"
     crossed = df.join(df.filter(idx=ego_id), how="cross", suffix="_ego").filter(
         (pl.col("total_nanos_ego") - time_buffer) <= pl.col("total_nanos"),
         (pl.col("total_nanos_ego") + time_buffer) >= pl.col("total_nanos"),
@@ -51,7 +51,7 @@ def _timegaps_by_cross_join(df, ego_id, time_buffer):
 
 
 @pytest.mark.parametrize("time_buffer", [2e9, 10e9, 1_000_000_000])
-def test_range_join_gives_the_cross_join_result(cut_in: Recording, time_buffer) -> None:
+def test_projected_columns_give_the_full_result(cut_in: Recording, time_buffer) -> None:
     with_distance, _ = distance_traveled(cut_in.df)
     _, dct = timegaps_and_min_timegaps(with_distance, ego_id=0, time_buffer=time_buffer)
     expected = _timegaps_by_cross_join(with_distance, 0, time_buffer).collect()
