@@ -135,6 +135,9 @@ def test_parquet_without_conditions(tmp_path):
             {"version": 2, "runs": [{"start": 0, "end": 1, "conditions": {"precipitation": "NOT_A_PRECIPITATION"}}]}
         ).encode(),
         json.dumps({"version": 2, "runs": [{"conditions": {}}]}).encode(),
+        # readable, but of an unknown version of the encoding
+        json.dumps({"version": 2, "runs": [{"start": 0, "end": 1, "conditions": {}}]}).encode(),
+        json.dumps({"runs": []}).encode(),
     ],
 )
 def test_parquet_with_unreadable_conditions(tmp_path, payload):
@@ -186,6 +189,52 @@ def test_subclass_without_environmental_conditions_argument(tmp_path, suffix):
 
     reloaded.interpolate(hz=10)
     assert set(reloaded.environmental_conditions) == set(reloaded.nanos2frame)
+
+
+@pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
+def test_explicit_environmental_conditions_take_precedence(tmp_path, suffix):
+    rec = load()
+    set_time_varying(rec)
+    rec.to_file(tmp_path / f"conditions{suffix}")
+
+    explicit = {min(rec.nanos2frame): EC(precipitation=Precipitation.LIGHT)}
+    if suffix == ".mcap":
+        gts = betterosi.read(tmp_path / "conditions.mcap", return_ground_truth=True, mcap_return_betterosi=True)
+        reloaded = omega_prime.Recording.from_osi_gts(gts, environmental_conditions=explicit)
+    else:
+        reloaded = omega_prime.Recording.from_parquet(
+            tmp_path / "conditions.parquet", environmental_conditions=explicit
+        )
+    assert reloaded.environmental_conditions == explicit
+
+
+class OldInitRecording(omega_prime.Recording):
+    "Subclass with the arguments the old `interpolate()` passed to `__init__`."
+
+    def __init__(self, df, map=None, host_vehicle_idx=None):
+        super().__init__(df, map=map, host_vehicle_idx=host_vehicle_idx, validate=False)
+
+
+def test_interpolate_subclass_with_old_init():
+    rec = load()
+    sub = OldInitRecording(rec.df.drop("polygon"), map=rec.map, host_vehicle_idx=rec.host_vehicle_idx)
+    set_time_varying(sub)
+
+    assert sub.interpolate(hz=10) is sub
+    assert set(sub.environmental_conditions) == set(sub.nanos2frame)
+
+
+def test_interpolate_without_overlapping_timestamps():
+    rec = load()
+    nanos = sorted(rec.nanos2frame)
+    rec.set_environmental_conditions(MODERATE)
+    rec.traffic_light_states = {n: [] for n in nanos}
+
+    rec.interpolate(new_nanos=[nanos[-1] + 10**9])
+
+    assert rec.df.height == 0
+    assert rec.environmental_conditions == {}
+    assert rec.traffic_light_states == {}
 
 
 def test_interpolate_keeps_environmental_conditions():
@@ -250,23 +299,40 @@ def test_interpolate_keeps_traffic_light_states():
     assert rec.traffic_light_states[new_nanos[0]] == red
     assert rec.traffic_light_states[new_nanos[-1]] == green
 
+    # upsampled timestamps do not share the states
+    rec.interpolate(hz=60)
+    new_nanos = sorted(rec.nanos2frame)
+    rec.traffic_light_states[new_nanos[0]][0].classification.color = betterosi.TrafficLightClassificationColor.YELLOW
+    colors = [rec.traffic_light_states[n][0].classification.color for n in new_nanos[:2]]
+    assert colors == [betterosi.TrafficLightClassificationColor.YELLOW, betterosi.TrafficLightClassificationColor.RED]
 
-def test_interpolate_keeps_projections(tmp_path):
+
+@pytest.mark.parametrize("hz", [10, 60])
+@pytest.mark.parametrize("varying", [False, True], ids=["constant_offset", "varying_offset"])
+def test_interpolate_keeps_projections(tmp_path, varying, hz):
     rec = load(1, apply_proj=False)
     proj_string = rec.projections["proj_string"]
     assert proj_string is not None
     # the projection of the example file is an identity, use an offset to make the projection matter
     offset = ProjectionOffset(x=100.0, y=50.0, z=2.0, yaw=0.1)
-    rec.projections = {"proj_string": proj_string, **{n: offset for n in rec.nanos2frame}}
+    nanos = sorted(rec.nanos2frame)
+    if varying:
+        # an offset that moves with every timestamp, like the pose of the ego in an ego-local recording
+        offsets = {
+            n: ProjectionOffset(x=100.0 + 5.0 * i, y=50.0, z=2.0, yaw=0.1 + 0.01 * i) for i, n in enumerate(nanos)
+        }
+    else:
+        offsets = {n: offset for n in nanos}
+    rec.projections = {"proj_string": proj_string, **offsets}
     rec.apply_projections()
     assert not np.allclose(rec.df["x"], rec.df["x_original"])
 
-    rec.interpolate(hz=10)
+    rec.interpolate(hz=hz)
 
     new_nanos = set(rec.nanos2frame)
     assert rec.projections["proj_string"] == proj_string
     assert {k for k in rec.projections if k not in ("proj_string", None)} == new_nanos
-    assert all(rec.projections[n] == offset for n in new_nanos)
+    assert all(rec.projections[n] in offsets.values() for n in new_nanos)
     assert "x_original" in rec.df.columns
 
     # the stored pose must stay in the source frame, so that it is not projected twice on reload
@@ -299,8 +365,8 @@ def test_environmental_conditions_df():
     assert first["wind_speed"] is None
     assert last["precipitation"] == Precipitation.HEAVY.value
     assert last["temperature"] is None
-    # 0 is not distinguishable from unset, also within a set sub-message
-    assert last["wind_speed"] is None
+    # within a set sub-message 0 is a value
+    assert last["wind_speed"] == 0.0
     assert last["wind_origin_direction"] == pytest.approx(1.5)
     assert last["sun_azimuth"] is None
 
