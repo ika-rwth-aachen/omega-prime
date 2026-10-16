@@ -171,6 +171,7 @@ Unless stated otherwise, the fields listed in the following table are mandatory 
 Detailed info about the signal content are found in the [ASAM OSI documentation](https://opensimulationinterface.github.io/osi-antora-generator/asamosi/latest/gen/structosi3_1_1GroundTruth.html).
 Additional fields, e.g. as defined in the Open Simulation Interface, are optional.
 To represent a corresponding sequence of weather observations the OSI message `environmental_conditions` (contained in OSI GroundTruth) can be filled.
+A measured precipitation, for which OSI has no field, can be given as entry of `environmental_conditions.source_reference`: the `type` is `omega_prime.precipitation_intensity_mm_per_h` (intensity in mm/h) or `omega_prime.precipitation_amount_mm` (amount in mm) and the first `identifier` holds the value as string.
 The column 'Minimal Accuracy' indicates the desired accuracy of the signal in relation to the real world.
 
 ##### Note on Field Presence in Protobuf
