@@ -1,6 +1,9 @@
-import polars as pl
-from omega_prime.metrics import curvilinear_projection
 import numpy as np
+import polars as pl
+import shapely
+
+from omega_prime.locator import ShapelyTrajectoryTools
+from omega_prime.metrics import curvilinear_projection
 
 
 def test_curvilinear_projection_synthetic():
@@ -82,3 +85,31 @@ def test_curvilinear_projection_all_invalid():
     assert np.all(np.isnan(obj_res["pos_lon"].to_numpy()))
     assert np.all(np.isnan(obj_res["curv_heading"].to_numpy()))
     assert np.all(np.isnan(obj_res["vel_lon"].to_numpy()))
+
+
+def test_extend_linestring_of_a_standing_ego():
+    # all positions coincide: the path has no length and no direction
+    line = shapely.LineString([(5.0, 3.0), (5.0, 3.0), (5.0, 3.0)])
+    with np.errstate(all="raise"):
+        extended = ShapelyTrajectoryTools.extend_linestring(line, l_append=100)
+    assert np.isclose(extended.length, 200.0)
+    # the position stays at s = l_append, the origin the callers subtract
+    assert np.isclose(extended.project(shapely.Point(5.0, 3.0)), 100.0)
+
+
+def test_curvilinear_projection_standing_ego():
+    df = pl.DataFrame(
+        {
+            "idx": [1, 1, 2, 2],
+            "total_nanos": [0, 10, 0, 10],
+            "x": [0.0, 0.0, 10.0, 20.0],
+            "y": [0.0, 0.0, 0.0, 0.0],
+            "yaw": [0.0, 0.0, 0.0, 0.0],
+            "vel": [0.0, 0.0, 5.0, 5.0],
+        }
+    )
+    with np.errstate(all="raise"):
+        df_out, _ = curvilinear_projection(df.lazy(), ego_id=1)
+        res = df_out.collect()
+    assert np.isfinite(res["pos_lon"].to_numpy()).all()
+    assert np.allclose(res.filter(pl.col("idx") == 1)["pos_lon"].to_numpy(), 100.0)

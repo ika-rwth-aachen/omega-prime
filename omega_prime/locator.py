@@ -40,6 +40,11 @@ class ShapelyTrajectoryTools:
         if l.is_empty:
             cl = np.array([0, 0])
             return shapely.LineString(np.stack([cl - np.array([0, 1]), cl, cl + np.array([0, 1])]))
+        if l.length == 0:
+            # all points coincide, e.g. the path of a vehicle that stands throughout: there is no direction to
+            # extend along, so extend along the y-axis, by l_append to keep the point at s = l_append
+            cl = np.asarray(l.coords)[0]
+            return shapely.LineString(np.stack([cl - np.array([0, l_append]), cl, cl + np.array([0, l_append])]))
         startvec = np.asarray(l.interpolate(0, normalized=True).coords) - np.asarray(
             l.interpolate(0 + cls.epsi, normalized=True).coords
         )
