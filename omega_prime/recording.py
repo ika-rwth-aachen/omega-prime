@@ -642,8 +642,10 @@ class Recording:
                     )
 
         df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
-        # explicitly given conditions take precedence over the ones of the ground truths
-        environmental_conditions = kwargs.pop("environmental_conditions", environmental_conditions)
+        # explicitly given conditions take precedence over the ones of the ground truths, None counts as not given
+        explicit_conditions = kwargs.pop("environmental_conditions", None)
+        if explicit_conditions is not None:
+            environmental_conditions = explicit_conditions
         rec = cls(
             df_mv,
             projections=projs,
@@ -710,8 +712,10 @@ class Recording:
                         if map is not None:
                             break
 
-        # explicitly given conditions take precedence over the ones of the file
-        environmental_conditions = kwargs.pop("environmental_conditions", environmental_conditions)
+        # explicitly given conditions take precedence over the ones of the file, None counts as not given
+        explicit_conditions = kwargs.pop("environmental_conditions", None)
+        if explicit_conditions is not None:
+            environmental_conditions = explicit_conditions
         rec = cls(
             df,
             map=map,
@@ -948,7 +952,9 @@ class Recording:
         Interpolate the recording to new timestamps or a given frequency.
         Traffic light states, environmental conditions and projection offsets are taken from the nearest original
         timestamp. If several original timestamps fall onto one new timestamp (downsampling), the nearest one that
-        carries the information is used.
+        carries the information is used. When the whole recording is resampled (`new_nanos` not given), this includes
+        the original timestamps after the last new one; explicitly given `new_nanos` crop the information to their range.
+        The original pose (before `apply_projections()`) is interpolated in the source coordinate reference system.
         """
         df = self._df
         # The original pose (before `apply_projections()`) is interpolated after applying the projection offsets, since
@@ -970,6 +976,7 @@ class Recording:
             frame_min=pl.col("frame").min(),
             frame_max=pl.col("frame").max(),
         ).row(0)
+        resample_all = new_nanos is None
         if new_nanos is None:
             if hz is None:
                 new_nanos = np.linspace(nanos_min, nanos_max, frame_max - frame_min, dtype=int)
@@ -1041,6 +1048,10 @@ class Recording:
         kept_nanos = new_df["total_nanos"].unique().sort().to_numpy()
         new2old = dict(zip(kept_nanos.tolist(), nearest(old_nanos, kept_nanos).tolist()))
         used_nanos = set(new2old.values())
+        # Original timestamps whose information may be moved to a new timestamp. When resampling the whole recording,
+        # these include the ones after the last new timestamp (partial last interval), otherwise the range is cropped.
+        if len(kept_nanos) > 0:
+            keep_min, keep_max = (nanos_min, nanos_max) if resample_all else (kept_nanos[0], kept_nanos[-1])
 
         def rekey(per_nanos: dict) -> dict:
             "Values that land on several new timestamps (upsampling) are copied, so that these do not share them."
@@ -1053,7 +1064,7 @@ class Recording:
                 [
                     k
                     for k in per_nanos
-                    if isinstance(k, int | np.integer) and k not in used_nanos and kept_nanos[0] <= k <= kept_nanos[-1]
+                    if isinstance(k, int | np.integer) and k not in used_nanos and keep_min <= k <= keep_max
                 ],
                 dtype=np.int64,
             )

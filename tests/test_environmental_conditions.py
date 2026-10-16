@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import betterosi
@@ -208,6 +209,23 @@ def test_explicit_environmental_conditions_take_precedence(tmp_path, suffix):
     assert reloaded.environmental_conditions == explicit
 
 
+@pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
+def test_explicit_none_environmental_conditions_count_as_not_given(tmp_path, suffix):
+    rec = load()
+    set_time_varying(rec)
+    rec.to_file(tmp_path / f"conditions{suffix}")
+
+    if suffix == ".mcap":
+        gts = betterosi.read(tmp_path / "conditions.mcap", return_ground_truth=True, mcap_return_betterosi=True)
+        reloaded = omega_prime.Recording.from_osi_gts(gts, environmental_conditions=None)
+    else:
+        reloaded = omega_prime.Recording.from_parquet(tmp_path / "conditions.parquet", environmental_conditions=None)
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+    assert reloaded.environmental_conditions_df.height == len(rec.nanos2frame)
+    reloaded.set_environmental_conditions(HEAVY)
+    reloaded.to_file(tmp_path / f"reexported{suffix}")
+
+
 class OldInitRecording(omega_prime.Recording):
     "Subclass with the arguments the old `interpolate()` passed to `__init__`."
 
@@ -276,6 +294,48 @@ def test_interpolate_keeps_sparse_environmental_conditions():
     assert max(rec.environmental_conditions) <= sparse[-1] + 1e9 / hz / 2
 
 
+def downsample_with_partial_last_interval(rec: omega_prime.Recording) -> tuple[list[int], float]:
+    "Sorted original timestamps and a frequency whose last new timestamp lies before the last original one."
+    nanos = sorted(rec.nanos2frame)
+    hz = 1e9 / (7 * (nanos[1] - nanos[0]))
+    last_new = np.arange(nanos[0], nanos[-1] + 1, 1e9 / hz, dtype=int)[-1]
+    assert nanos[-1] - last_new > 1e9 / hz / 4
+    return nanos, hz
+
+
+def test_interpolate_keeps_conditions_of_partial_last_interval():
+    rec = load(1)
+    nanos, hz = downsample_with_partial_last_interval(rec)
+    rec.set_environmental_conditions(HEAVY, nanos=[nanos[-1]])
+
+    rec.interpolate(hz=hz)
+
+    assert rec.environmental_conditions == {max(rec.nanos2frame): HEAVY}
+
+
+def test_interpolate_partial_last_interval_does_not_overwrite():
+    rec = load(1)
+    nanos, hz = downsample_with_partial_last_interval(rec)
+    last_new = np.arange(nanos[0], nanos[-1] + 1, 1e9 / hz, dtype=int)[-1]
+    # conditions on the original timestamp nearest to the last new one are not overwritten by the trailing ones
+    rec.set_environmental_conditions(MODERATE, nanos=[min(nanos, key=lambda n: abs(n - last_new))])
+    rec.set_environmental_conditions(HEAVY, nanos=[nanos[-1]])
+
+    rec.interpolate(hz=hz)
+
+    assert rec.environmental_conditions == {max(rec.nanos2frame): MODERATE}
+
+
+def test_interpolate_with_explicit_timestamps_crops_conditions():
+    rec = load(1)
+    nanos = sorted(rec.nanos2frame)
+    rec.set_environmental_conditions(HEAVY, nanos=[nanos[-1]])
+
+    rec.interpolate(new_nanos=nanos[: len(nanos) // 2 : 5])
+
+    assert rec.environmental_conditions == {}
+
+
 def test_interpolate_keeps_traffic_light_states():
     def traffic_light(color):
         return [
@@ -339,6 +399,50 @@ def test_interpolate_keeps_projections(tmp_path, varying, hz):
     rec.to_mcap(tmp_path / "interpolated.mcap")
     reloaded = omega_prime.Recording.from_file(tmp_path / "interpolated.mcap", validate=False)
     assert reloaded.projections["proj_string"] == proj_string
+    expected = rec.df.sort(["total_nanos", "idx"])
+    actual = reloaded.df.sort(["total_nanos", "idx"])
+    assert actual.height == expected.height
+    for c in ["x", "y", "z"]:
+        np.testing.assert_allclose(actual[c].to_numpy(), expected[c].to_numpy(), atol=1e-6)
+
+
+@pytest.mark.parametrize("hz", [10, 2])
+@pytest.mark.parametrize("varying", [False, True], ids=["constant_offset", "varying_offset"])
+def test_interpolate_keeps_projections_with_crs_transformation(tmp_path, varying, hz):
+    # The original pose is interpolated in the source CRS, the projected one in the map CRS. Since the transformation
+    # between both is not linear, these do not commute exactly, but the difference over one sampling step is far below
+    # any relevant scale.
+    source_proj_string = "+proj=tmerc +lat_0=37.35 +lon_0=-122.0 +k=0.9996 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs"
+    map_proj_string = "+proj=tmerc +lat_0=37.35 +lon_0=-122.5 +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs"
+    rec = load(1, apply_proj=False)
+    # `parse()` reads the projection of the map from its xodr on every `apply_projections()`
+    rec.map.odr_xml, n_replaced = re.subn(
+        r"<geoReference>.*?</geoReference>",
+        f"<geoReference><![CDATA[{map_proj_string}]]></geoReference>",
+        rec.map.odr_xml,
+        flags=re.S,
+    )
+    assert n_replaced == 1
+    nanos = sorted(rec.nanos2frame)
+    rec.projections = {
+        "proj_string": source_proj_string,
+        **{
+            n: ProjectionOffset(
+                x=100.0 + (5.0 * i if varying else 0.0), y=50.0, z=2.0, yaw=0.1 + (0.01 * i if varying else 0.0)
+            )
+            for i, n in enumerate(nanos)
+        },
+    }
+    rec.apply_projections()
+    # the transformation is not an identity
+    assert np.abs(rec.df["x"] - rec.df["x_original"]).min() > 1e3
+
+    rec.interpolate(hz=hz)
+    rec.to_mcap(tmp_path / "interpolated.mcap")
+    reloaded = omega_prime.Recording.from_file(tmp_path / "interpolated.mcap", validate=False, apply_proj=False)
+    reloaded.map = rec.map
+    reloaded.apply_projections()
+
     expected = rec.df.sort(["total_nanos", "idx"])
     actual = reloaded.df.sort(["total_nanos", "idx"])
     assert actual.height == expected.height
