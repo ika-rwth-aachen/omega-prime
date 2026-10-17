@@ -30,21 +30,20 @@ class ShapelyTrajectoryTools:
                     # p is not a polygon
                     pass
 
+    @staticmethod
+    def extend_point(cl, l_append, heading=None):
+        # a point has no direction of its own: extend along the heading (in radians) if given, the y-axis otherwise
+        direction = np.array([0, 1]) if heading is None else np.array([np.cos(heading), np.sin(heading)])
+        return shapely.LineString(np.stack([cl - direction * l_append, cl, cl + direction * l_append]))
+
     @classmethod
-    def extend_linestring(cls, l: shapely.LineString, simplify: bool = True, l_append=None):
+    def extend_linestring(cls, l: shapely.LineString, simplify: bool = True, l_append=None, heading=None):
         l_append = l_append if l_append is not None else cls.l_append
         # TODO move s coordinate epsi to NOT normalized
         if isinstance(l, shapely.Point):
-            cl = np.asarray(l.coords)[0]
-            return shapely.LineString(np.stack([cl - np.array([0, 1]), cl, cl + np.array([0, 1])]))
+            return cls.extend_point(np.asarray(l.coords)[0], 1)
         if l.is_empty:
-            cl = np.array([0, 0])
-            return shapely.LineString(np.stack([cl - np.array([0, 1]), cl, cl + np.array([0, 1])]))
-        if l.length == 0:
-            # all points coincide, e.g. the path of a vehicle that stands throughout: there is no direction to
-            # extend along, so extend along the y-axis, by l_append to keep the point at s = l_append
-            cl = np.asarray(l.coords)[0]
-            return shapely.LineString(np.stack([cl - np.array([0, l_append]), cl, cl + np.array([0, l_append])]))
+            return cls.extend_point(np.array([0, 0]), 1)
         startvec = np.asarray(l.interpolate(0, normalized=True).coords) - np.asarray(
             l.interpolate(0 + cls.epsi, normalized=True).coords
         )
@@ -59,6 +58,10 @@ class ShapelyTrajectoryTools:
             endvec = np.asarray(l.interpolate(1, normalized=True).coords) - np.asarray(
                 l.interpolate(0, normalized=True).coords
             )
+        if np.all(startvec == 0) or np.all(endvec == 0):
+            # start and end coincide within float precision, e.g. the path of a vehicle that stands throughout:
+            # extend the start point by l_append to keep it at s = l_append, like on any other path
+            return cls.extend_point(np.asarray(l.coords)[0], l_append, heading)
 
         startvec = startvec / np.linalg.norm(startvec) * l_append
         endvec = endvec / np.linalg.norm(endvec) * l_append
