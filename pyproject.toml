@@ -41,7 +41,7 @@ dependencies = [
     'polars-st',
     'altair',
     'pyproj',
-    'betterosi (>=0.8.4, <1)',
+    'betterosi==0.9.*',
     'lxd-io>=0.4.6',
     'pyxodr-omega-prime',
     'joblib>=1.3',
@@ -50,8 +50,6 @@ dependencies = [
 ]
 version = "0.3.7"
 
-[tool.uv.sources]
-betterosi = { git="https://github.com/ika-rwth-aachen/betterosi.git", rev="protobuf-py" }
 
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
