@@ -1,3 +1,8 @@
+# Unreleased
+
+- `MapOdr`: lanes without geometry are dropped with a warning and their predecessors linked to their successors.
+  pyxodr gives a lane section shorter than `step_size` (at most one sample) zero coordinates, a lane at the origin.
+
 # 0.3.7
 
 - Cap `polars<2`: polars-st is not yet compatible with polars 2 (metaclass conflict on import).
