@@ -440,9 +440,9 @@ class Map:
         # Create a GroundTruth with only the lanes (no moving objects, no lane boundaries)
         ground_truth = betterosi.GroundTruth(
             version=betterosi.InterfaceVersion(
-                version_major=3,
-                version_minor=7,
-                version_patch=0,
+                version_major=types.version_major,
+                version_minor=types.version_minor,
+                version_patch=types.version_patch,
             ),
             timestamp=betterosi.Timestamp(
                 seconds=0,

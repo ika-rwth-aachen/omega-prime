@@ -21,6 +21,7 @@ from .map_odr import MapOdr
 from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
 from .mapodrsegmentation import MapODRSegmentation
 from .schemas import polars_schema, recording_moving_object_schema
+from . import types
 
 
 def timestamp2ts(timestamp: betterosi.Timestamp):
@@ -256,7 +257,9 @@ class Recording:
 
         mvs = [get_object(r) for r in df.iter_rows(named=True)]
         gt = betterosi.GroundTruth(
-            version=betterosi.InterfaceVersion(version_major=3, version_minor=7, version_patch=9),
+            version=betterosi.InterfaceVersion(
+                version_major=types.version_major, version_minor=types.version_minor, version_patch=types.version_patch
+            ),
             timestamp=betterosi.Timestamp(seconds=int(nanos // int(1e9)), nanos=int(nanos % int(1e9))),
             host_vehicle_id=(None if host_vehicle_idx is None else betterosi.Identifier(value=host_vehicle_idx)),
             moving_object=mvs,
@@ -422,7 +425,9 @@ class Recording:
             projections[None] = target_offset
         return projections
 
-    def to_osi_gts(self, *, materialize_projection: bool = False) -> typing.Generator[betterosi.GroundTruth, None, None]:
+    def to_osi_gts(
+        self, *, materialize_projection: bool = False
+    ) -> typing.Generator[betterosi.GroundTruth, None, None]:
         """Yield OSI GroundTruth messages.
 
         By default, any temporary projection is reversed for export. Set
@@ -444,8 +449,8 @@ class Recording:
             if source_proj_string is not None:
                 gt.proj_string = source_proj_string
             if proj_offset is not None:
-                gt.proj_frame_offset = betterosi.GroundTruthProjFrameOffset(
-                    position=betterosi.Vector3D(x=proj_offset.x, y=proj_offset.y, z=proj_offset.z),
+                gt.proj_frame_offset = betterosi.GroundTruth.ProjFrameOffset(
+                    position=betterosi.Vector3d(x=proj_offset.x, y=proj_offset.y, z=proj_offset.z),
                     yaw=proj_offset.yaw,
                 )
             if first_iteration:

@@ -1,5 +1,8 @@
 import betterosi
 
+
+version_major, version_minor, version_patch = [int(o) for o in betterosi.version.split(".")]
+
 __all__ = [
     "LaneBoundaryType",
     "LaneType",
