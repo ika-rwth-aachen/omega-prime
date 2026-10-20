@@ -1,3 +1,4 @@
+import copy
 import itertools
 import json
 import logging
@@ -17,6 +18,11 @@ import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
 
+from . import environmental_conditions as envc
+from .environmental_conditions import (  # noqa: F401
+    PRECIPITATION_AMOUNT_REFERENCE_TYPE,
+    PRECIPITATION_INTENSITY_REFERENCE_TYPE,
+)
 from .map import MapOsi, MapOsiCenterline, ProjectionOffset
 from .map_odr import MapOdr
 from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
@@ -119,10 +125,15 @@ class Recording:
         projections (dict): Projection metadata with structure
             `{"proj_string": str | None, None: ProjectionOffset | None, int: ProjectionOffset | None}`.
         traffic_light_states (dict): Dictionary mapping timestamps to traffic light states.
+        environmental_conditions (dict): Dictionary mapping timestamps (`total_nanos`) to
+            `betterosi.EnvironmentalConditions`. Only timestamps that carry conditions have an entry.
+            Conditions of timestamps without moving objects are kept in the dictionary but not exported.
         host_vehicle_idx (int | None): Index of the host vehicle, if applicable.
     """
 
     _MovingObjectClass: typing.ClassVar = MovingObject
+
+    _environmental_conditions_schema: typing.ClassVar = envc.SCHEMA
 
     @staticmethod
     def _offset_components(
@@ -177,6 +188,16 @@ class Recording:
             key = None if ts is None else int(ts)
             result[key] = offset
         return result
+
+    @staticmethod
+    def _pop_environmental_conditions(kwargs: dict, found: dict) -> dict:
+        """
+        The conditions given explicitly as `environmental_conditions` in `kwargs` (removed from it), else `found`.
+        None counts as not given. The caller sets them after construction, so that subclasses do not have to accept
+        the argument in their `__init__`.
+        """
+        explicit = kwargs.pop("environmental_conditions", None)
+        return found if explicit is None else explicit
 
     @staticmethod
     def _validate_projections_schema(
@@ -312,6 +333,7 @@ class Recording:
         host_vehicle_idx: int | None = None,
         validate=False,
         traffic_light_states: dict | None = None,
+        environmental_conditions: dict | None = None,
     ):
         "Initialize a Recording instance."
         df = self._ensure_polars_dataframe(df)
@@ -329,6 +351,7 @@ class Recording:
         df = self._ensure_motion_norm_columns(df)
         self.projections = self._validate_projections_schema(projections)
         self.traffic_light_states = traffic_light_states if traffic_light_states is not None else {}
+        self.environmental_conditions = environmental_conditions if environmental_conditions is not None else {}
 
         df = bbx_to_polygon(df)
 
@@ -374,6 +397,29 @@ class Recording:
             self._moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
 
         return self._moving_objects
+
+    def set_environmental_conditions(
+        self, conditions: betterosi.EnvironmentalConditions, nanos: typing.Iterable[int] | None = None
+    ):
+        """
+        Set environmental conditions for the given timestamps (default: all frames of the recording).
+        Each timestamp gets its own copy of `conditions`.
+        """
+        for n in self.nanos2frame if nanos is None else nanos:
+            self.environmental_conditions[int(n)] = copy.deepcopy(conditions)
+
+    @property
+    def environmental_conditions_df(self) -> pl.DataFrame:
+        """
+        Environmental conditions as a DataFrame with one row per timestamp that carries conditions.
+        Enumerations are given as their integer value. Fields of unset sub-messages (`time_of_day`, `clouds`, `wind`,
+        `sun`) are null. `temperature`, `atmospheric_pressure`, `relative_humidity` and `unix_timestamp` are null if
+        they are 0, since an unset value cannot be distinguished from 0 after deserialization. The values of a set
+        `wind` or `sun` are given as they are, 0 included (calm wind, sun on the horizon, north).
+        `precipitation_intensity` (mm/h) and `precipitation_amount` (mm) are measured values taken from
+        `source_reference` and null if there is no such reference.
+        """
+        return envc.to_df(self.environmental_conditions, self.nanos2frame)
 
     def _df_with_original_pose_for_export(self, df: pl.DataFrame | None = None) -> pl.DataFrame:
         """
@@ -463,12 +509,15 @@ class Recording:
                     gt.lane = [l._osi for l in self.map.lanes.values()]
             if nanos in self.traffic_light_states:
                 gt.traffic_light = self.traffic_light_states[nanos]
+            if nanos in self.environmental_conditions:
+                gt.environmental_conditions = self.environmental_conditions[nanos]
             yield gt
 
     @classmethod
     def from_osi_gts(cls, gts: list[betterosi.GroundTruth], **kwargs):
         projs: dict[typing.Any, typing.Any] = {"proj_string": None}
         traffic_light_states = {}
+        environmental_conditions = {}
 
         gts, tmp_gts = itertools.tee(gts, 2)
         first_gt = next(tmp_gts)
@@ -507,6 +556,8 @@ class Recording:
                             )
 
                 traffic_light_states[total_nanos] = gt.traffic_light
+                if gt.environmental_conditions is not None:
+                    environmental_conditions[total_nanos] = gt.environmental_conditions
 
                 for mv in gt.moving_object:
                     yield dict(
@@ -535,13 +586,16 @@ class Recording:
                     )
 
         df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
-        return cls(
+        environmental_conditions = cls._pop_environmental_conditions(kwargs, environmental_conditions)
+        rec = cls(
             df_mv,
             projections=projs,
             host_vehicle_idx=host_vehicle_idx,
             traffic_light_states=traffic_light_states,
             **kwargs,
         )
+        rec.environmental_conditions = environmental_conditions
+        return rec
 
     def to_mcap(self, filepath, *, materialize_projection: bool = False):
         """Store Recording as an MCAP file.
@@ -572,6 +626,7 @@ class Recording:
         df = pl.DataFrame(t, schema_overrides=polars_schema)
         host_vehicle_idx = None
         projections: dict[typing.Any, typing.Any] = {}
+        environmental_conditions: dict[int, betterosi.EnvironmentalConditions] = {}
         map = None
         metadata = t.schema.metadata or {}
         if metadata:
@@ -579,6 +634,12 @@ class Recording:
                 host_vehicle_idx = int(metadata[b"host_vehicle_idx"].decode())
 
             projections = cls._decode_projections(metadata.get(b"projections_json"))
+            try:
+                environmental_conditions = envc.decode(
+                    metadata.get(b"environmental_conditions_json"), df["total_nanos"].unique()
+                )
+            except Exception as e:
+                warn(f"The environmental conditions could not be read: {e!r}")
 
             map_parsing = {}
             for MC in MAP_CLASSES:
@@ -595,13 +656,16 @@ class Recording:
                         if map is not None:
                             break
 
-        return cls(
+        environmental_conditions = cls._pop_environmental_conditions(kwargs, environmental_conditions)
+        rec = cls(
             df,
             map=map,
             host_vehicle_idx=host_vehicle_idx,
             projections=projections,
             **kwargs,
         )
+        rec.environmental_conditions = environmental_conditions
+        return rec
 
     def to_parquet(self, filename, *, materialize_projection: bool = False):
         """Store Recording as a Parquet file.
@@ -617,6 +681,9 @@ class Recording:
         encoded_projections = self._encode_projections(projections)
         if encoded_projections:
             proj_meta[b"projections_json"] = encoded_projections
+        encoded_conditions = envc.encode(self.environmental_conditions, self.nanos2frame)
+        if encoded_conditions:
+            metadata[b"environmental_conditions_json"] = encoded_conditions
         df_export = self._df if materialize_projection else self._df_with_original_pose_for_export()
         to_drop = ["frame"]
         optional_cols = [
