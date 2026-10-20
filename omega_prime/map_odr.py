@@ -255,6 +255,7 @@ class MapOdr(Map):
         self._xodr_map = rn
         self.lane_boundaries = lane_boundaries
         self.lanes = lanes
+        self._drop_phantom_lanes()
         for lane in self.lanes.values():
             lane._map = self
             lane._set_boundaries()
@@ -324,6 +325,47 @@ class MapOdr(Map):
         self._lane_boundaries = None
 
         return self
+
+    def _drop_phantom_lanes(self):
+        """
+        Drop the lanes without geometry and link their predecessors to their successors.
+
+        pyxodr samples the reference line of a road at `step_size` and splits the samples among its lane sections; a
+        lane section that gets at most one sample is given zero coordinates, i.e. a lane at the origin.
+        """
+        phantoms = [
+            idx
+            for idx, lane in self._lanes.items()
+            if not isinstance(lane.centerline, LineString) or lane.centerline.is_empty or lane.centerline.length == 0
+        ]
+        for idx in phantoms:
+            phantom = self._lanes.pop(idx)
+            for side in ("left", "right"):
+                self._lane_boundaries.pop(getattr(phantom, f"{side}_boundary_id"), None)
+            # the lanes before and after the phantom, as it lists them and as they list it
+            predecessors = {i for i in phantom.predecessor_ids if i in self._lanes}
+            successors = {i for i in phantom.successor_ids if i in self._lanes}
+            for lane in self._lanes.values():
+                if idx in lane.successor_ids:
+                    predecessors.add(lane.idx)
+                    lane.successor_ids = [i for i in lane.successor_ids if i != idx]
+                if idx in lane.predecessor_ids:
+                    successors.add(lane.idx)
+                    lane.predecessor_ids = [i for i in lane.predecessor_ids if i != idx]
+            for p in predecessors:
+                self._lanes[p].successor_ids += [
+                    s for s in successors if s != p and s not in self._lanes[p].successor_ids
+                ]
+            for s in successors:
+                self._lanes[s].predecessor_ids += [
+                    p for p in predecessors if p != s and p not in self._lanes[s].predecessor_ids
+                ]
+        if phantoms:
+            warnings.warn(
+                f"Dropped {len(phantoms)} lanes of map {self.name} without geometry, most likely because the OpenDRIVE "
+                f"geometry is translated to a zero length polyline (lane sections shorter than `step_size` = "
+                f"{self.step_size}). Try to decrease `step_size`. Lanes: {phantoms}"
+            )
 
     def setup_lanes_and_boundaries(self):
         pass
@@ -430,10 +472,8 @@ class LaneXodr(Lane):
 
         centerline = LineString(centre_line[:, :2])
         if not centerline.is_valid:
+            # fewer than two distinct points: a point or an empty geometry, which MapOdr.parse drops with a warning
             centerline = make_valid(centerline)
-            warnings.warn(
-                f"Needed to make centerline of lane {idx} valid. Most likely, because the OpenDRIVE geometry is translated to a zero length polyline. Try to decrease `step_size`."
-            )
 
         lane_type, lane_subtype = cls._determine_lane_type_and_subtype(lane, road)
         return cls(
