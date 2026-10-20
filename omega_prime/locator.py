@@ -5,6 +5,7 @@ from typing import Any
 import networkx as nx
 import numpy as np
 import shapely
+import warnings
 from matplotlib.patches import Polygon as PltPolygon
 from strenum import StrEnum
 import polars as pl
@@ -14,6 +15,8 @@ class ShapelyTrajectoryTools:
     epsi = 1e-10
     l_append = 200
     simplify_tolerance = 1e-5
+    # a path shorter than this [m] counts as having no direction of its own, e.g. a standing vehicle with jitter
+    min_length = 0.1
 
     @staticmethod
     def plot_polygon(ax, p, **kwargs):
@@ -30,16 +33,32 @@ class ShapelyTrajectoryTools:
                     # p is not a polygon
                     pass
 
+    @staticmethod
+    def extend_degenerate(l, l_append, heading):
+        # a point, an empty line or a path shorter than min_length (e.g. a vehicle that stands throughout) has no
+        # direction to extend along: extend its first point along the heading (in radians) by l_append to keep it at
+        # s = l_append like on any other path; without a heading there is no meaningful s-t frame
+        if l.is_empty or heading is None or not np.isfinite(heading):
+            raise ValueError(f"{l.geom_type} of length {l.length} has no direction to extend along: pass a heading")
+        cl = np.asarray(l.coords)[0, :2]
+        direction = np.array([np.cos(heading), np.sin(heading)])
+        return shapely.LineString(np.stack([cl - direction * l_append, cl, cl + direction * l_append]))
+
     @classmethod
-    def extend_linestring(cls, l: shapely.LineString, simplify: bool = True, l_append=None):
+    def extend_linestring(
+        cls, l: shapely.LineString, simplify: bool = True, l_append=None, heading=None, min_length=None
+    ):
+        """
+        Extend `l` by `l_append` along its start and end tangent, so that points before and after it get an s-t frame.
+
+        A point, an empty line or a line shorter than `min_length` has no direction of its own and is extended along
+        `heading` (in radians) instead; `heading` is ignored otherwise. Raises ValueError if it is needed but missing.
+        """
         l_append = l_append if l_append is not None else cls.l_append
+        min_length = min_length if min_length is not None else cls.min_length
         # TODO move s coordinate epsi to NOT normalized
-        if isinstance(l, shapely.Point):
-            cl = np.asarray(l.coords)[0]
-            return shapely.LineString(np.stack([cl - np.array([0, 1]), cl, cl + np.array([0, 1])]))
-        if l.is_empty:
-            cl = np.array([0, 0])
-            return shapely.LineString(np.stack([cl - np.array([0, 1]), cl, cl + np.array([0, 1])]))
+        if isinstance(l, shapely.Point) or l.is_empty or l.length < min_length:
+            return cls.extend_degenerate(l, l_append, heading)
         startvec = np.asarray(l.interpolate(0, normalized=True).coords) - np.asarray(
             l.interpolate(0 + cls.epsi, normalized=True).coords
         )
@@ -54,12 +73,41 @@ class ShapelyTrajectoryTools:
             endvec = np.asarray(l.interpolate(1, normalized=True).coords) - np.asarray(
                 l.interpolate(0, normalized=True).coords
             )
+        if np.all(startvec == 0) or np.all(endvec == 0):
+            # start and end coincide within float precision
+            return cls.extend_degenerate(l, l_append, heading)
 
         startvec = startvec / np.linalg.norm(startvec) * l_append
         endvec = endvec / np.linalg.norm(endvec) * l_append
         cl = np.asarray(l.coords)
         cl = shapely.LineString(np.concatenate([startvec + cl[0, :], cl, endvec + cl[-1, :]]))
         return cl.simplify(tolerance=cls.simplify_tolerance) if simplify else cl
+
+    @classmethod
+    def trajectory_axis(cls, x, y, yaw, l_append=None, still=False) -> shapely.LineString | None:
+        """
+        Reference axis of a trajectory: its path, extended by `l_append` at both ends.
+
+        A trajectory without a direction of its own - standing throughout (`still`, e.g. from a standstill signal the
+        caller has) or a path shorter than `min_length` - runs through its first valid position along the first yaw
+        of a sample with a valid position. None if there is neither a path nor a yaw: there is no axis to project onto.
+        """
+        x, y, yaw = (np.asarray(a, dtype=float) for a in (x, y, yaw))
+        finite_xy = np.isfinite(x) & np.isfinite(y)
+        valid_yaw = yaw[finite_xy & np.isfinite(yaw)]
+        heading = valid_yaw[0] if valid_yaw.size else None
+        path = np.stack([x[finite_xy], y[finite_xy]], axis=1)
+        if len(path) == 1:
+            # a linestring needs two points
+            path = np.repeat(path, 2, axis=0)
+        try:
+            # a still trajectory has no path direction of its own, however far its positions jitter
+            return cls.extend_linestring(
+                shapely.LineString(path), l_append=l_append, heading=heading, min_length=np.inf if still else None
+            )
+        except ValueError:
+            # neither a path direction nor a heading
+            return None
 
     @classmethod
     def get_line_point_distances(cls, l: shapely.LineString):
@@ -222,11 +270,23 @@ class Locator:
         return cls(all_lanes=all_lanes)
 
     def __post_init__(self):
+        # a lane is extended along its own geometry only, however short; one without a direction is not located on
+        extended_centerlines, all_lanes, skipped = [], [], []
+        for l in self.all_lanes:
+            try:
+                extended_centerlines.append(ShapelyTrajectoryTools.extend_linestring(l.centerline, min_length=0))
+                all_lanes.append(l)
+            except ValueError:
+                skipped.append(l.idx)
+        if skipped:
+            warnings.warn(f"Skipped {len(skipped)} lanes without a centerline direction in the Locator: {skipped}")
+        self.all_lanes = all_lanes
+        self.extended_centerlines = extended_centerlines
+
         # Create mapping with lane_id as key
         self.external2internal_laneid = {l.idx: i for i, l in enumerate(self.all_lanes)}
         self.internal2external_laneid = [l.idx for l in self.all_lanes]
 
-        self.extended_centerlines = [ShapelyTrajectoryTools.extend_linestring(l.centerline) for l in self.all_lanes]
         if hasattr(self.all_lanes[0], "polygon") and self.all_lanes[0].polygon is not None:
             self.str_tree = shapely.STRtree([l.polygon for l in self.all_lanes])
         else:

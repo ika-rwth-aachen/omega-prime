@@ -1,6 +1,10 @@
-import polars as pl
-from omega_prime.metrics import curvilinear_projection
 import numpy as np
+import polars as pl
+import pytest
+import shapely
+
+from omega_prime.locator import ShapelyTrajectoryTools
+from omega_prime.metrics import curvilinear_projection
 
 
 def test_curvilinear_projection_synthetic():
@@ -82,3 +86,154 @@ def test_curvilinear_projection_all_invalid():
     assert np.all(np.isnan(obj_res["pos_lon"].to_numpy()))
     assert np.all(np.isnan(obj_res["curv_heading"].to_numpy()))
     assert np.all(np.isnan(obj_res["vel_lon"].to_numpy()))
+
+
+def test_extend_linestring_of_a_standing_ego():
+    # all positions coincide: the path has no length and no direction
+    line = shapely.LineString([(5.0, 3.0), (5.0, 3.0), (5.0, 3.0)])
+    with np.errstate(all="raise"):
+        extended = ShapelyTrajectoryTools.extend_linestring(line, l_append=100, heading=np.pi / 4)
+    assert np.isclose(extended.length, 200.0)
+    # the position stays at s = l_append, the origin the callers subtract
+    assert np.isclose(extended.project(shapely.Point(5.0, 3.0)), 100.0)
+    # the axis runs along the heading
+    start, end = np.asarray(extended.coords)[[0, -1]]
+    assert np.allclose((end - start) / np.linalg.norm(end - start), [np.cos(np.pi / 4), np.sin(np.pi / 4)])
+
+
+def test_extend_linestring_of_a_jittering_line_without_min_length():
+    # with min_length=0 (lanes) a line passes the length check although its tangents vanish at float precision:
+    # start and end coincide and the jitter in between is below float precision at UTM coordinates
+    line = shapely.LineString([(3e5, 5e6), (3e5 + 1e-9, 5e6), (3e5, 5e6)])
+    with np.errstate(all="raise"):
+        extended = ShapelyTrajectoryTools.extend_linestring(line, l_append=100, heading=0.0, min_length=0)
+    assert np.isclose(extended.length, 200.0)
+    assert np.isclose(extended.project(shapely.Point(3e5, 5e6)), 100.0)
+
+
+def test_extend_linestring_of_a_standing_ego_with_noise():
+    # a few centimetres of position noise must not define the axis: below min_length the heading does
+    line = shapely.LineString([(0.0, 0.0), (0.0, 0.03), (0.02, 0.0)])
+    assert line.length < ShapelyTrajectoryTools.min_length
+    extended = ShapelyTrajectoryTools.extend_linestring(line, l_append=100, heading=0.0)
+    start, end = np.asarray(extended.coords)[[0, -1]]
+    assert np.allclose(start, [-100.0, 0.0]) and np.allclose(end, [100.0, 0.0])
+
+
+def test_extend_point_along_the_heading_by_l_append():
+    extended = ShapelyTrajectoryTools.extend_linestring(shapely.Point(5.0, 3.0), l_append=2, heading=np.pi / 2)
+    assert np.allclose(np.asarray(extended.coords), [(5.0, 1.0), (5.0, 3.0), (5.0, 5.0)])
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        shapely.Point(5.0, 3.0),
+        shapely.LineString(),
+        shapely.LineString([(5.0, 3.0), (5.0, 3.0)]),
+        shapely.LineString([(5.0, 3.0), (5.0, 3.05)]),
+    ],
+)
+@pytest.mark.parametrize("heading", [None, np.nan])
+def test_extend_linestring_without_a_direction_raises(line, heading):
+    # neither the geometry nor a heading gives a direction: there is no axis to make up
+    with pytest.raises(ValueError, match="no direction"):
+        ShapelyTrajectoryTools.extend_linestring(line, l_append=100, heading=heading)
+
+
+def test_extend_linestring_of_coinciding_points_without_min_length_raises():
+    # with min_length=0 (lanes) a line of coinciding points passes the length check but still has no direction
+    with pytest.raises(ValueError, match="no direction"):
+        ShapelyTrajectoryTools.extend_linestring(shapely.LineString([(5.0, 3.0), (5.0, 3.0)]), min_length=0)
+
+
+def test_trajectory_axis_of_a_still_trajectory_follows_the_yaw():
+    # 0.3 m of jitter across the yaw (north) is more than min_length, but a still trajectory has no path direction
+    axis = ShapelyTrajectoryTools.trajectory_axis([0.0, 0.3, 0.0, 0.3], [0.0] * 4, [np.pi / 2] * 4, 100, still=True)
+    s, t = ShapelyTrajectoryTools.xy2st(axis, shapely.points([-5.0], [10.0]))[0]
+    # 10 m ahead and 5 m to the left (t < 0 is left)
+    assert np.isclose(s, 110.0) and np.isclose(t, -5.0)
+    # without `still` the jitter is the path
+    axis = ShapelyTrajectoryTools.trajectory_axis([0.0, 0.3, 0.0, 0.3], [0.0] * 4, [np.pi / 2] * 4, 100)
+    start, end = np.asarray(axis.coords)[[0, -1]]
+    assert np.isclose(start[1], 0.0) and np.isclose(end[1], 0.0)
+
+
+def test_trajectory_axis_takes_the_first_yaw_of_a_sample_with_a_position():
+    # the first yaw belongs to a sample without position, the second to the first position; the path is shorter
+    # than min_length
+    axis = ShapelyTrajectoryTools.trajectory_axis([np.nan, 1.0, 1.02], [np.nan, 2.0, 2.0], [0.0, np.pi / 2, np.pi], 10)
+    assert np.allclose(np.asarray(axis.coords), [(1.0, -8.0), (1.0, 2.0), (1.0, 12.0)])
+
+
+def test_trajectory_axis_without_a_yaw_is_none():
+    assert ShapelyTrajectoryTools.trajectory_axis([0.0, 0.0], [0.0, 0.0], [np.nan, np.nan], 100) is None
+    assert ShapelyTrajectoryTools.trajectory_axis([0.0, 0.3], [0.0, 0.0], [np.nan, np.nan], 100, still=True) is None
+    assert ShapelyTrajectoryTools.trajectory_axis([np.nan], [np.nan], [0.0], 100) is None
+    assert ShapelyTrajectoryTools.trajectory_axis([], [], [], 100) is None
+
+
+def test_trajectory_axis_of_a_single_sample_and_with_missing_positions():
+    axis = ShapelyTrajectoryTools.trajectory_axis([5.0], [3.0], [0.0], 2)
+    assert np.allclose(np.asarray(axis.coords), [(3.0, 3.0), (5.0, 3.0), (7.0, 3.0)])
+    # a moving trajectory without yaw keeps its path, the missing position is skipped
+    axis = ShapelyTrajectoryTools.trajectory_axis([0.0, np.nan, 20.0], [0.0, np.nan, 0.0], [np.nan] * 3, 100)
+    assert np.allclose(np.asarray(axis.coords)[[0, -1]], [(-100.0, 0.0), (120.0, 0.0)])
+
+
+def standing_ego_df(ego_x, ego_y, ego_nanos):
+    # standing ego (idx 1) facing along the x-axis, object (idx 2) driving ahead of it along the x-axis
+    return pl.DataFrame(
+        {
+            "idx": [1] * len(ego_x) + [2, 2],
+            "total_nanos": ego_nanos + [0, 10],
+            "x": ego_x + [10.0, 20.0],
+            "y": ego_y + [0.0, 0.0],
+            "yaw": [0.0] * (len(ego_x) + 2),
+            "vel": [0.0] * len(ego_x) + [5.0, 5.0],
+        }
+    )
+
+
+def assert_object_ahead_of_standing_ego(df):
+    with np.errstate(all="raise"):
+        df_out, _ = curvilinear_projection(df.lazy(), ego_id=1)
+        res = df_out.collect()
+    ego_res = res.filter((pl.col("idx") == 1) & pl.col("x").is_not_nan())
+    assert np.allclose(ego_res["pos_lon"].to_numpy(), 100.0)
+    obj_res = res.filter(pl.col("idx") == 2)
+    assert np.allclose(obj_res["pos_lon"].to_numpy(), [110.0, 120.0])
+    assert np.allclose(obj_res["curv_heading"].to_numpy(), 0.0)
+    assert np.allclose(obj_res["vel_lon"].to_numpy(), 5.0)
+
+
+def test_curvilinear_projection_standing_ego():
+    assert_object_ahead_of_standing_ego(standing_ego_df([0.0, 0.0], [0.0, 0.0], [0, 10]))
+
+
+def test_curvilinear_projection_standing_ego_with_dropout():
+    assert_object_ahead_of_standing_ego(standing_ego_df([0.0, np.nan, 0.0], [0.0, np.nan, 0.0], [0, 5, 10]))
+
+
+def test_curvilinear_projection_ego_with_a_single_position():
+    assert_object_ahead_of_standing_ego(standing_ego_df([0.0], [0.0], [0]))
+
+
+def test_curvilinear_projection_standing_ego_without_yaw():
+    # a standing ego without any heading has no axis: the projection is NaN, not along a made-up direction
+    df = standing_ego_df([0.0, 0.0], [0.0, 0.0], [0, 10]).with_columns(
+        pl.when(pl.col("idx") == 1).then(np.nan).otherwise(pl.col("yaw")).alias("yaw")
+    )
+    with np.errstate(all="raise"):
+        df_out, _ = curvilinear_projection(df.lazy(), ego_id=1)
+        res = df_out.collect()
+    assert np.all(np.isnan(res["pos_lon"].to_numpy()))
+    assert np.all(np.isnan(res["vel_lon"].to_numpy()))
+
+
+def test_curvilinear_projection_no_valid_ego_position():
+    df = standing_ego_df([np.nan, np.nan], [np.nan, np.nan], [0, 10])
+    df_out, _ = curvilinear_projection(df.lazy(), ego_id=1)
+    res = df_out.collect()
+    assert np.all(np.isnan(res["pos_lon"].to_numpy()))
+    assert np.all(np.isnan(res["vel_lon"].to_numpy()))
