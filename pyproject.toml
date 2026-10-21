@@ -50,7 +50,6 @@ dependencies = [
 ]
 version = "0.3.7"
 
-
 [project.urls]
 Homepage = "https://github.com/ika-rwth-aachen/omega-prime"
 Repository = "https://github.com/ika-rwth-aachen/omega-prime"
@@ -58,7 +57,7 @@ Documentation = "https://ika-rwth-aachen.github.io/omega-prime/"
 ChangeLog = "https://ika-rwth-aachen.github.io/omega-prime/CHANGELOG.md"
 
 [project.optional-dependencies]
-test = ['ruff', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','jupyterlab', 'ipywidgets', 'mkdocs-jupyter', 'mkdocs-material', 'mkdocstrings[python]', 'mkdocs-typer2']
+test = ['ruff', 'pre-commit', 'pytest', 'pytest-sugar', 'pytest-env','pytest-cov','pytest-progress','pytest-codeblocks', 'nbval','ipykernel', 'ipywidgets', 'mkdocs-jupyter', 'mkdocs-material', 'mkdocstrings[python]', 'mkdocs-typer2']
 
 [project.scripts]
 omega-prime = "omega_prime.cli:main"
@@ -83,7 +82,7 @@ lint.isort.combine-as-imports = true
 [tool.licensecheck]
 ignore_licenses = ["MPL", "Apache"]
 
-ignore_packages = [ 
+ignore_packages = [
     "mypy-extensions", # MIT
     "polars-st", # LGPL 2.1
     "protobuf-py-ext" # Apache as protobuf-py

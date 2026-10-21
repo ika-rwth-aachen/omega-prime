@@ -1,5 +1,6 @@
 import itertools
 import json
+import logging
 import typing
 from pathlib import Path
 from warnings import warn
@@ -402,7 +403,9 @@ class Recording:
             raise ValueError("A map is required to apply or materialize a projection.")
         if isinstance(self.map, MapOdr):
             self.map.parse_projection()
-        else:
+        elif hasattr(self.map, "parse_projection"):
+            self.map.parse_projection()
+        elif hasattr(self.map, "parse"):
             self.map.parse()
 
     def _materialized_projection_metadata(self) -> dict[typing.Any, typing.Any]:
@@ -685,12 +688,15 @@ class Recording:
                 warn(f"No map could be found: {map_parsing}")
 
         if r.projections and apply_proj:
-            try:
-                r.apply_projections()
-            except Exception:
-                import traceback
-
-                warn(f"Failed to apply projections: {traceback.format_exc()}")
+            source_proj_string = r.projections.get("proj_string")
+            if source_proj_string is None and r.map is not None:
+                r._parse_map_projection()
+                source_proj_string = getattr(r.map, "proj_string", None)
+            if source_proj_string is not None:
+                try:
+                    r.apply_projections()
+                except Exception:
+                    logging.warning("Failed to apply projections.", exc_info=True)
         return r
 
     def to_file(self, filepath, *, materialize_projection: bool = False):
@@ -716,12 +722,12 @@ class Recording:
             return self
 
         source_proj_string = self.projections.get("proj_string")
-        if source_proj_string is None:
+        if source_proj_string is None and self.map is not None:
             self._parse_map_projection()
             source_proj_string = getattr(self.map, "proj_string", None)
 
         if source_proj_string is None:
-            return self
+            raise ValueError("No proj_string information available on the recording or attached map.")
 
         frame_projections: list[dict[str, typing.Any]] = []
         for ts, offset in self.projections.items():
