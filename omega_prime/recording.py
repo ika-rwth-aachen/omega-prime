@@ -1022,6 +1022,7 @@ class Recording:
                     return_dtype=pl.String,
                 ),
                 separator="-",
+                ignore_nulls=True,
             ).alias("type")
         )
         buffer = pl.col("length").max()
