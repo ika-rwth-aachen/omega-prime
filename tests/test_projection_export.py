@@ -216,4 +216,3 @@ def test_from_file_skips_projection_without_proj_string(tmp_path):
     reloaded = Recording.from_file(source, apply_proj=True)
     assert reloaded.df["x"].item() == pytest.approx(10.0)
     assert "x_original" not in reloaded.df.columns
-

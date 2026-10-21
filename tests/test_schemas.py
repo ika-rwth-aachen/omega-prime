@@ -80,4 +80,3 @@ def test_recording_validation_with_osi_3_8_subtypes():
     # Validating recording should not raise SchemaErrors
     rec = Recording(df=df, validate=True)
     assert rec.df.height == 2
-
