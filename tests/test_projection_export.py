@@ -49,7 +49,7 @@ def make_recording() -> Recording:
                 "roll": 0.0,
                 "pitch": 0.0,
                 "yaw": 0.5,
-                "type": int(betterosi.MovingObjectType.TYPE_VEHICLE),
+                "type": int(betterosi.MovingObject.Type.VEHICLE),
                 "role": 0,
                 "subtype": 0,
             }
@@ -150,3 +150,70 @@ def test_flatten_elevation_zeros_all_surface_polynomials():
     assert map_odr._xodr_map is None
     assert map_odr._lanes is None
     assert map_odr._lane_boundaries is None
+
+
+def test_apply_projections_without_proj_string_raises_value_error():
+    recording = Recording(
+        [
+            {
+                "total_nanos": 1_000_000_000,
+                "idx": 1,
+                "x": 10.0,
+                "y": 20.0,
+                "z": 1.0,
+                "vel_x": 0.0,
+                "vel_y": 0.0,
+                "vel_z": 0.0,
+                "acc_x": 0.0,
+                "acc_y": 0.0,
+                "acc_z": 0.0,
+                "length": 4.0,
+                "width": 2.0,
+                "height": 1.5,
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw": 0.0,
+                "type": int(betterosi.MovingObject.Type.VEHICLE),
+                "role": 0,
+                "subtype": 0,
+            }
+        ],
+        projections={None: ProjectionOffset(x=1.0, y=2.0, z=0.0, yaw=0.0)},
+    )
+    with pytest.raises(ValueError, match="No proj_string information available"):
+        recording.apply_projections()
+
+
+def test_from_file_skips_projection_without_proj_string(tmp_path):
+    source = tmp_path / "no_proj.parquet"
+    recording = Recording(
+        [
+            {
+                "total_nanos": 1_000_000_000,
+                "idx": 1,
+                "x": 10.0,
+                "y": 20.0,
+                "z": 1.0,
+                "vel_x": 0.0,
+                "vel_y": 0.0,
+                "vel_z": 0.0,
+                "acc_x": 0.0,
+                "acc_y": 0.0,
+                "acc_z": 0.0,
+                "length": 4.0,
+                "width": 2.0,
+                "height": 1.5,
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw": 0.0,
+                "type": int(betterosi.MovingObject.Type.VEHICLE),
+                "role": 0,
+                "subtype": 0,
+            }
+        ],
+    )
+    recording.to_parquet(source)
+    reloaded = Recording.from_file(source, apply_proj=True)
+    assert reloaded.df["x"].item() == pytest.approx(10.0)
+    assert "x_original" not in reloaded.df.columns
+

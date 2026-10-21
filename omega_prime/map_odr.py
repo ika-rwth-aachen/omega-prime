@@ -33,7 +33,7 @@ class RoadNetwork(PyxodrRoadNetwork):
         self.road_ids_to_object = {}
 
 
-LANE_BOUNDARY_MAP = {
+LANE_BOUNDARY_TYPE_MAP = {
     "none": OsiLaneBoundary.Classification.Type.NO_LINE,
     "solid": OsiLaneBoundary.Classification.Type.SOLID_LINE,
     "broken": OsiLaneBoundary.Classification.Type.DASHED_LINE,
@@ -48,7 +48,7 @@ LANE_BOUNDARY_MAP = {
     "custom": OsiLaneBoundary.Classification.Type.OTHER,
 }
 
-LANE_SUBMAP = {
+LANE_SUBTYPE_MAP = {
     "driving": OsiLane.Classification.Subtype.NORMAL,
     "shoulder": OsiLane.Classification.Subtype.SHOULDER,
     "sidewalk": OsiLane.Classification.Subtype.SIDEWALK,
@@ -85,7 +85,7 @@ OTHER_LANE_TYPES = {
     "special3",
 }
 
-LANE_MAP = {
+LANE_TYPE_MAP = {
     betterosi.Lane.Classification.Type.UNKNOWN: ["unknown", "none"],
     betterosi.Lane.Classification.Type.OTHER: [
         "special1",
@@ -125,7 +125,7 @@ LANE_MAP = {
     ],
 }
 
-odrlanetype2osilanetype = {odrlt: osilt for osilt, ts in LANE_MAP.items() for odrlt in ts}
+odrlanetype2osilanetype = {odrlt: osilt for osilt, ts in LANE_TYPE_MAP.items() for odrlt in ts}
 
 XodrLaneId = namedtuple("XodrLaneId", ["road_id", "lane_id", "section_id"])
 XodrBoundaryId = namedtuple("XodrBoundaryId", ["road_id", "lane_id", "section_id", "side"])
@@ -387,7 +387,7 @@ class LaneBoundaryXodr(LaneBoundary):
             polyline = LineString(bl)
 
         if type is None and hasattr(boundary, "lane_xml"):
-            type = cls._extract_lane_boundary_from_xml(boundary, side)
+            type = cls._extract_lane_boundary_type_from_xml(boundary, side)
 
         lane_boundary_type = cls._determine_lane_boundary_type(type)
 
@@ -395,7 +395,7 @@ class LaneBoundaryXodr(LaneBoundary):
         return cls(idx=idx, type=lane_boundary_type, polyline=polyline, _xodr=boundary)
 
     @staticmethod
-    def _extract_lane_boundary_from_xml(lane, side: str) -> str:
+    def _extract_lane_boundary_type_from_xml(lane, side: str) -> str:
         if not hasattr(lane, "lane_xml"):
             return None
         road_marks = lane.lane_xml.findall("roadMark")
@@ -410,9 +410,9 @@ class LaneBoundaryXodr(LaneBoundary):
         return None
 
     @staticmethod
-    def _determine_lane_boundary_type(boundary_str: str) -> OsiLaneBoundary.Classification.Type:
-        return LANE_BOUNDARY_MAP.get(
-            (boundary_str or "unknown").strip().lower(), OsiLaneBoundary.Classification.Type.UNKNOWN
+    def _determine_lane_boundary_type(boundary_type_str: str) -> OsiLaneBoundary.Classification.Type:
+        return LANE_BOUNDARY_TYPE_MAP.get(
+            (boundary_type_str or "unknown").strip().lower(), OsiLaneBoundary.Classification.Type.UNKNOWN
         )
 
 
@@ -435,7 +435,7 @@ class LaneXodr(Lane):
                 f"Needed to make centerline of lane {idx} valid. Most likely, because the OpenDRIVE geometry is translated to a zero length polyline. Try to decrease `step_size`."
             )
 
-        lane_type, lane_subtype = cls._determine_lane_and_subtype(lane, road)
+        lane_type, lane_subtype = cls._determine_lane_type_and_subtype(lane, road)
         return cls(
             _xodr=lane,
             idx=idx,
@@ -453,18 +453,18 @@ class LaneXodr(Lane):
         )
 
     @staticmethod
-    def _determine_lane_and_subtype(lane: PyxodrLane, road: PyxodrRoad):
+    def _determine_lane_type_and_subtype(lane: PyxodrLane, road: PyxodrRoad):
         is_junction = road.road_xml.get("junction") != "-1"
-        lane_str = (getattr(lane, "type", "unknown") or "unknown").lower()
+        lane_type_str = (getattr(lane, "type", "unknown") or "unknown").lower()
 
         if is_junction:
             lane_type = OsiLane.Classification.Type.INTERSECTION
         else:
-            lane_type = odrlanetype2osilanetype[lane_str]
+            lane_type = odrlanetype2osilanetype[lane_type_str]
 
-        if lane_str in LANE_SUBMAP:
-            lane_subtype = LANE_SUBMAP[lane_str]
-        elif lane_str in OTHER_LANE_TYPES:
+        if lane_type_str in LANE_SUBTYPE_MAP:
+            lane_subtype = LANE_SUBTYPE_MAP[lane_type_str]
+        elif lane_type_str in OTHER_LANE_TYPES:
             lane_subtype = OsiLane.Classification.Subtype.OTHER
         else:
             lane_subtype = OsiLane.Classification.Subtype.UNKNOWN

@@ -1,9 +1,14 @@
+"""Define DataFrame schemas and validation checks for ASAM OSI data."""
+
 import betterosi
 import numpy as np
-import polars as pl
-import pandera.polars as pa
 import pandera.extensions as extensions
+import pandera.polars as pa
 import polars as pl
+
+_MAX_MOVING_OBJECT_TYPE = max(int(v) for v in betterosi.MovingObject.Type)
+_MAX_VEHICLE_ROLE = max(int(v) for v in betterosi.MovingObject.VehicleClassification.Role)
+_MAX_VEHICLE_SUBTYPE = max(int(v) for v in betterosi.MovingObject.VehicleClassification.Type)
 
 pi_valued = pa.Check.between(-np.pi, np.pi)
 polars_schema = {
@@ -88,25 +93,27 @@ recording_moving_object_schema = pa.DataFrameSchema(
         "length": pa.Column(
             polars_schema["length"],
             pa.Check.gt(0),
-            title="MovingObject.base.dimesion.length",
-            description="osi3.Dimenstion3d.length",
+            title="MovingObject.base.dimension.length",
+            description="osi3.Dimension3d.length",
         ),
         "width": pa.Column(
             polars_schema["width"],
             pa.Check.gt(0),
-            title="MovingObject.base.dimesion.width",
-            description="osi3.Dimenstion3d.width",
+            title="MovingObject.base.dimension.width",
+            description="osi3.Dimension3d.width",
         ),
         "height": pa.Column(
             polars_schema["height"],
             pa.Check.ge(0),
-            title="MovingObject.base.dimesion.height",
-            description="osi3.Dimenstion3d.height",
+            title="MovingObject.base.dimension.height",
+            description="osi3.Dimension3d.height",
         ),
         "type": pa.Column(
             polars_schema["type"],
             pa.Check.between(
-                0, 4, error=f"Type must be one of { ({o.name: o.value for o in betterosi.MovingObject.Type}) }"
+                0,
+                _MAX_MOVING_OBJECT_TYPE,
+                error=f"Type must be one of { ({o.name: o.value for o in betterosi.MovingObject.Type}) }",
             ),
             title="MovingObject.type",
             description="osi3.MovingObject.Type",
@@ -115,7 +122,7 @@ recording_moving_object_schema = pa.DataFrameSchema(
             polars_schema["role"],
             pa.Check.between(
                 -1,
-                10,
+                _MAX_VEHICLE_ROLE,
                 error=f"Type must be one of { ({o.name: o.value for o in betterosi.MovingObject.VehicleClassification.Role}) }",
             ),
             title="MovingObject.vehicle_classification.role",
@@ -125,7 +132,7 @@ recording_moving_object_schema = pa.DataFrameSchema(
             polars_schema["subtype"],
             pa.Check.between(
                 -1,
-                17,
+                _MAX_VEHICLE_SUBTYPE,
                 error=f"Subtype must be one of { ({o.name: o.value for o in betterosi.MovingObject.VehicleClassification.Type}) }",
             ),
             title="MovingObject.vehicle_classification.type",
@@ -166,29 +173,29 @@ recording_moving_object_schema = pa.DataFrameSchema(
             int(betterosi.MovingObject.Type.VEHICLE),
             "role",
             -1,
-            error="`role` is `-1` despite type beeing `VEHICLE`",
+            error="`role` is `-1` despite type being `VEHICLE`",
         ),
         pa.Check.other_column_unset_on_column_value(
             "type",
             int(betterosi.MovingObject.Type.VEHICLE),
             "role",
             -1,
-            error="`role` is set despite type not beeing `VEHICLE`",
+            error="`role` is set despite type not being `VEHICLE`",
         ),
         pa.Check.other_column_set_on_column_value(
             "type",
             int(betterosi.MovingObject.Type.VEHICLE),
             "subtype",
             -1,
-            error="`subtype` is `-1` despite type beeing `VEHICLE`",
+            error="`subtype` is `-1` despite type being `VEHICLE`",
         ),
         pa.Check.other_column_unset_on_column_value(
             "type",
             int(betterosi.MovingObject.Type.VEHICLE),
             "subtype",
             -1,
-            error="`subtype` is set despite type not beeing `VEHICLE`",
+            error="`subtype` is set despite type not being `VEHICLE`",
         ),
-        pa.Check.check_has_no_frame_skip(error="Some objects skip frames during their etistence."),
+        pa.Check.check_has_no_frame_skip(error="Some objects skip frames during their existence."),
     ],
 )

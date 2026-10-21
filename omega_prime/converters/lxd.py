@@ -102,7 +102,7 @@ class LxdConverter(DatasetConverter):
             )
 
         is_vehicle = pl.col("type") == betterosi.MovingObject.Type.VEHICLE
-        is_bicycle = pl.col("subtype") == betterosi.MovingObject.VehicleClassificationType.BICYCLE
+        is_bicycle = pl.col("subtype") == betterosi.MovingObject.VehicleClassification.Type.BICYCLE
         is_pedestrian = pl.col("type") == betterosi.MovingObject.Type.PEDESTRIAN
         tracks = tracks.with_columns(
             [pl.lit(0.0).alias(k) for k in ["acc_z", "z", "vel_z", "roll", "pitch"]]
