@@ -1,3 +1,4 @@
+import copy
 import itertools
 import json
 import logging
@@ -17,6 +18,11 @@ import shapely
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon as PltPolygon
 
+from . import environmental_conditions as envc
+from .environmental_conditions import (  # noqa: F401
+    PRECIPITATION_AMOUNT_REFERENCE_TYPE,
+    PRECIPITATION_INTENSITY_REFERENCE_TYPE,
+)
 from .map import MapOsi, MapOsiCenterline, ProjectionOffset
 from .map_odr import MapOdr
 from .maposicenterlinesegmentation import MapOsiCenterlineSegmentation
@@ -29,10 +35,45 @@ def timestamp2ts(timestamp: betterosi.Timestamp):
     return timestamp.seconds * 1_000_000_000 + timestamp.nanos
 
 
-def nearest_interp(xi, x, y):
-    # https://stackoverflow.com/a/21003629
-    idx = np.abs(x - xi[:, None])
-    return y[idx.argmin(axis=1)]
+def nearest(candidates: np.ndarray, targets: np.ndarray) -> np.ndarray:
+    "For each target the index of the nearest of the sorted `candidates`, the earlier one on a tie."
+    after = np.clip(np.searchsorted(candidates, targets), 0, len(candidates) - 1)
+    before = np.maximum(after - 1, 0)
+    return np.where(targets - candidates[before] <= candidates[after] - targets, before, after)
+
+
+def _rekey_per_timestamp(
+    per_nanos: dict, new2old: dict[int, int], kept_nanos: np.ndarray, keep_range: tuple[int, int]
+) -> dict:
+    """
+    Move per-timestamp information (`per_nanos`, keyed by original `total_nanos`) to the new timestamps.
+
+    Each new timestamp takes the information of its nearest original timestamp (`new2old`). When downsampling,
+    original timestamps between two new ones are not the nearest of any new timestamp; their information is kept on
+    the nearest new timestamp, if this has none yet. Only original timestamps within `keep_range` are moved this way.
+    Values that land on several new timestamps (upsampling) are copied, so that these do not share them.
+    """
+    if len(kept_nanos) == 0:
+        return {}
+    used_nanos = set(new2old.values())
+    pairs = [(new, old) for new, old in new2old.items() if old in per_nanos]
+    keep_min, keep_max = keep_range
+    skipped = np.array(
+        [k for k in per_nanos if isinstance(k, int | np.integer) and k not in used_nanos and keep_min <= k <= keep_max],
+        dtype=np.int64,
+    )
+    if len(skipped) > 0:
+        taken = {new for new, _ in pairs}
+        new = kept_nanos[nearest(kept_nanos, skipped)]
+        for i in np.argsort(np.abs(new - skipped), kind="stable"):
+            if int(new[i]) not in taken:
+                taken.add(int(new[i]))
+                pairs.append((int(new[i]), int(skipped[i])))
+    result, used = {}, set()
+    for new, old in pairs:
+        result[new] = copy.deepcopy(per_nanos[old]) if old in used else per_nanos[old]
+        used.add(old)
+    return result
 
 
 class MovingObject:
@@ -119,10 +160,15 @@ class Recording:
         projections (dict): Projection metadata with structure
             `{"proj_string": str | None, None: ProjectionOffset | None, int: ProjectionOffset | None}`.
         traffic_light_states (dict): Dictionary mapping timestamps to traffic light states.
+        environmental_conditions (dict): Dictionary mapping timestamps (`total_nanos`) to
+            `betterosi.EnvironmentalConditions`. Only timestamps that carry conditions have an entry.
+            Conditions of timestamps without moving objects are kept in the dictionary but not exported.
         host_vehicle_idx (int | None): Index of the host vehicle, if applicable.
     """
 
     _MovingObjectClass: typing.ClassVar = MovingObject
+
+    _environmental_conditions_schema: typing.ClassVar = envc.SCHEMA
 
     @staticmethod
     def _offset_components(
@@ -132,6 +178,17 @@ class Recording:
         if offset is None:
             return 0.0, 0.0, 0.0, 0.0
         return offset.x, offset.y, offset.z, offset.yaw
+
+    @classmethod
+    def _offset_arrays(
+        cls, projections: dict[typing.Any, typing.Any], total_nanos: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        "Offset components (x, y, z, yaw) for each of `total_nanos`, the default offset where a timestamp has none."
+        default = projections.get(None)
+        components = np.array(
+            [cls._offset_components(projections.get(int(n), default)) for n in total_nanos], dtype=np.float64
+        ).reshape(-1, 4)
+        return components[:, 0], components[:, 1], components[:, 2], components[:, 3]
 
     @staticmethod
     def _encode_projections(
@@ -177,6 +234,16 @@ class Recording:
             key = None if ts is None else int(ts)
             result[key] = offset
         return result
+
+    @staticmethod
+    def _pop_environmental_conditions(kwargs: dict, found: dict) -> dict:
+        """
+        The conditions given explicitly as `environmental_conditions` in `kwargs` (removed from it), else `found`.
+        None counts as not given. The caller sets them after construction, so that subclasses do not have to accept
+        the argument in their `__init__`.
+        """
+        explicit = kwargs.pop("environmental_conditions", None)
+        return found if explicit is None else explicit
 
     @staticmethod
     def _validate_projections_schema(
@@ -312,6 +379,7 @@ class Recording:
         host_vehicle_idx: int | None = None,
         validate=False,
         traffic_light_states: dict | None = None,
+        environmental_conditions: dict | None = None,
     ):
         "Initialize a Recording instance."
         df = self._ensure_polars_dataframe(df)
@@ -329,6 +397,7 @@ class Recording:
         df = self._ensure_motion_norm_columns(df)
         self.projections = self._validate_projections_schema(projections)
         self.traffic_light_states = traffic_light_states if traffic_light_states is not None else {}
+        self.environmental_conditions = environmental_conditions if environmental_conditions is not None else {}
 
         df = bbx_to_polygon(df)
 
@@ -374,6 +443,29 @@ class Recording:
             self._moving_objects = {int(idx): self._MovingObjectClass(self, idx) for idx in self._df["idx"].unique()}
 
         return self._moving_objects
+
+    def set_environmental_conditions(
+        self, conditions: betterosi.EnvironmentalConditions, nanos: typing.Iterable[int] | None = None
+    ):
+        """
+        Set environmental conditions for the given timestamps (default: all frames of the recording).
+        Each timestamp gets its own copy of `conditions`.
+        """
+        for n in self.nanos2frame if nanos is None else nanos:
+            self.environmental_conditions[int(n)] = copy.deepcopy(conditions)
+
+    @property
+    def environmental_conditions_df(self) -> pl.DataFrame:
+        """
+        Environmental conditions as a DataFrame with one row per timestamp that carries conditions.
+        Enumerations are given as their integer value. Fields of unset sub-messages (`time_of_day`, `clouds`, `wind`,
+        `sun`) are null. `temperature`, `atmospheric_pressure`, `relative_humidity` and `unix_timestamp` are null if
+        they are 0, since an unset value cannot be distinguished from 0 after deserialization. The values of a set
+        `wind` or `sun` are given as they are, 0 included (calm wind, sun on the horizon, north).
+        `precipitation_intensity` (mm/h) and `precipitation_amount` (mm) are measured values taken from
+        `source_reference` and null if there is no such reference.
+        """
+        return envc.to_df(self.environmental_conditions, self.nanos2frame)
 
     def _df_with_original_pose_for_export(self, df: pl.DataFrame | None = None) -> pl.DataFrame:
         """
@@ -463,12 +555,15 @@ class Recording:
                     gt.lane = [l._osi for l in self.map.lanes.values()]
             if nanos in self.traffic_light_states:
                 gt.traffic_light = self.traffic_light_states[nanos]
+            if nanos in self.environmental_conditions:
+                gt.environmental_conditions = self.environmental_conditions[nanos]
             yield gt
 
     @classmethod
     def from_osi_gts(cls, gts: list[betterosi.GroundTruth], **kwargs):
         projs: dict[typing.Any, typing.Any] = {"proj_string": None}
         traffic_light_states = {}
+        environmental_conditions = {}
 
         gts, tmp_gts = itertools.tee(gts, 2)
         first_gt = next(tmp_gts)
@@ -507,6 +602,8 @@ class Recording:
                             )
 
                 traffic_light_states[total_nanos] = gt.traffic_light
+                if gt.environmental_conditions is not None:
+                    environmental_conditions[total_nanos] = gt.environmental_conditions
 
                 for mv in gt.moving_object:
                     yield dict(
@@ -535,13 +632,16 @@ class Recording:
                     )
 
         df_mv = pl.DataFrame(get_gts(), schema=polars_schema).sort(["total_nanos", "idx"])
-        return cls(
+        environmental_conditions = cls._pop_environmental_conditions(kwargs, environmental_conditions)
+        rec = cls(
             df_mv,
             projections=projs,
             host_vehicle_idx=host_vehicle_idx,
             traffic_light_states=traffic_light_states,
             **kwargs,
         )
+        rec.environmental_conditions = environmental_conditions
+        return rec
 
     def to_mcap(self, filepath, *, materialize_projection: bool = False):
         """Store Recording as an MCAP file.
@@ -572,6 +672,7 @@ class Recording:
         df = pl.DataFrame(t, schema_overrides=polars_schema)
         host_vehicle_idx = None
         projections: dict[typing.Any, typing.Any] = {}
+        environmental_conditions: dict[int, betterosi.EnvironmentalConditions] = {}
         map = None
         metadata = t.schema.metadata or {}
         if metadata:
@@ -579,6 +680,12 @@ class Recording:
                 host_vehicle_idx = int(metadata[b"host_vehicle_idx"].decode())
 
             projections = cls._decode_projections(metadata.get(b"projections_json"))
+            try:
+                environmental_conditions = envc.decode(
+                    metadata.get(b"environmental_conditions_json"), df["total_nanos"].unique()
+                )
+            except Exception as e:
+                warn(f"The environmental conditions could not be read: {e!r}")
 
             map_parsing = {}
             for MC in MAP_CLASSES:
@@ -595,13 +702,16 @@ class Recording:
                         if map is not None:
                             break
 
-        return cls(
+        environmental_conditions = cls._pop_environmental_conditions(kwargs, environmental_conditions)
+        rec = cls(
             df,
             map=map,
             host_vehicle_idx=host_vehicle_idx,
             projections=projections,
             **kwargs,
         )
+        rec.environmental_conditions = environmental_conditions
+        return rec
 
     def to_parquet(self, filename, *, materialize_projection: bool = False):
         """Store Recording as a Parquet file.
@@ -617,6 +727,9 @@ class Recording:
         encoded_projections = self._encode_projections(projections)
         if encoded_projections:
             proj_meta[b"projections_json"] = encoded_projections
+        encoded_conditions = envc.encode(self.environmental_conditions, self.nanos2frame)
+        if encoded_conditions:
+            metadata[b"environmental_conditions_json"] = encoded_conditions
         df_export = self._df if materialize_projection else self._df_with_original_pose_for_export()
         to_drop = ["frame"]
         optional_cols = [
@@ -829,14 +942,35 @@ class Recording:
         return self
 
     def interpolate(self, new_nanos: list[int] | None = None, hz: float | None = None):
-        "Interpolate the recording to new timestamps or a given frequency."
+        """
+        Interpolate the recording to new timestamps or a given frequency.
+        Traffic light states, environmental conditions and projection offsets are taken from the nearest original
+        timestamp. If several original timestamps fall onto one new timestamp (downsampling), the nearest one that
+        carries the information is used. When the whole recording is resampled (`new_nanos` not given), this includes
+        the original timestamps after the last new one; explicitly given `new_nanos` crop the information to their range.
+        The original pose (before `apply_projections()`) is interpolated in the source coordinate reference system.
+        """
         df = self._df
+        # The original pose (before `apply_projections()`) is interpolated after applying the projection offsets, since
+        # these can change from one timestamp to the next. It is mapped back with the offset of the new timestamp below.
+        source_cols = []
+        if all(c in df.columns for c in ["x_original", "y_original", "z_original"]):
+            source_cols = ["_x_source", "_y_source", "_z_source"]
+            ox, oy, oz, oyaw = self._offset_arrays(self.projections, df["total_nanos"].to_numpy())
+            x_orig, y_orig = df["x_original"].to_numpy(), df["y_original"].to_numpy()
+            df = df.with_columns(
+                pl.Series("_x_source", x_orig * np.cos(oyaw) - y_orig * np.sin(oyaw) + ox),
+                pl.Series("_y_source", x_orig * np.sin(oyaw) + y_orig * np.cos(oyaw) + oy),
+                pl.Series("_z_source", df["z_original"].to_numpy() + oz),
+            )
+        original_angle_cols = [c for c in ["yaw_original"] if c in df.columns]
         nanos_min, nanos_max, frame_min, frame_max = df.select(
             nanos_min=pl.col("total_nanos").min(),
             nanos_max=pl.col("total_nanos").max(),
             frame_min=pl.col("frame").min(),
             frame_max=pl.col("frame").max(),
         ).row(0)
+        resample_all = new_nanos is None
         if new_nanos is None:
             if hz is None:
                 new_nanos = np.linspace(nanos_min, nanos_max, frame_max - frame_min, dtype=int)
@@ -867,15 +1001,13 @@ class Recording:
                 "length",
                 "width",
                 "height",
+                *source_cols,
             ]:
                 track_data[c] = np.interp(track_new_nanos, track_df["total_nanos"], track_df[c])
+            nearest_idxs = nearest(track_df["total_nanos"].to_numpy(), track_new_nanos)
             for c in ["type", "subtype", "role"]:
-                track_data[c] = nearest_interp(
-                    track_new_nanos,
-                    track_df["total_nanos"].to_numpy(),
-                    track_df[c].to_numpy(),
-                )
-            for c in ["roll", "pitch", "yaw"]:
+                track_data[c] = track_df[c].to_numpy()[nearest_idxs]
+            for c in ["roll", "pitch", "yaw", *original_angle_cols]:
                 # Unwrap angles to handle discontinuities, then interpolate, then wrap back to [-π, π]
                 unwrapped_angles = np.unwrap(track_df[c])
                 interpolated = np.interp(track_new_nanos, track_df["total_nanos"], unwrapped_angles)
@@ -895,7 +1027,40 @@ class Recording:
             )
             new_dfs.append(new_track_df)
         new_df = pl.concat(new_dfs, how="vertical")
-        return self.__init__(df=new_df, map=self.map, host_vehicle_idx=self.host_vehicle_idx)
+
+        # Map each new timestamp to the nearest original timestamp to carry over per-timestamp information
+        old_nanos = np.array(sorted(self.nanos2frame), dtype=np.int64)
+        kept_nanos = new_df["total_nanos"].unique().sort().to_numpy()
+        new2old = dict(zip(kept_nanos.tolist(), old_nanos[nearest(old_nanos, kept_nanos)].tolist()))
+        # Original timestamps whose information may be moved to a new timestamp. When resampling the whole recording,
+        # these include the ones after the last new timestamp (partial last interval), otherwise the range is cropped.
+        if resample_all or len(kept_nanos) == 0:
+            keep_range = (nanos_min, nanos_max)
+        else:
+            keep_range = (kept_nanos[0], kept_nanos[-1])
+
+        def rekey(per_nanos: dict) -> dict:
+            return _rekey_per_timestamp(per_nanos, new2old, kept_nanos, keep_range)
+
+        projections = {k: v for k, v in self.projections.items() if k in ("proj_string", None)}
+        projections.update(rekey(self.projections))
+        if source_cols:
+            ox, oy, oz, oyaw = self._offset_arrays(projections, new_df["total_nanos"].to_numpy())
+            dx = new_df["_x_source"].to_numpy() - ox
+            dy = new_df["_y_source"].to_numpy() - oy
+            new_df = new_df.with_columns(
+                pl.Series("x_original", dx * np.cos(oyaw) + dy * np.sin(oyaw)),
+                pl.Series("y_original", -dx * np.sin(oyaw) + dy * np.cos(oyaw)),
+                pl.Series("z_original", new_df["_z_source"].to_numpy() - oz),
+            ).drop(source_cols)
+        traffic_light_states = rekey(self.traffic_light_states)
+        environmental_conditions = rekey(self.environmental_conditions)
+        self.__init__(df=new_df, map=self.map, host_vehicle_idx=self.host_vehicle_idx)
+        # set after construction, so that subclasses do not have to accept the arguments in their `__init__`
+        self.projections = self._validate_projections_schema(projections)
+        self.traffic_light_states = traffic_light_states
+        self.environmental_conditions = environmental_conditions
+        return self
 
     def _create_legend(self, ax):
         handles, labels = ax.get_legend_handles_labels()
