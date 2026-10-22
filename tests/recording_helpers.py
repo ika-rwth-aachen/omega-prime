@@ -12,14 +12,14 @@ with open(p / "mapping.json") as f:
     mapping = json.load(f)
 
 EC = betterosi.EnvironmentalConditions
-Precipitation = betterosi.EnvironmentalConditionsPrecipitation
-Fog = betterosi.EnvironmentalConditionsFog
+Precipitation = betterosi.EnvironmentalConditions.Precipitation
+Fog = betterosi.EnvironmentalConditions.Fog
 
 MODERATE = EC(precipitation=Precipitation.MODERATE, fog=Fog.GOOD_VISIBILITY, temperature=283.15)
 HEAVY = EC(
     precipitation=Precipitation.HEAVY,
     fog=Fog.MIST,
-    wind=betterosi.EnvironmentalConditionsWind(origin_direction=1.5, speed=0.0),
+    wind=betterosi.EnvironmentalConditions.Wind(origin_direction=1.5, speed=0.0),
 )
 
 

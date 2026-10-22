@@ -158,12 +158,12 @@ def test_interpolate_keeps_traffic_light_states():
         return [
             betterosi.TrafficLight(
                 id=betterosi.Identifier(value=1),
-                classification=betterosi.TrafficLightClassification(color=color),
+                classification=betterosi.TrafficLight.Classification(color=color),
             )
         ]
 
-    red = traffic_light(betterosi.TrafficLightClassificationColor.RED)
-    green = traffic_light(betterosi.TrafficLightClassificationColor.GREEN)
+    red = traffic_light(betterosi.TrafficLight.Classification.Color.RED)
+    green = traffic_light(betterosi.TrafficLight.Classification.Color.GREEN)
 
     rec = load()
     nanos = sorted(rec.nanos2frame)
@@ -179,9 +179,12 @@ def test_interpolate_keeps_traffic_light_states():
     # upsampled timestamps do not share the states
     rec.interpolate(hz=60)
     new_nanos = sorted(rec.nanos2frame)
-    rec.traffic_light_states[new_nanos[0]][0].classification.color = betterosi.TrafficLightClassificationColor.YELLOW
+    rec.traffic_light_states[new_nanos[0]][0].classification.color = betterosi.TrafficLight.Classification.Color.YELLOW
     colors = [rec.traffic_light_states[n][0].classification.color for n in new_nanos[:2]]
-    assert colors == [betterosi.TrafficLightClassificationColor.YELLOW, betterosi.TrafficLightClassificationColor.RED]
+    assert colors == [
+        betterosi.TrafficLight.Classification.Color.YELLOW,
+        betterosi.TrafficLight.Classification.Color.RED,
+    ]
 
 
 @pytest.mark.parametrize("hz", [10, 60])
