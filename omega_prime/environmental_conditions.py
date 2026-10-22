@@ -55,7 +55,7 @@ def encode(
         elif current is not None and current[0] == conditions:
             current[1]["end"] = ts
         else:
-            run = {"start": ts, "end": ts, "conditions": conditions.to_dict()}
+            run = {"start": ts, "end": ts, "conditions": json.loads(conditions.to_json())}
             runs.append(run)
             current = (conditions, run)
     if not runs:
@@ -81,7 +81,7 @@ def decode(
     timestamps = np.array(sorted(int(n) for n in total_nanos), dtype=np.int64)
     result: dict[int, betterosi.EnvironmentalConditions] = {}
     for run in payload.get("runs", []):
-        conditions = betterosi.EnvironmentalConditions().from_dict(run["conditions"])
+        conditions = betterosi.EnvironmentalConditions.from_json(json.dumps(run["conditions"]))
         lo = np.searchsorted(timestamps, int(run["start"]), side="left")
         hi = np.searchsorted(timestamps, int(run["end"]), side="right")
         for ts in timestamps[lo:hi]:

@@ -49,7 +49,7 @@ def test_absent_conditions_stay_absent(tmp_path):
     assert all(gt.environmental_conditions is None for gt in rec.to_osi_gts())
 
     rec.to_mcap(tmp_path / "absent.mcap")
-    gts = betterosi.read(tmp_path / "absent.mcap", return_ground_truth=True, mcap_return_betterosi=True)
+    gts = betterosi.read(tmp_path / "absent.mcap", return_ground_truth=True)
     assert all(gt.environmental_conditions is None for gt in gts)
     assert omega_prime.Recording.from_file(tmp_path / "absent.mcap", validate=False).environmental_conditions == {}
 
@@ -147,7 +147,7 @@ def test_explicit_environmental_conditions_take_precedence(tmp_path, suffix):
 
     explicit = {min(rec.nanos2frame): EC(precipitation=Precipitation.LIGHT)}
     if suffix == ".mcap":
-        gts = betterosi.read(tmp_path / "conditions.mcap", return_ground_truth=True, mcap_return_betterosi=True)
+        gts = betterosi.read(tmp_path / "conditions.mcap", return_ground_truth=True)
         reloaded = omega_prime.Recording.from_osi_gts(gts, environmental_conditions=explicit)
     else:
         reloaded = omega_prime.Recording.from_parquet(
@@ -163,7 +163,7 @@ def test_explicit_none_environmental_conditions_count_as_not_given(tmp_path, suf
     rec.to_file(tmp_path / f"conditions{suffix}")
 
     if suffix == ".mcap":
-        gts = betterosi.read(tmp_path / "conditions.mcap", return_ground_truth=True, mcap_return_betterosi=True)
+        gts = betterosi.read(tmp_path / "conditions.mcap", return_ground_truth=True)
         reloaded = omega_prime.Recording.from_osi_gts(gts, environmental_conditions=None)
     else:
         reloaded = omega_prime.Recording.from_parquet(tmp_path / "conditions.parquet", environmental_conditions=None)
