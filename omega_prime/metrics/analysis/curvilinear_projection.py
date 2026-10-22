@@ -24,9 +24,11 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
     """
     # Collect only the ego rows to build the curvilinear reference line.
     # This is a small, targeted collect — the rest of the frame stays lazy.
-    ego_xy = df.filter(pl.col("idx") == ego_id).sort("total_nanos").select(["x", "y"]).collect().to_numpy()
-
-    ego_curvilinear = ShapelyTrajectoryTools.extend_linestring(shapely.LineString(ego_xy), l_append=100)
+    ego = df.filter(pl.col("idx") == ego_id).sort("total_nanos").select(["x", "y", "yaw"]).collect()
+    # None if the ego has neither a path nor a heading: there is no reference axis to project onto
+    ego_curvilinear = ShapelyTrajectoryTools.trajectory_axis(
+        ego["x"].to_numpy(), ego["y"].to_numpy(), ego["yaw"].to_numpy(), l_append=100
+    )
 
     # Collect only the scalar columns needed for Shapely operations, deliberately
     # excluding heavy geometry/polygon columns that are not used here.
@@ -39,7 +41,7 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
 
     # st[:, 0] = arc-length (pos_lon), st[:, 1] = lateral offset
     st_arr = np.full((xy.shape[0], 2), np.nan, dtype=np.float64)
-    if np.any(valid_xy):
+    if np.any(valid_xy) and ego_curvilinear is not None:
         points = shapely.points(xy[valid_xy, 0], xy[valid_xy, 1])
         st_arr[valid_xy] = ShapelyTrajectoryTools.xy2st(ego_curvilinear, points)
 
