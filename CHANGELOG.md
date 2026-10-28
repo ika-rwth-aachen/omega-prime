@@ -1,4 +1,4 @@
-# Unreleased
+# 0.3.8
 
 - `ShapelyTrajectoryTools.trajectory_axis(x, y, yaw, l_append, still)`: the reference axis of a trajectory, its path extended at both ends.
   A trajectory standing throughout (`still`) or with a path shorter than `min_length` gets an axis through its first valid position along its first valid yaw; None without path and yaw.
