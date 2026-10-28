@@ -66,3 +66,9 @@ def test_phantom_bridging_of_one_sided_links():
     # only the phantom lists A, only B lists the phantom
     links = drop_phantoms({"A": ([], []), "F": (["A"], []), "B": (["F"], [])})
     assert links == {"A": ([], ["B"]), "B": (["A"], [])}
+
+
+def test_phantom_bridging_keeps_a_loop_through_the_phantom():
+    # A's end runs through the phantom back to A's start
+    links = drop_phantoms({"A": (["F"], ["F"]), "F": (["A"], ["A"])})
+    assert links == {"A": (["A"], ["A"])}

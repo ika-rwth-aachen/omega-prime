@@ -354,11 +354,13 @@ class MapOdr(Map):
                     elif idx in lane.predecessor_ids:
                         end[lane.idx] = None
             # each lane is linked to the lanes at the other end of the phantom in the list it linked the phantom in,
-            # which keeps end-to-end and start-to-start contacts in their orientation
+            # which keeps end-to-end and start-to-start contacts in their orientation; a lane linking the phantom in
+            # both lists closes a loop through it and keeps it as a link to itself
             for side, other in ((start, end), (end, start)):
                 for i in side:
                     lane = self._lanes[i]
-                    across = [o for o in other if o != i]
+                    loops = idx in lane.predecessor_ids and idx in lane.successor_ids
+                    across = [o for o in other if o != i or loops]
                     lists = [name for name in ("predecessor_ids", "successor_ids") if idx in getattr(lane, name)]
                     for name in lists or ["successor_ids" if side is start else "predecessor_ids"]:
                         ids = [o for o in getattr(lane, name) if o != idx]
