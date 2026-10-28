@@ -1,3 +1,9 @@
+# 0.3.9
+
+- `Recording` reads, stores and writes the OSI `EnvironmentalConditions` of a recording (MCAP and Parquet), see `Recording.environmental_conditions`, `Recording.set_environmental_conditions` and `Recording.environmental_conditions_df`.
+- `Recording.interpolate` returns the recording and keeps traffic light states, environmental conditions and projections.
+- `Recording.interpolate` takes type, subtype and role from the nearest sample in time linear in the samples of a track; the distance matrix of all pairs did not fit into memory for a long track.
+
 # 0.3.8
 
 - `ShapelyTrajectoryTools.trajectory_axis(x, y, yaw, l_append, still)`: the reference axis of a trajectory, its path extended at both ends.
