@@ -255,6 +255,7 @@ class MapOdr(Map):
         self._xodr_map = rn
         self.lane_boundaries = lane_boundaries
         self.lanes = lanes
+        self._drop_phantom_lanes()
         for lane in self.lanes.values():
             lane._map = self
             lane._set_boundaries()
@@ -324,6 +325,52 @@ class MapOdr(Map):
         self._lane_boundaries = None
 
         return self
+
+    def _drop_phantom_lanes(self):
+        """
+        Drop the lanes without geometry and link their predecessors to their successors.
+
+        pyxodr samples the reference line of a road at `step_size` and splits the samples among its lane sections; a
+        lane section that gets at most one sample is given zero coordinates, i.e. a lane at the origin.
+        """
+        phantoms = [
+            idx
+            for idx, lane in self._lanes.items()
+            if not isinstance(lane.centerline, LineString) or lane.centerline.is_empty or lane.centerline.length == 0
+        ]
+        for idx in phantoms:
+            phantom = self._lanes.pop(idx)
+            for side in ("left", "right"):
+                self._lane_boundaries.pop(getattr(phantom, f"{side}_boundary_id"), None)
+            # the lanes at the start and at the end of the phantom, as it lists them; a lane that lists the phantom
+            # but is not listed by it touches the start if the phantom is its successor and the end otherwise
+            # (dicts as ordered sets, so that the bridged links are in a reproducible order)
+            start = dict.fromkeys(i for i in phantom.predecessor_ids if i in self._lanes)
+            end = dict.fromkeys(i for i in phantom.successor_ids if i in self._lanes)
+            for lane in self._lanes.values():
+                if lane.idx not in start and lane.idx not in end:
+                    if idx in lane.successor_ids:
+                        start[lane.idx] = None
+                    elif idx in lane.predecessor_ids:
+                        end[lane.idx] = None
+            # each lane is linked to the lanes at the other end of the phantom in the list it linked the phantom in,
+            # which keeps end-to-end and start-to-start contacts in their orientation; a lane linking the phantom in
+            # both lists closes a loop through it and keeps it as a link to itself
+            for side, other in ((start, end), (end, start)):
+                for i in side:
+                    lane = self._lanes[i]
+                    loops = idx in lane.predecessor_ids and idx in lane.successor_ids
+                    across = [o for o in other if o != i or loops]
+                    lists = [name for name in ("predecessor_ids", "successor_ids") if idx in getattr(lane, name)]
+                    for name in lists or ["successor_ids" if side is start else "predecessor_ids"]:
+                        ids = [o for o in getattr(lane, name) if o != idx]
+                        setattr(lane, name, ids + [o for o in across if o not in ids])
+        if phantoms:
+            warnings.warn(
+                f"Dropped {len(phantoms)} lanes of map {self.name} without geometry, most likely because the OpenDRIVE "
+                f"geometry is translated to a zero length polyline (lane sections shorter than `step_size` = "
+                f"{self.step_size}). Try to decrease `step_size`. Lanes: {phantoms}"
+            )
 
     def setup_lanes_and_boundaries(self):
         pass
@@ -430,10 +477,8 @@ class LaneXodr(Lane):
 
         centerline = LineString(centre_line[:, :2])
         if not centerline.is_valid:
+            # fewer than two distinct points: a point or an empty geometry, which MapOdr.parse drops with a warning
             centerline = make_valid(centerline)
-            warnings.warn(
-                f"Needed to make centerline of lane {idx} valid. Most likely, because the OpenDRIVE geometry is translated to a zero length polyline. Try to decrease `step_size`."
-            )
 
         lane_type, lane_subtype = cls._determine_lane_type_and_subtype(lane, road)
         return cls(
