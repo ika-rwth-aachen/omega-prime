@@ -1,0 +1,239 @@
+import json
+
+import betterosi
+import pyarrow.parquet as pq
+import pytest
+
+import omega_prime
+from omega_prime.recording import PRECIPITATION_AMOUNT_REFERENCE_TYPE, PRECIPITATION_INTENSITY_REFERENCE_TYPE
+
+from .recording_helpers import EC, HEAVY, MODERATE, ExplicitInitRecording, Fog, Precipitation, load, set_time_varying
+
+
+def test_mcap_roundtrip_constant(tmp_path):
+    rec = load()
+    rec.set_environmental_conditions(MODERATE)
+    rec.to_mcap(tmp_path / "constant.mcap")
+
+    reloaded = omega_prime.Recording.from_file(tmp_path / "constant.mcap", validate=False)
+    assert set(reloaded.environmental_conditions) == set(rec.nanos2frame)
+    assert all(ec == MODERATE for ec in reloaded.environmental_conditions.values())
+
+
+def test_mcap_roundtrip_time_varying(tmp_path):
+    rec = load()
+    nanos = set_time_varying(rec)
+    rec.to_mcap(tmp_path / "varying.mcap")
+
+    reloaded = omega_prime.Recording.from_file(tmp_path / "varying.mcap", validate=False)
+    assert reloaded.environmental_conditions[nanos[0]] == MODERATE
+    assert reloaded.environmental_conditions[nanos[-1]] == HEAVY
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+
+
+def test_load_save_preserves_conditions_of_input(tmp_path):
+    rec = load()
+    set_time_varying(rec)
+    rec.to_mcap(tmp_path / "input.mcap")
+
+    # conditions are already part of the input file and are not touched in between
+    omega_prime.Recording.from_file(tmp_path / "input.mcap", validate=False).to_mcap(tmp_path / "output.mcap")
+
+    reloaded = omega_prime.Recording.from_file(tmp_path / "output.mcap", validate=False)
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+
+
+def test_absent_conditions_stay_absent(tmp_path):
+    rec = load()
+    assert rec.environmental_conditions == {}
+    assert all(gt.environmental_conditions is None for gt in rec.to_osi_gts())
+
+    rec.to_mcap(tmp_path / "absent.mcap")
+    gts = betterosi.read(tmp_path / "absent.mcap", return_ground_truth=True)
+    assert all(gt.environmental_conditions is None for gt in gts)
+    assert omega_prime.Recording.from_file(tmp_path / "absent.mcap", validate=False).environmental_conditions == {}
+
+
+def test_parquet_roundtrip(tmp_path):
+    rec = load()
+    nanos = sorted(rec.nanos2frame)
+    # MODERATE on the first quarter, nothing on the second quarter, HEAVY on the second half
+    rec.set_environmental_conditions(MODERATE, nanos=nanos[: len(nanos) // 4])
+    rec.set_environmental_conditions(HEAVY, nanos=nanos[len(nanos) // 2 :])
+    rec.to_parquet(tmp_path / "conditions.parquet")
+
+    metadata = pq.read_schema(tmp_path / "conditions.parquet").metadata
+    encoded = json.loads(metadata[b"environmental_conditions_json"])
+    assert encoded["version"] == 1
+    runs = encoded["runs"]
+    assert [(r["start"], r["end"]) for r in runs] == [
+        (nanos[0], nanos[len(nanos) // 4 - 1]),
+        (nanos[len(nanos) // 2], nanos[-1]),
+    ]
+
+    reloaded = omega_prime.Recording.from_file(tmp_path / "conditions.parquet", validate=False)
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+    assert nanos[len(nanos) // 4] not in reloaded.environmental_conditions
+
+
+def test_parquet_without_conditions(tmp_path):
+    rec = load()
+    rec.to_parquet(tmp_path / "absent.parquet")
+    assert b"environmental_conditions_json" not in pq.read_schema(tmp_path / "absent.parquet").metadata
+    assert omega_prime.Recording.from_file(tmp_path / "absent.parquet", validate=False).environmental_conditions == {}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"{not json",
+        json.dumps(
+            {"version": 2, "runs": [{"start": 0, "end": 1, "conditions": {"precipitation": "NOT_A_PRECIPITATION"}}]}
+        ).encode(),
+        json.dumps({"version": 2, "runs": [{"conditions": {}}]}).encode(),
+        # readable, but of an unknown version of the encoding
+        json.dumps({"version": 2, "runs": [{"start": 0, "end": 1, "conditions": {}}]}).encode(),
+        json.dumps({"runs": []}).encode(),
+    ],
+)
+def test_parquet_with_unreadable_conditions(tmp_path, payload):
+    rec = load()
+    rec.set_environmental_conditions(MODERATE)
+    rec.to_parquet(tmp_path / "conditions.parquet")
+    table = pq.read_table(tmp_path / "conditions.parquet")
+    metadata = {**table.schema.metadata, b"environmental_conditions_json": payload}
+    pq.write_table(table.replace_schema_metadata(metadata), tmp_path / "unreadable.parquet")
+
+    # the recording is still loaded, only the conditions are missing
+    with pytest.warns(UserWarning, match="environmental conditions could not be read"):
+        reloaded = omega_prime.Recording.from_file(tmp_path / "unreadable.parquet", validate=False)
+    assert reloaded.environmental_conditions == {}
+    assert reloaded.df.height == rec.df.height
+
+
+def test_environmental_conditions_are_not_shared(tmp_path):
+    conditions = EC(precipitation=Precipitation.LIGHT)
+    rec = load()
+    rec.set_environmental_conditions(conditions)
+    nanos = sorted(rec.nanos2frame)
+
+    # neither between the timestamps nor with the object of the caller
+    rec.environmental_conditions[nanos[0]].precipitation = Precipitation.HEAVY
+    conditions.fog = Fog.MIST
+    assert rec.environmental_conditions[nanos[1]] == EC(precipitation=Precipitation.LIGHT)
+
+    rec.to_parquet(tmp_path / "conditions.parquet")
+    reloaded = omega_prime.Recording.from_file(tmp_path / "conditions.parquet", validate=False)
+    reloaded.environmental_conditions[nanos[1]].fog = Fog.MIST
+    assert reloaded.environmental_conditions[nanos[2]] == EC(precipitation=Precipitation.LIGHT)
+
+
+@pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
+def test_subclass_without_environmental_conditions_argument(tmp_path, suffix):
+    rec = load()
+    set_time_varying(rec)
+    rec.to_file(tmp_path / f"conditions{suffix}")
+
+    reloaded = ExplicitInitRecording.from_file(tmp_path / f"conditions{suffix}", validate=False)
+    assert isinstance(reloaded, ExplicitInitRecording)
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+
+
+@pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
+def test_explicit_environmental_conditions_take_precedence(tmp_path, suffix):
+    rec = load()
+    set_time_varying(rec)
+    rec.to_file(tmp_path / f"conditions{suffix}")
+
+    explicit = {min(rec.nanos2frame): EC(precipitation=Precipitation.LIGHT)}
+    if suffix == ".mcap":
+        gts = betterosi.read(tmp_path / "conditions.mcap", return_ground_truth=True)
+        reloaded = omega_prime.Recording.from_osi_gts(gts, environmental_conditions=explicit)
+    else:
+        reloaded = omega_prime.Recording.from_parquet(
+            tmp_path / "conditions.parquet", environmental_conditions=explicit
+        )
+    assert reloaded.environmental_conditions == explicit
+
+
+@pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
+def test_explicit_none_environmental_conditions_count_as_not_given(tmp_path, suffix):
+    rec = load()
+    set_time_varying(rec)
+    rec.to_file(tmp_path / f"conditions{suffix}")
+
+    if suffix == ".mcap":
+        gts = betterosi.read(tmp_path / "conditions.mcap", return_ground_truth=True)
+        reloaded = omega_prime.Recording.from_osi_gts(gts, environmental_conditions=None)
+    else:
+        reloaded = omega_prime.Recording.from_parquet(tmp_path / "conditions.parquet", environmental_conditions=None)
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+    assert reloaded.environmental_conditions_df.height == len(rec.nanos2frame)
+    reloaded.set_environmental_conditions(HEAVY)
+    reloaded.to_file(tmp_path / f"reexported{suffix}")
+
+
+def test_environmental_conditions_df():
+    rec = load()
+    empty = rec.environmental_conditions_df
+    assert empty.height == 0
+    assert "precipitation" in empty.columns
+
+    nanos = set_time_varying(rec)
+    df = rec.environmental_conditions_df
+    assert df.height == len(nanos)
+    assert df["total_nanos"].to_list() == nanos
+    assert df["frame"].to_list() == [rec.nanos2frame[n] for n in nanos]
+    assert df.columns == empty.columns
+
+    first, last = df.row(0, named=True), df.row(-1, named=True)
+    assert first["precipitation"] == Precipitation.MODERATE.value
+    assert first["temperature"] == pytest.approx(283.15)
+    assert first["wind_speed"] is None
+    assert last["precipitation"] == Precipitation.HEAVY.value
+    assert last["temperature"] is None
+    # within a set sub-message 0 is a value
+    assert last["wind_speed"] == 0.0
+    assert last["wind_origin_direction"] == pytest.approx(1.5)
+    assert last["sun_azimuth"] is None
+
+    joined = rec.df.join(df, on="total_nanos", how="left")
+    assert joined.height == rec.df.height
+    assert joined["precipitation"].null_count() == 0
+
+
+@pytest.mark.parametrize("suffix", [".mcap", ".parquet"])
+def test_measured_precipitation_in_source_reference(tmp_path, suffix):
+    def reference(reference_type, value):
+        return betterosi.ExternalReference(reference="weather_station", type=reference_type, identifier=[value])
+
+    measured = EC(
+        precipitation=Precipitation.VERY_LIGHT,
+        source_reference=[
+            reference(PRECIPITATION_INTENSITY_REFERENCE_TYPE, "0.3"),
+            reference(PRECIPITATION_AMOUNT_REFERENCE_TYPE, "0.01"),
+        ],
+    )
+    not_a_number = EC(source_reference=[reference(PRECIPITATION_INTENSITY_REFERENCE_TYPE, "n/a")])
+
+    rec = load()
+    nanos = sorted(rec.nanos2frame)
+    rec.set_environmental_conditions(measured)
+    rec.set_environmental_conditions(not_a_number, nanos=nanos[-2:-1])
+    rec.set_environmental_conditions(MODERATE, nanos=nanos[-1:])
+    if suffix == ".mcap":
+        rec.to_mcap(tmp_path / "measured.mcap")
+    else:
+        rec.to_parquet(tmp_path / "measured.parquet")
+
+    reloaded = omega_prime.Recording.from_file(tmp_path / f"measured{suffix}", validate=False)
+    assert reloaded.environmental_conditions == rec.environmental_conditions
+
+    df = reloaded.environmental_conditions_df
+    first = df.row(0, named=True)
+    assert first["precipitation"] == Precipitation.VERY_LIGHT.value
+    assert first["precipitation_intensity"] == pytest.approx(0.3)
+    assert first["precipitation_amount"] == pytest.approx(0.01)
+    assert df.row(-2, named=True)["precipitation_intensity"] is None
+    assert df.row(-1, named=True)["precipitation_intensity"] is None
+    assert df.row(-1, named=True)["precipitation_amount"] is None
