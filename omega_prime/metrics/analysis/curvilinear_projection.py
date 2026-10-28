@@ -5,6 +5,9 @@ import shapely
 from ...locator import ShapelyTrajectoryTools
 from ..metric import metric
 
+# speed in m/s up to which the ego counts as standing
+STILL_VEL = 0.1
+
 
 @metric(
     requires_columns=["vel"],
@@ -24,10 +27,14 @@ def curvilinear_projection(df, /, ego_id) -> tuple[pl.LazyFrame, dict]:
     """
     # Collect only the ego rows to build the curvilinear reference line.
     # This is a small, targeted collect — the rest of the frame stays lazy.
-    ego = df.filter(pl.col("idx") == ego_id).sort("total_nanos").select(["x", "y", "yaw"]).collect()
-    # None if the ego has neither a path nor a heading: there is no reference axis to project onto
+    ego = df.filter(pl.col("idx") == ego_id).sort("total_nanos").select(["x", "y", "yaw", "vel"]).collect()
+    # An ego standing throughout has no path direction of its own, however far its positions jitter: its axis
+    # follows its heading. None if the ego has neither a path nor a heading: there is no reference axis to project onto
+    ego_vel = ego["vel"].to_numpy().astype(float)
+    ego_vel = ego_vel[np.isfinite(ego_vel)]
+    still = ego_vel.size > 0 and bool(np.all(np.abs(ego_vel) <= STILL_VEL))
     ego_curvilinear = ShapelyTrajectoryTools.trajectory_axis(
-        ego["x"].to_numpy(), ego["y"].to_numpy(), ego["yaw"].to_numpy(), l_append=100
+        ego["x"].to_numpy(), ego["y"].to_numpy(), ego["yaw"].to_numpy(), l_append=100, still=still
     )
 
     # Collect only the scalar columns needed for Shapely operations, deliberately

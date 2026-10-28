@@ -91,6 +91,14 @@ def test_lane_without_a_direction_is_not_located_on():
     assert sts["roadlane_id"][0] != lanes[0].idx
 
 
+def test_locator_without_a_lane_with_a_direction_raises():
+    lane = SimpleNamespace(idx=0, centerline=shapely.Point(0.0, 0.0), polygon=None)
+    with pytest.warns(UserWarning, match="Skipped 1 lanes"), pytest.raises(ValueError, match="No lane"):
+        Locator(all_lanes=[lane])
+    with pytest.raises(ValueError, match="No lane"):
+        Locator(all_lanes=[])
+
+
 def test_short_lane_is_extended_along_its_own_geometry():
     # unlike a trajectory below min_length, a lane keeps its own direction however short
     m = straight_map()

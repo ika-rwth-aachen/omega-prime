@@ -342,24 +342,27 @@ class MapOdr(Map):
             phantom = self._lanes.pop(idx)
             for side in ("left", "right"):
                 self._lane_boundaries.pop(getattr(phantom, f"{side}_boundary_id"), None)
-            # the lanes before and after the phantom, as it lists them and as they list it
-            predecessors = {i for i in phantom.predecessor_ids if i in self._lanes}
-            successors = {i for i in phantom.successor_ids if i in self._lanes}
+            # the lanes at the start and at the end of the phantom, as it lists them; a lane that lists the phantom
+            # but is not listed by it touches the start if the phantom is its successor and the end otherwise
+            # (dicts as ordered sets, so that the bridged links are in a reproducible order)
+            start = dict.fromkeys(i for i in phantom.predecessor_ids if i in self._lanes)
+            end = dict.fromkeys(i for i in phantom.successor_ids if i in self._lanes)
             for lane in self._lanes.values():
-                if idx in lane.successor_ids:
-                    predecessors.add(lane.idx)
-                    lane.successor_ids = [i for i in lane.successor_ids if i != idx]
-                if idx in lane.predecessor_ids:
-                    successors.add(lane.idx)
-                    lane.predecessor_ids = [i for i in lane.predecessor_ids if i != idx]
-            for p in predecessors:
-                self._lanes[p].successor_ids += [
-                    s for s in successors if s != p and s not in self._lanes[p].successor_ids
-                ]
-            for s in successors:
-                self._lanes[s].predecessor_ids += [
-                    p for p in predecessors if p != s and p not in self._lanes[s].predecessor_ids
-                ]
+                if lane.idx not in start and lane.idx not in end:
+                    if idx in lane.successor_ids:
+                        start[lane.idx] = None
+                    elif idx in lane.predecessor_ids:
+                        end[lane.idx] = None
+            # each lane is linked to the lanes at the other end of the phantom in the list it linked the phantom in,
+            # which keeps end-to-end and start-to-start contacts in their orientation
+            for side, other in ((start, end), (end, start)):
+                for i in side:
+                    lane = self._lanes[i]
+                    across = [o for o in other if o != i]
+                    lists = [name for name in ("predecessor_ids", "successor_ids") if idx in getattr(lane, name)]
+                    for name in lists or ["successor_ids" if side is start else "predecessor_ids"]:
+                        ids = [o for o in getattr(lane, name) if o != idx]
+                        setattr(lane, name, ids + [o for o in across if o not in ids])
         if phantoms:
             warnings.warn(
                 f"Dropped {len(phantoms)} lanes of map {self.name} without geometry, most likely because the OpenDRIVE "

@@ -147,6 +147,31 @@ def test_extend_linestring_of_coinciding_points_without_min_length_raises():
         ShapelyTrajectoryTools.extend_linestring(shapely.LineString([(5.0, 3.0), (5.0, 3.0)]), min_length=0)
 
 
+@pytest.mark.parametrize("ego_vel", [0.0, 5.0])
+def test_curvilinear_projection_of_a_standing_ego_follows_its_yaw(ego_vel):
+    # 0.21 m of accumulated jitter across the ego's yaw (north) is more than min_length
+    n = 8
+    df = pl.DataFrame(
+        {
+            "idx": [1] * n + [2],
+            "total_nanos": list(range(n)) + [0],
+            "x": [0.0, 0.03] * (n // 2) + [0.0],
+            "y": [0.0] * n + [10.0],
+            "yaw": [np.pi / 2] * (n + 1),
+            "vel": [ego_vel] * n + [5.0],
+        }
+    )
+    obj = curvilinear_projection(df.lazy(), ego_id=1)[0].collect().filter(pl.col("idx") == 2)
+    if ego_vel == 0:
+        # 10 m ahead of the ego along its yaw, after the 100 m the axis is extended backwards
+        assert np.isclose(obj["pos_lon"][0], 110.0)
+        assert np.isclose(obj["curv_heading"][0], 0.0)
+        assert np.isclose(obj["vel_lon"][0], 5.0)
+    else:
+        # a moving ego's path is its axis, however short
+        assert not np.isclose(obj["curv_heading"][0], 0.0)
+
+
 def test_trajectory_axis_of_a_still_trajectory_follows_the_yaw():
     # 0.3 m of jitter across the yaw (north) is more than min_length, but a still trajectory has no path direction
     axis = ShapelyTrajectoryTools.trajectory_axis([0.0, 0.3, 0.0, 0.3], [0.0] * 4, [np.pi / 2] * 4, 100, still=True)

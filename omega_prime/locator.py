@@ -280,6 +280,8 @@ class Locator:
                 skipped.append(l.idx)
         if skipped:
             warnings.warn(f"Skipped {len(skipped)} lanes without a centerline direction in the Locator: {skipped}")
+        if not all_lanes:
+            raise ValueError(f"No lane with a centerline direction to locate on ({len(skipped)} lanes skipped)")
         self.all_lanes = all_lanes
         self.extended_centerlines = extended_centerlines
 
