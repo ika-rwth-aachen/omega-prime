@@ -1,5 +1,8 @@
+import math
+
 import betterosi
 import polars as pl
+import pyproj
 import pytest
 from lxml import etree
 from typer.testing import CliRunner
@@ -182,6 +185,195 @@ def test_apply_projections_without_proj_string_raises_value_error():
     )
     with pytest.raises(ValueError, match="No proj_string information available"):
         recording.apply_projections()
+
+
+# --- directions under projection ----------------------------------------------------------------------------------
+# Real-world setup: object data in a UTM-aligned local frame, map in a local transverse Mercator projection whose
+# central meridian (6.05 deg) differs from the UTM zone meridian (9 deg) -> the grids are rotated by about 2.29 deg.
+UTM_32N = "EPSG:32632"
+LOCAL_TMERC = (
+    "+proj=tmerc +lat_0=50.7795585854429 +lon_0=6.05069819822389 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+)
+UTM_ORIGIN = ProjectionOffset(x=292087.91958096693, y=5629458.721799827, z=255.0, yaw=0.0)
+
+
+def open_drive(proj_string: str, offset: str = "") -> str:
+    return f"""<OpenDRIVE>
+  <header>
+    <geoReference><![CDATA[{proj_string}]]></geoReference>
+    {offset}
+  </header>
+</OpenDRIVE>"""
+
+
+def moving_rows(yaw: float, speed: float = 10.0, accel: float = 1.0, n: int = 3) -> list[dict]:
+    "An object driving along its heading, sampled at 10 Hz."
+    rows = []
+    for k in range(n):
+        s = speed * 0.1 * k
+        rows.append(
+            {
+                "total_nanos": 1_000_000_000 + k * 100_000_000,
+                "idx": 3,
+                "x": 20.0 + s * math.cos(yaw),
+                "y": -15.0 + s * math.sin(yaw),
+                "z": 0.5,
+                "vel_x": speed * math.cos(yaw),
+                "vel_y": speed * math.sin(yaw),
+                "vel_z": 0.0,
+                "acc_x": accel * math.cos(yaw),
+                "acc_y": accel * math.sin(yaw),
+                "acc_z": 0.0,
+                "length": 18.0,
+                "width": 2.5,
+                "height": 3.2,
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw": yaw,
+                "type": int(betterosi.MovingObject.Type.VEHICLE),
+                "role": 0,
+                "subtype": 0,
+            }
+        )
+    return rows
+
+
+def angle_diff(a, b):
+    return (a - b + math.pi) % (2 * math.pi) - math.pi
+
+
+def assert_directions_consistent(df: pl.DataFrame, tol: float = 1e-6):
+    "yaw, velocity, acceleration, polygon axis and the motion between projected positions point the same way."
+    df = df.sort("total_nanos")
+    yaw = df["yaw"].to_numpy()
+    motion = math.atan2(df["y"][1] - df["y"][0], df["x"][1] - df["x"][0])
+    assert abs(angle_diff(yaw[0], motion)) < 1e-5
+    for row in df.iter_rows(named=True):
+        assert abs(angle_diff(math.atan2(row["vel_y"], row["vel_x"]), row["yaw"])) < tol
+        assert abs(angle_diff(math.atan2(row["acc_y"], row["acc_x"]), row["yaw"])) < tol
+        assert math.hypot(row["vel_x"], row["vel_y"]) == pytest.approx(10.0)
+        corners = list(row["polygon"].exterior.coords)
+        front_mid = ((corners[0][0] + corners[1][0]) / 2, (corners[0][1] + corners[1][1]) / 2)
+        axis = math.atan2(front_mid[1] - row["y"], front_mid[0] - row["x"])
+        assert abs(angle_diff(axis, row["yaw"])) < 1e-6
+
+
+def test_apply_projections_rotates_directions_by_grid_convergence():
+    yaw0 = 0.3
+    recording = Recording(
+        moving_rows(yaw0),
+        map=MapOdr.create(open_drive(LOCAL_TMERC), name="tmerc"),
+        projections={"proj_string": UTM_32N, None: UTM_ORIGIN},
+    )
+
+    recording.apply_projections()
+    df = recording.df
+
+    transformer = pyproj.Transformer.from_crs(UTM_32N, LOCAL_TMERC, always_xy=True)
+    x0, y0 = transformer.transform(UTM_ORIGIN.x, UTM_ORIGIN.y)
+    x1, y1 = transformer.transform(UTM_ORIGIN.x + 100.0, UTM_ORIGIN.y)
+    convergence = math.atan2(y1 - y0, x1 - x0)
+    # UTM grid east, seen in the map frame (the map's x axis is rotated by -2.2857 deg against UTM grid east)
+    assert math.degrees(convergence) == pytest.approx(2.2857, abs=1e-3)
+
+    for yaw in df["yaw"]:
+        assert angle_diff(yaw, yaw0 + convergence) == pytest.approx(0.0, abs=1e-5)
+    assert_directions_consistent(df)
+    assert df["yaw_original"].to_list() == pytest.approx([yaw0] * 3)
+    assert df["vel_x_original"].to_list() == pytest.approx([10.0 * math.cos(yaw0)] * 3)
+
+
+def test_apply_projections_rotates_directions_by_offset_yaw():
+    yaw0 = -1.0
+    offset_yaw = math.radians(30.0)
+    recording = Recording(
+        moving_rows(yaw0),
+        map=MapOdr.create(open_drive(LOCAL_TMERC), name="tmerc"),
+        projections={"proj_string": LOCAL_TMERC, None: ProjectionOffset(x=5.0, y=-3.0, z=0.0, yaw=offset_yaw)},
+    )
+
+    recording.apply_projections()
+    df = recording.df
+
+    for yaw in df["yaw"]:
+        assert angle_diff(yaw, yaw0 + offset_yaw) == pytest.approx(0.0, abs=1e-9)
+    assert_directions_consistent(df, tol=1e-9)
+
+
+def test_apply_projections_keeps_directions_consistent_with_map_offset_heading():
+    recording = Recording(
+        moving_rows(2.5),
+        map=MapOdr.create(OPEN_DRIVE, name="test"),
+        projections={"proj_string": SOURCE_PROJECTION, None: ProjectionOffset(x=1.0, y=2.0, z=3.0, yaw=0.1)},
+    )
+
+    recording.apply_projections()
+
+    assert_directions_consistent(recording.df)
+
+
+def test_export_after_projection_restores_original_directions(tmp_path):
+    rows = moving_rows(0.7)
+    recording = Recording(
+        rows,
+        map=MapOdr.create(open_drive(LOCAL_TMERC), name="tmerc"),
+        projections={"proj_string": UTM_32N, None: UTM_ORIGIN},
+    )
+    recording.apply_projections()
+
+    gt = next(recording.to_osi_gts())
+    base = gt.moving_object[0].base
+    assert base.orientation.yaw == pytest.approx(rows[0]["yaw"])
+    assert base.velocity.x == pytest.approx(rows[0]["vel_x"])
+    assert base.velocity.y == pytest.approx(rows[0]["vel_y"])
+    assert base.acceleration.x == pytest.approx(rows[0]["acc_x"])
+    assert base.position.x == pytest.approx(rows[0]["x"])
+
+    output = tmp_path / "roundtrip.parquet"
+    recording.to_parquet(output)
+    reloaded = Recording.from_parquet(output)
+    for column in ("x", "y", "yaw", "vel_x", "vel_y", "acc_x", "acc_y"):
+        assert reloaded.df.sort("total_nanos")[column].to_list() == pytest.approx([r[column] for r in rows])
+    assert not any(c.endswith("_original") for c in reloaded.df.columns)
+
+
+def test_materialized_export_keeps_projected_directions(tmp_path):
+    recording = Recording(
+        moving_rows(0.7),
+        map=MapOdr.create(open_drive(LOCAL_TMERC), name="tmerc"),
+        projections={"proj_string": UTM_32N, None: UTM_ORIGIN},
+    )
+    recording.apply_projections()
+    projected = recording.df.sort("total_nanos")
+    output = tmp_path / "materialized.parquet"
+    recording.to_parquet(output, materialize_projection=True)
+
+    reloaded = Recording.from_file(output, validate=False).df.sort("total_nanos")
+
+    for column in ("x", "y", "yaw", "vel_x", "vel_y"):
+        assert reloaded[column].to_list() == pytest.approx(projected[column].to_list(), abs=1e-6)
+    assert_directions_consistent(reloaded)
+
+
+def test_apply_projections_warns_about_frames_without_offset():
+    rows = moving_rows(0.0)
+    recording = Recording(
+        rows,
+        map=MapOdr.create(open_drive(LOCAL_TMERC), name="tmerc"),
+        projections={"proj_string": UTM_32N, rows[0]["total_nanos"]: UTM_ORIGIN, rows[1]["total_nanos"]: None},
+    )
+
+    with pytest.warns(UserWarning, match="2 of 3 rows have no projection offset"):
+        recording.apply_projections()
+
+
+def test_frame_numbers_follow_time():
+    rows = list(reversed(moving_rows(0.0, n=5)))
+    recording = Recording(rows)
+
+    frames = recording.df.sort("total_nanos")["frame"].to_list()
+
+    assert frames == [0, 1, 2, 3, 4]
 
 
 def test_from_file_skips_projection_without_proj_string(tmp_path):

@@ -82,6 +82,13 @@ MAP_CLASSES = [
     MapOsiCenterline,
 ]
 
+# Columns that hold directions in the x/y plane; `apply_projections` rotates them together with the positions.
+_DIRECTIONAL_COLUMNS = ("yaw", "vel_x", "vel_y", "acc_x", "acc_y")
+# Step (in meters) along the heading that `apply_projections` pushes through the projection to get the new heading.
+_HEADING_PROBE_M = 1.0
+# Columns that keep the values from before a projection; they restore the original pose on export.
+_ORIGINAL_COLUMNS = {f"{base}_original": base for base in ("x", "y", "z", *_DIRECTIONAL_COLUMNS)}
+
 
 def bbx_to_polygon(df):
     dxl = (pl.col("length") / 2) * pl.col("yaw").cos()
@@ -277,7 +284,7 @@ class Recording:
     @staticmethod
     def _build_frame_mapping(df: pl.DataFrame) -> tuple[dict[int, int], pl.DataFrame]:
         "Build a mapping from `total_nanos` to frame numbers and return both the mapping and a DataFrame for joining."
-        nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique())}
+        nanos2frame = {n: i for i, n in enumerate(df["total_nanos"].unique().sort())}
         mapping = pl.DataFrame(
             {
                 "total_nanos": list(nanos2frame.keys()),
@@ -377,21 +384,15 @@ class Recording:
 
     def _df_with_original_pose_for_export(self, df: pl.DataFrame | None = None) -> pl.DataFrame:
         """
-        Return a DataFrame with original pose columns (`x_original`, `y_original`, `z_original`, `yaw_original`)
-        for export, if they exist. This is used to ensure that the original pose information is preserved when
-        exporting to formats like Parquet or MCAP,
-        even if the main `x`, `y`, `z`, and `yaw` columns have been modified by projections.
+        Return a DataFrame with the original pose and motion columns (`x_original`, `y_original`, `z_original`,
+        `yaw_original`, `vel_x_original`, `vel_y_original`, `acc_x_original`, `acc_y_original`) for export, if they
+        exist. This is used to ensure that the original pose information is preserved when exporting to formats like
+        Parquet or MCAP, even if the main columns have been modified by projections.
         """
         df_export = self._df if df is None else df
-        original_to_base = {
-            "x_original": "x",
-            "y_original": "y",
-            "z_original": "z",
-            "yaw_original": "yaw",
-        }
         overwrite_exprs = [
             pl.col(original_col).alias(base_col)
-            for original_col, base_col in original_to_base.items()
+            for original_col, base_col in _ORIGINAL_COLUMNS.items()
             if original_col in df_export.columns
         ]
         if overwrite_exprs:
@@ -626,10 +627,7 @@ class Recording:
             "global_alt",
             "global_yaw",
             "proj_string",
-            "x_original",
-            "y_original",
-            "z_original",
-            "yaw_original",
+            *_ORIGINAL_COLUMNS,
         ]
         to_drop.extend([c for c in optional_cols if c in df_export.columns])
         t = pyarrow.table(df_export.drop(*to_drop))
@@ -715,8 +713,11 @@ class Recording:
         Apply projection transformations to the recording's moving object data based on the provided projection metadata
         and the map's projection. This method updates the `x`, `y`, and `z` columns of the recording's DataFrame
         according to the specified projections and transforms the coordinates to the target CRS if necessary.
-        The original coordinates before applying projections are stored in `x_original`, `y_original`, and `z_original`
-        columns to preserve the original pose information for export or reference.
+        Directions (`yaw`, `vel_x`/`vel_y`, `acc_x`/`acc_y`) and the bounding box polygons are rotated by the same
+        transformation, including the frame offset yaw, the map offset yaw and the grid convergence between the
+        source and the target CRS.
+        The values before applying projections are stored in `<column>_original` columns (`x`, `y`, `z`, `yaw`,
+        `vel_x`, `vel_y`, `acc_x`, `acc_y`) to preserve the original pose information for export or reference.
         """
         if self._df.height == 0:
             return self
@@ -731,7 +732,7 @@ class Recording:
 
         frame_projections: list[dict[str, typing.Any]] = []
         for ts, offset in self.projections.items():
-            if ts in (None, "proj_string"):
+            if ts in (None, "proj_string") or offset is None:
                 continue
             ox, oy, oz, oyaw = self._offset_components(offset)
             frame_projections.append(
@@ -761,6 +762,15 @@ class Recording:
                 },
             )
             df = df.join(proj_df, on="total_nanos", how="left")
+            if default_offset is None:
+                n_missing = df.select(pl.col("offset_x").is_null().sum()).item()
+                if n_missing:
+                    # Some frames carry an offset and others do not: the rows without one are treated as
+                    # coordinates in the source CRS, which is almost never intended in a mixed recording.
+                    warn(
+                        f"{n_missing} of {df.height} rows have no projection offset while other frames have one; "
+                        "they are projected without offset."
+                    )
             df = df.with_columns(
                 pl.lit(source_proj_string).alias("proj_string"),
                 pl.col("offset_x").fill_null(dox).alias("offset_x"),
@@ -785,40 +795,58 @@ class Recording:
         # Store original values before applying offsets, when it is the first projection
         if not any(col in df.columns for col in ["x_original", "y_original", "z_original"]):
             df = df.with_columns(
-                pl.col("x").alias("x_original"),
-                pl.col("y").alias("y_original"),
-                pl.col("z").alias("z_original"),
+                pl.col(base).alias(f"{base}_original") for base in ("x", "y", "z", *_DIRECTIONAL_COLUMNS)
             )
-
-        # Update main columns with offset values
-        df = df.with_columns(
-            (
-                pl.col("x") * pl.col("offset_yaw").cos() - pl.col("y") * pl.col("offset_yaw").sin() + pl.col("offset_x")
-            ).alias("x"),
-            (
-                pl.col("x") * pl.col("offset_yaw").sin() + pl.col("y") * pl.col("offset_yaw").cos() + pl.col("offset_y")
-            ).alias("y"),
-            (pl.col("z") + pl.col("offset_z")).alias("z"),
-        )
 
         self._parse_map_projection()
         target_crs = self.map.projection
         if not target_crs:
             raise ValueError("Map does not have a valid projection defined.")
-
-        # Apply 2D proj string transformation
         transformer = pyproj.Transformer.from_crs(source_crs, target_crs)
-        x_tgt, y_tgt = transformer.transform(df["x"].to_numpy(), df["y"].to_numpy())
-        df = df.with_columns(pl.Series(name="x", values=x_tgt), pl.Series(name="y", values=y_tgt))
+        m_ox, m_oy, m_oz, m_oyaw = self._offset_components(self.map.proj_offset)
 
-        # From map world to map local
-        if self.map.proj_offset:
-            m_ox, m_oy, m_oz, m_oyaw = self._offset_components(self.map.proj_offset)
-            df = df.with_columns(
-                ((pl.col("x") - m_ox) * np.cos(m_oyaw) + (pl.col("y") - m_oy) * np.sin(m_oyaw)).alias("x"),
-                ((pl.col("y") - m_oy) * np.cos(m_oyaw) - (pl.col("x") - m_ox) * np.sin(m_oyaw)).alias("y"),
-                (pl.col("z") - m_oz).alias("z"),
+        offset_x = df["offset_x"].to_numpy()
+        offset_y = df["offset_y"].to_numpy()
+        offset_yaw = df["offset_yaw"].to_numpy()
+
+        def to_map_local(x, y):
+            "Recording frame -> source CRS (frame offset) -> target CRS -> map local (map offset)."
+            x_src = x * np.cos(offset_yaw) - y * np.sin(offset_yaw) + offset_x
+            y_src = x * np.sin(offset_yaw) + y * np.cos(offset_yaw) + offset_y
+            x_tgt, y_tgt = transformer.transform(x_src, y_src)
+            x_tgt, y_tgt = np.asarray(x_tgt) - m_ox, np.asarray(y_tgt) - m_oy
+            return (
+                x_tgt * np.cos(m_oyaw) + y_tgt * np.sin(m_oyaw),
+                y_tgt * np.cos(m_oyaw) - x_tgt * np.sin(m_oyaw),
             )
+
+        x = df["x"].to_numpy()
+        y = df["y"].to_numpy()
+        yaw = df["yaw"].to_numpy()
+        x_new, y_new = to_map_local(x, y)
+
+        # Directions change with the frame offset yaw, the map offset yaw and the grid convergence between the
+        # source and the target CRS (e.g. UTM vs. a local transverse Mercator). Push a point one heading step
+        # ahead through the same chain and take the direction between both projected points.
+        x_ahead, y_ahead = to_map_local(x + _HEADING_PROBE_M * np.cos(yaw), y + _HEADING_PROBE_M * np.sin(yaw))
+        yaw_new = np.arctan2(y_ahead - y_new, x_ahead - x_new)
+        yaw_new = np.where(np.isfinite(yaw), yaw_new, yaw)
+        rotation = (yaw_new - yaw + np.pi) % (2 * np.pi) - np.pi
+        rotation = np.where(np.isfinite(rotation), rotation, 0.0)
+        cos_r, sin_r = np.cos(rotation), np.sin(rotation)
+
+        vel_x, vel_y = df["vel_x"].to_numpy(), df["vel_y"].to_numpy()
+        acc_x, acc_y = df["acc_x"].to_numpy(), df["acc_y"].to_numpy()
+        df = df.with_columns(
+            pl.Series(name="x", values=x_new),
+            pl.Series(name="y", values=y_new),
+            (pl.col("z") + pl.col("offset_z") - m_oz).alias("z"),
+            pl.Series(name="yaw", values=yaw_new),
+            pl.Series(name="vel_x", values=vel_x * cos_r - vel_y * sin_r),
+            pl.Series(name="vel_y", values=vel_x * sin_r + vel_y * cos_r),
+            pl.Series(name="acc_x", values=acc_x * cos_r - acc_y * sin_r),
+            pl.Series(name="acc_y", values=acc_x * sin_r + acc_y * cos_r),
+        )
 
         df = bbx_to_polygon(df)
 

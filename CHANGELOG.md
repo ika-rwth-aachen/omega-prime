@@ -1,3 +1,12 @@
+# Unreleased
+
+- `Recording.apply_projections` (also run by `Recording.from_file` with `apply_proj=True`) rotates `yaw`, `vel_x`/`vel_y`, `acc_x`/`acc_y` and the bounding box polygons together with the positions.
+  The rotation covers the frame offset yaw, the map offset heading and the grid convergence between the source and the map projection (e.g. about 2.3 deg between UTM zone 32N and a local transverse Mercator at 6 deg E).
+  Before, only `x`/`y` were transformed, so headings and motion vectors no longer matched the projected positions, and `materialize_projection` wrote this mismatch into the exported file.
+- `yaw_original`, `vel_x_original`, `vel_y_original`, `acc_x_original` and `acc_y_original` keep the values from before the projection; a normal export restores them like `x_original`/`y_original`/`z_original`.
+- `Recording.apply_projections` warns if some frames carry a projection offset and others have none (rows without an offset are projected as source CRS coordinates).
+- Frame numbers follow `total_nanos` in ascending order.
+
 # 0.3.8
 
 - `ShapelyTrajectoryTools.trajectory_axis(x, y, yaw, l_append, still)`: the reference axis of a trajectory, its path extended at both ends.
