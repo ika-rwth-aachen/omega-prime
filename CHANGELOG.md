@@ -1,4 +1,4 @@
-# Unreleased
+# 0.3.9
 
 - `Recording.apply_projections` (also run by `Recording.from_file` with `apply_proj=True`) rotates `yaw`, `vel_x`/`vel_y`, `acc_x`/`acc_y` and the bounding box polygons together with the positions.
   The rotation covers the frame offset yaw, the map offset heading and the grid convergence between the source and the map projection (e.g. about 2.3 deg between UTM zone 32N and a local transverse Mercator at 6 deg E).
