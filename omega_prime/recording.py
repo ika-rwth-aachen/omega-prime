@@ -84,8 +84,8 @@ MAP_CLASSES = [
 
 # Columns that hold directions in the x/y plane; `apply_projections` rotates them together with the positions.
 _DIRECTIONAL_COLUMNS = ("yaw", "vel_x", "vel_y", "acc_x", "acc_y")
-# Step (in meters) along the heading that `apply_projections` pushes through the projection to get the new heading.
-_HEADING_PROBE_M = 1.0
+# Step (in meters) along the local x axis that `apply_projections` pushes through the projection to get the rotation.
+_ROTATION_PROBE_M = 1.0
 # Columns that keep the values from before a projection; they restore the original pose on export.
 _ORIGINAL_COLUMNS = {f"{base}_original": base for base in ("x", "y", "z", *_DIRECTIONAL_COLUMNS)}
 
@@ -718,6 +718,7 @@ class Recording:
         source and the target CRS.
         The values before applying projections are stored in `<column>_original` columns (`x`, `y`, `z`, `yaw`,
         `vel_x`, `vel_y`, `acc_x`, `acc_y`) to preserve the original pose information for export or reference.
+        Velocities and accelerations are rotated, not scaled by the projection's scale factor.
         """
         if self._df.height == 0:
             return self
@@ -732,7 +733,7 @@ class Recording:
 
         frame_projections: list[dict[str, typing.Any]] = []
         for ts, offset in self.projections.items():
-            if ts in (None, "proj_string") or offset is None:
+            if ts in (None, "proj_string"):
                 continue
             ox, oy, oz, oyaw = self._offset_components(offset)
             frame_projections.append(
@@ -762,8 +763,11 @@ class Recording:
                 },
             )
             df = df.join(proj_df, on="total_nanos", how="left")
-            if default_offset is None:
-                n_missing = df.select(pl.col("offset_x").is_null().sum()).item()
+            with_offset = [
+                int(ts) for ts, o in self.projections.items() if ts not in (None, "proj_string") and o is not None
+            ]
+            if default_offset is None and with_offset:
+                n_missing = df.select((~pl.col("total_nanos").is_in(with_offset)).sum()).item()
                 if n_missing:
                     # Some frames carry an offset and others do not: the rows without one are treated as
                     # coordinates in the source CRS, which is almost never intended in a mixed recording.
@@ -792,11 +796,11 @@ class Recording:
         if df.select(pl.col("proj_string").is_null().any()).item():
             raise ValueError("Some rows do not have a projection string assigned.")
 
-        # Store original values before applying offsets, when it is the first projection
-        if not any(col in df.columns for col in ["x_original", "y_original", "z_original"]):
-            df = df.with_columns(
-                pl.col(base).alias(f"{base}_original") for base in ("x", "y", "z", *_DIRECTIONAL_COLUMNS)
-            )
+        # Store original values before applying offsets, when it is the first projection. Columns are added one by
+        # one, so data that already carries x/y/z_original (e.g. from an older version) still gets yaw/vel/acc_original.
+        missing_originals = [orig for orig in _ORIGINAL_COLUMNS if orig not in df.columns]
+        if missing_originals:
+            df = df.with_columns(pl.col(_ORIGINAL_COLUMNS[orig]).alias(orig) for orig in missing_originals)
 
         self._parse_map_projection()
         target_crs = self.map.projection
@@ -826,13 +830,14 @@ class Recording:
         x_new, y_new = to_map_local(x, y)
 
         # Directions change with the frame offset yaw, the map offset yaw and the grid convergence between the
-        # source and the target CRS (e.g. UTM vs. a local transverse Mercator). Push a point one heading step
-        # ahead through the same chain and take the direction between both projected points.
-        x_ahead, y_ahead = to_map_local(x + _HEADING_PROBE_M * np.cos(yaw), y + _HEADING_PROBE_M * np.sin(yaw))
-        yaw_new = np.arctan2(y_ahead - y_new, x_ahead - x_new)
-        yaw_new = np.where(np.isfinite(yaw), yaw_new, yaw)
-        rotation = (yaw_new - yaw + np.pi) % (2 * np.pi) - np.pi
+        # source and the target CRS (e.g. UTM vs. a local transverse Mercator). Push a point one step along the
+        # local x axis through the same chain; the direction between both projected points is the rotation of the
+        # frame at this position. It does not depend on yaw, so rows without a valid yaw still get their vel/acc
+        # rotated. Projections used for maps are conformal, so one rotation holds for all directions.
+        x_ahead, y_ahead = to_map_local(x + _ROTATION_PROBE_M, y)
+        rotation = np.arctan2(y_ahead - y_new, x_ahead - x_new)
         rotation = np.where(np.isfinite(rotation), rotation, 0.0)
+        yaw_new = (yaw + rotation + np.pi) % (2 * np.pi) - np.pi
         cos_r, sin_r = np.cos(rotation), np.sin(rotation)
 
         vel_x, vel_y = df["vel_x"].to_numpy(), df["vel_y"].to_numpy()

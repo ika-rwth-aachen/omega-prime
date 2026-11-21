@@ -367,6 +367,69 @@ def test_apply_projections_warns_about_frames_without_offset():
         recording.apply_projections()
 
 
+def test_apply_projections_uses_zero_offset_for_explicit_none_frame():
+    rows = moving_rows(0.0)
+    recording = Recording(
+        rows,
+        map=MapOdr.create(open_drive(LOCAL_TMERC), name="tmerc"),
+        projections={
+            "proj_string": LOCAL_TMERC,
+            None: ProjectionOffset(x=100.0, y=50.0, z=0.0, yaw=0.0),
+            rows[1]["total_nanos"]: None,
+        },
+    )
+
+    recording.apply_projections()
+    df = recording.df.sort("total_nanos")
+
+    # The frame with an explicit None is not shifted, matching the export, which writes no offset for it.
+    assert df["x"][1] == pytest.approx(rows[1]["x"], abs=1e-6)
+    assert df["x"][0] == pytest.approx(rows[0]["x"] + 100.0, abs=1e-6)
+    assert recording._projection_for_timestamp(rows[1]["total_nanos"])[1] is None
+
+
+def test_apply_projections_rotates_motion_independent_of_yaw():
+    # The heading differs from the direction of motion (e.g. a reversing or drifting vehicle).
+    rows = moving_rows(0.3)
+    yaw0 = 0.3 + 2.0
+    for row in rows:
+        row["yaw"] = yaw0
+    recording = Recording(
+        rows,
+        map=MapOdr.create(open_drive(LOCAL_TMERC), name="tmerc"),
+        projections={"proj_string": UTM_32N, None: UTM_ORIGIN},
+    )
+
+    recording.apply_projections()
+    df = recording.df.sort("total_nanos")
+
+    motion = math.atan2(df["y"][1] - df["y"][0], df["x"][1] - df["x"][0])
+    for row in df.iter_rows(named=True):
+        assert angle_diff(row["yaw"], motion + 2.0) == pytest.approx(0.0, abs=1e-5)
+        assert angle_diff(math.atan2(row["vel_y"], row["vel_x"]), motion) == pytest.approx(0.0, abs=1e-5)
+        assert angle_diff(math.atan2(row["acc_y"], row["acc_x"]), motion) == pytest.approx(0.0, abs=1e-5)
+
+
+def test_apply_projections_adds_missing_direction_originals():
+    rows = moving_rows(0.7)
+    for row in rows:
+        row.update(x_original=row["x"], y_original=row["y"], z_original=row["z"])
+    recording = Recording(
+        rows,
+        map=MapOdr.create(open_drive(LOCAL_TMERC), name="tmerc"),
+        projections={"proj_string": UTM_32N, None: UTM_ORIGIN},
+    )
+    assert "yaw_original" not in recording.df.columns
+
+    recording.apply_projections()
+
+    df = recording.df.sort("total_nanos")
+    assert df["yaw_original"].to_list() == pytest.approx([0.7] * 3)
+    base = next(recording.to_osi_gts()).moving_object[0].base
+    assert base.orientation.yaw == pytest.approx(rows[0]["yaw"])
+    assert base.velocity.x == pytest.approx(rows[0]["vel_x"])
+
+
 def test_frame_numbers_follow_time():
     rows = list(reversed(moving_rows(0.0, n=5)))
     recording = Recording(rows)
